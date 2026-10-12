@@ -2,13 +2,18 @@ package kr.hanbit.school.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import kr.hanbit.school.account.Account;
 import kr.hanbit.school.account.AuthenticationModule;
 import kr.hanbit.school.learning.xp.XpEntryRepository;
@@ -44,6 +49,7 @@ class LearningReviewIT extends LearningAnswerTestSupport {
   @Autowired LearningAnswerFinalizer finalizer;
   @Autowired XpEntryRepository xp;
   @Autowired PlatformTransactionManager transactions;
+  @Autowired DataSource dataSource;
 
   @Test
   void firstWrongAndTimeoutActivateAutoWhileFirstCorrectDoesNot() throws Exception {
@@ -469,6 +475,164 @@ class LearningReviewIT extends LearningAnswerTestSupport {
         403,
         "FORBIDDEN");
     assertThat(learning.count("review_attempts", student)).isZero();
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void crossSessionAdvanceRaceRecoversOnlyTheIdempotencyPrimaryKeyAndRollsBackTheLoser(
+      boolean idempotencyCollision) throws Exception {
+    var student = student();
+    var historicalLogin = client.loginStudent(student);
+    var currentLogin = client.loginStudent(student);
+    firstWrongDay(historicalLogin);
+    var historical = sessionId(review(historicalLogin, List.of(1), UUID.randomUUID()));
+    answerCurrent(historicalLogin, historical, true);
+    var historicalView = node(session(historicalLogin, historical));
+    var current = sessionId(review(currentLogin, List.of(2, 3), UUID.randomUUID()));
+    answerCurrent(currentLogin, current, false);
+    var waitingView = node(session(currentLogin, current));
+    var waitingRow = jdbc.queryForMap("select * from learning_sessions where id=?", current);
+    clock.setInstant(clock.instant().plusSeconds(1));
+    var request = UUID.randomUUID();
+    var function = "task7_advance_gate_" + UUID.randomUUID().toString().replace("-", "");
+    if (!idempotencyCollision) {
+      jdbc.execute(
+          "create table "
+              + function
+              + "_other(id integer not null, constraint task7_other_unique unique(id))");
+      jdbc.update("insert into " + function + "_other(id) values (1)");
+    }
+    jdbc.execute(
+        "create function "
+            + function
+            + "() returns trigger language plpgsql as $$ begin"
+            + " if NEW.operation='ADVANCE_SESSION' and NEW.request_id='"
+            + request
+            + "'::uuid then"
+            + " if NEW.response_json->>'sessionId'='"
+            + historical
+            + "' then"
+            + " perform pg_advisory_xact_lock(707001,1); else"
+            + " perform pg_advisory_xact_lock(707001,2);"
+            + (idempotencyCollision ? "" : " insert into " + function + "_other(id) values (1);")
+            + " end if; end if; return NEW; end; $$");
+    jdbc.execute(
+        "create trigger "
+            + function
+            + " before insert on idempotency_records for each row execute function "
+            + function
+            + "()");
+    try {
+      try (var gate = dataSource.getConnection();
+          var statement = gate.createStatement()) {
+        statement.execute("select pg_advisory_lock(707001,1)");
+        statement.execute("select pg_advisory_lock(707001,2)");
+        try (var pool = Executors.newFixedThreadPool(2)) {
+          try {
+            var historicalRequest =
+                pool.submit(() -> advance(historicalLogin, historical, request));
+            var currentRequest =
+                pool.submit(
+                    () -> {
+                      try {
+                        return (Object) advance(currentLogin, current, request);
+                      } catch (Exception failure) {
+                        return (Object) failure;
+                      }
+                    });
+            // Both writes have missed replay and reached the real snapshot INSERT. The current
+            // session has already flushed its next prompt, deadline and feedback clearing.
+            await()
+                .atMost(Duration.ofSeconds(10))
+                .until(
+                    () ->
+                        jdbc.queryForObject(
+                                "select count(*) from pg_locks where locktype='advisory' and not"
+                                    + " granted and classid=707001::oid and objid in"
+                                    + " (1::oid,2::oid)",
+                                Integer.class)
+                            == 2);
+            statement.execute("select pg_advisory_unlock(707001,1)");
+            var winner = historicalRequest.get(10, TimeUnit.SECONDS);
+            assertThat(winner.getResponse().getStatus()).isEqualTo(200);
+            assertThat(node(winner)).isEqualTo(historicalView);
+            var winningRow =
+                jdbc.queryForMap(
+                    "select * from idempotency_records where student_account_id=? and"
+                        + " operation='ADVANCE_SESSION' and request_id=?",
+                    student.getId(),
+                    request);
+            assertThat(
+                    jdbc.queryForObject(
+                        "select count(*) from pg_locks where locktype='advisory' and not granted"
+                            + " and classid=707001::oid and objid=2::oid",
+                        Integer.class))
+                .isEqualTo(1);
+            statement.execute("select pg_advisory_unlock(707001,2)");
+            var loser = currentRequest.get(10, TimeUnit.SECONDS);
+            // Read in fresh transactions after the loser finishes, not from its failed write.
+            assertThat(jdbc.queryForMap("select * from learning_sessions where id=?", current))
+                .isEqualTo(waitingRow);
+            assertThat(node(session(currentLogin, current))).isEqualTo(waitingView);
+            assertThat(
+                    jdbc.queryForMap(
+                        "select * from idempotency_records where student_account_id=? and"
+                            + " operation='ADVANCE_SESSION' and request_id=?",
+                        student.getId(),
+                        request))
+                .isEqualTo(winningRow);
+            assertThat(
+                    jdbc.queryForObject(
+                        "select count(*) from idempotency_records where student_account_id=? and"
+                            + " operation='ADVANCE_SESSION' and request_id=?",
+                        Integer.class,
+                        student.getId(),
+                        request))
+                .isEqualTo(1);
+            if (idempotencyCollision) {
+              assertThat(loser)
+                  .as(
+                      "the losing advance must return a mapped HTTP conflict, not an unhandled"
+                          + " persistence exception")
+                  .isInstanceOf(MvcResult.class);
+              assertError((MvcResult) loser, 409, "IDEMPOTENCY_KEY_REUSED");
+            } else {
+              assertThat(loser)
+                  .as("another uniqueness constraint must remain a persistence failure")
+                  .isInstanceOf(Throwable.class);
+              Throwable cause = (Throwable) loser;
+              while (cause.getCause() != null
+                  && !(cause instanceof org.hibernate.exception.ConstraintViolationException))
+                cause = cause.getCause();
+              assertThat(cause)
+                  .isInstanceOfSatisfying(
+                      org.hibernate.exception.ConstraintViolationException.class,
+                      failure ->
+                          assertThat(failure.getConstraintName()).isEqualTo("task7_other_unique"));
+            }
+            var advanced = advanceOk(currentLogin, current);
+            assertThat(node(advanced).path("question").path("questionId").asInt()).isEqualTo(3);
+            assertThat(node(advance(historicalLogin, historical, request)))
+                .isEqualTo(historicalView);
+            assertThat(
+                    jdbc.queryForMap(
+                        "select * from idempotency_records where student_account_id=? and"
+                            + " operation='ADVANCE_SESSION' and request_id=?",
+                        student.getId(),
+                        request))
+                .isEqualTo(winningRow);
+          } finally {
+            // Release only this test's two locks before the executor waits for its tasks.
+            statement.execute("select pg_advisory_unlock(707001,1)");
+            statement.execute("select pg_advisory_unlock(707001,2)");
+          }
+        }
+      }
+    } finally {
+      jdbc.execute("drop trigger " + function + " on idempotency_records");
+      jdbc.execute("drop function " + function + "()");
+      if (!idempotencyCollision) jdbc.execute("drop table " + function + "_other");
+    }
   }
 
   private Account student() {

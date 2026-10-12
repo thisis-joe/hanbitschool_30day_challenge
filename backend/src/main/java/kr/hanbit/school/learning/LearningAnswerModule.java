@@ -6,6 +6,7 @@ import java.util.UUID;
 import kr.hanbit.school.content.ContentCatalog;
 import kr.hanbit.school.security.AccountPrincipal;
 import kr.hanbit.school.shared.web.ApiException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -137,7 +138,12 @@ public class LearningAnswerModule {
                 view);
             return view;
           });
-    } catch (DataIntegrityViolationException failure) {
+    } catch (RuntimeException failure) {
+      // Direct EntityManager.flush can expose Hibernate's exception without Spring translation.
+      // Keep the existing translated-constraint path, and recognize only the idempotency PK
+      // collision among other persistence/runtime failures. execute() has already rolled back.
+      if (!(failure instanceof DataIntegrityViolationException)
+          && !idempotencyKeyCollision(failure)) throw failure;
       return freshReads.execute(
           status -> {
             var student = access.requireStudent(principal);
@@ -157,6 +163,15 @@ public class LearningAnswerModule {
                 .orElseThrow(() -> failure);
           });
     }
+  }
+
+  private boolean idempotencyKeyCollision(Throwable failure) {
+    for (var cause = failure; cause != null; cause = cause.getCause()) {
+      if (cause instanceof ConstraintViolationException violation
+          && "23505".equals(violation.getSQLState())
+          && "idempotency_records_pkey".equals(violation.getConstraintName())) return true;
+    }
+    return false;
   }
 
   private void validateAnswer(UUID sessionId, SubmitAnswerCommand command) {
