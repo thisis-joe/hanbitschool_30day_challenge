@@ -49,9 +49,22 @@ public class ReviewQueueEntry {
 
   public void releaseAuto(Instant at) {
     if (active && reason == ReviewQueueReason.AUTO_FIRST_WRONG) {
-      active = false;
-      releasedAt = LearningTime.persistable(at);
+      release(at);
     }
+  }
+
+  public void activateUser(Instant at) {
+    if (active && reason == ReviewQueueReason.USER_AFTER_LATER_WRONG) return;
+    reason = ReviewQueueReason.USER_AFTER_LATER_WRONG;
+    active = true;
+    createdAt = LearningTime.persistable(at);
+    releasedAt = null;
+  }
+
+  public void release(Instant at) {
+    if (!active) return;
+    active = false;
+    releasedAt = LearningTime.persistable(at);
   }
 
   public UUID getStudentAccountId() {

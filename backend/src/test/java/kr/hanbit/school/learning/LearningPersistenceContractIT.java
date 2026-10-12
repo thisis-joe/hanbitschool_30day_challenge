@@ -1689,6 +1689,115 @@ class LearningPersistenceContractIT {
         "23505", "review_queue_entries_pkey", () -> insertPrivateRow("review_queue_entries", row));
   }
 
+  @Test
+  void v7BookmarksExistWithOnlyNoActionStudentVersionAndQuestionForeignKeys() {
+    assertThat(jdbc.queryForObject("select to_regclass('private_bookmarks')::text", String.class))
+        .isEqualTo("private_bookmarks");
+    assertThat(
+            jdbc.queryForList(
+                "select confdeltype::text from pg_constraint where"
+                    + " conrelid='private_bookmarks'::regclass and contype='f'",
+                String.class))
+        .hasSize(3)
+        .containsOnly("a");
+    assertThat(entityManager.getMetamodel().getEntities())
+        .extracting(jakarta.persistence.metamodel.EntityType::getName)
+        .contains("PrivateBookmark");
+  }
+
+  @Test
+  void bookmarksPersistIndependentlyAndAllowTheSameQuestionForDifferentStudents() {
+    var row = bookmarkRow();
+    insertPrivateRow("private_bookmarks", row);
+    var owner = row.get("student_account_id");
+    row.put("student_account_id", student(2));
+    insertPrivateRow("private_bookmarks", row);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from private_bookmarks where student_account_id=?",
+                Integer.class,
+                owner))
+        .isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from review_queue_entries where student_account_id=?",
+                Integer.class,
+                owner))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from review_masteries where student_account_id=?",
+                Integer.class,
+                owner))
+        .isZero();
+  }
+
+  @Test
+  void bookmarksAreUniquePerStudentVersionAndQuestion() {
+    var row = bookmarkRow();
+    insertPrivateRow("private_bookmarks", row);
+    assertSqlViolation(
+        "23505", "private_bookmarks_pkey", () -> insertPrivateRow("private_bookmarks", row));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"student_account_id", "version", "question_id", "created_at"})
+  void bookmarksRejectNullRequiredFields(String field) {
+    var row = bookmarkRow();
+    row.put(field, null);
+    assertSqlViolation("23502", null, () -> insertPrivateRow("private_bookmarks", row));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"student_account_id", "version", "question_id"})
+  void bookmarksRejectMissingForeignIdentities(String field) {
+    var row = bookmarkRow();
+    row.put(
+        field,
+        field.equals("student_account_id")
+            ? UUID.randomUUID()
+            : field.equals("version") ? "missing" : 151);
+    assertSqlViolation("23503", null, () -> insertPrivateRow("private_bookmarks", row));
+  }
+
+  @Test
+  void deletingAQuestionCannotImplicitlyDeleteItsBookmark() {
+    var row = bookmarkRow();
+    insertPrivateRow("private_bookmarks", row);
+    assertSqlViolation(
+        "23503",
+        "private_bookmarks_question_fk",
+        () -> jdbc.update("delete from questions where version='hanbit-v1' and question_id=1"));
+  }
+
+  private java.util.LinkedHashMap<String, Object> bookmarkRow() {
+    var row = new java.util.LinkedHashMap<String, Object>();
+    row.put("student_account_id", student(1));
+    row.put("version", VERSION);
+    row.put("question_id", 1);
+    row.put("created_at", now());
+    return row;
+  }
+
+  @Test
+  void bookmarkJpaRoundTripKeepsThePrincipalKeyAndMicrosecondActivationTime() {
+    var owner = student(1);
+    var key = new PrivateBookmarkId(owner, VERSION, 1);
+    var bookmark = new PrivateBookmark(owner, VERSION, 1, clock.instant());
+    entityManager.persist(bookmark);
+    entityManager.flush();
+    entityManager.clear();
+    var stored = entityManager.find(PrivateBookmark.class, key);
+    assertThat(stored.getStudentAccountId()).isEqualTo(owner);
+    assertThat(stored.getVersion()).isEqualTo(VERSION);
+    assertThat(stored.getQuestionId()).isEqualTo(1);
+    assertThat(stored.getCreatedAt()).isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+    entityManager.remove(stored);
+    entityManager.flush();
+    entityManager.clear();
+    assertThat(entityManager.find(PrivateBookmark.class, key)).isNull();
+  }
+
   private java.util.LinkedHashMap<String, Object> masteryRow(java.util.Map<String, Object> fact) {
     var row = new java.util.LinkedHashMap<String, Object>();
     row.put("student_account_id", fact.get("student_account_id"));
