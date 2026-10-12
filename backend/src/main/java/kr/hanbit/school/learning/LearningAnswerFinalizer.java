@@ -29,6 +29,8 @@ public class LearningAnswerFinalizer {
   private final DayProgressRepository progress;
   private final FirstAnswerRepository firstAnswers;
   private final ReviewAttemptRepository reviewAttempts;
+  private final ReviewMasteryRepository masteries;
+  private final ReviewQueueEntryRepository reviewQueue;
   private final LastAnswerRepository lastAnswers;
   private final XpEntryRepository xpEntries;
   private final XpPolicy xpPolicy;
@@ -49,6 +51,8 @@ public class LearningAnswerFinalizer {
       DayProgressRepository progress,
       FirstAnswerRepository firstAnswers,
       ReviewAttemptRepository reviewAttempts,
+      ReviewMasteryRepository masteries,
+      ReviewQueueEntryRepository reviewQueue,
       LastAnswerRepository lastAnswers,
       XpEntryRepository xpEntries,
       XpPolicy xpPolicy,
@@ -67,6 +71,8 @@ public class LearningAnswerFinalizer {
     this.progress = progress;
     this.firstAnswers = firstAnswers;
     this.reviewAttempts = reviewAttempts;
+    this.masteries = masteries;
+    this.reviewQueue = reviewQueue;
     this.lastAnswers = lastAnswers;
     this.xpEntries = xpEntries;
     this.xpPolicy = xpPolicy;
@@ -132,10 +138,9 @@ public class LearningAnswerFinalizer {
       SubmitAnswerCommand command,
       Instant receivedAt,
       String payloadHash) {
-    if (session.getMode() != LearningMode.FIRST && session.getMode() != LearningMode.REPLAY)
-      throw new ApiException(409, "SESSION_CONFLICT", "현재 회차 답변을 확정할 수 없습니다.");
-    var attempt = attempts.findBySessionId(session.getId()).orElseThrow();
-    var day = progress.findById(attempt.getDayProgressId()).orElseThrow();
+    boolean review = session.getMode() == LearningMode.REVIEW;
+    var attempt = review ? null : attempts.findBySessionId(session.getId()).orElseThrow();
+    var day = review ? null : progress.findById(attempt.getDayProgressId()).orElseThrow();
     boolean timedOut = receivedAt.isAfter(session.getDeadlineAt());
     var choice = timedOut ? null : command.choice();
     boolean correct = !timedOut && choice == question.getAnswer();
@@ -174,8 +179,8 @@ public class LearningAnswerFinalizer {
               session.getVersion(),
               question.getQuestionId(),
               session.getId(),
-              attempt.getId(),
-              LearningMode.REPLAY,
+              review ? null : attempt.getId(),
+              session.getMode(),
               command.requestId(),
               choice,
               timedOut,
@@ -207,10 +212,12 @@ public class LearningAnswerFinalizer {
                         now));
     last.update(sourceType, factId, choice, timedOut, correct, outcome, now);
     lastAnswers.saveAndFlush(last);
-    if (!first && attempt.getAnsweredCount() == 4)
+    boolean reviewPromptEligible =
+        updateReviewPolicy(session, question.getQuestionId(), factId, first, correct, now);
+    if (!first && !review && attempt.getAnsweredCount() == 4)
       attempt.classifyReplayCompletion(
           calendar.isCatchUp(session.getDay(), currentCalendarCap(session)));
-    attempt.recordAnswer(correct, now);
+    if (!review) attempt.recordAnswer(correct, now);
     int awarded =
         first
             ? xpPolicy.firstAnswer(correct, attempt.getCurrentStreak(), attempt.isCatchUp())
@@ -222,9 +229,21 @@ public class LearningAnswerFinalizer {
         awarded,
         now);
 
-    boolean completed = attempt.getAnsweredCount() == 5;
+    int answeredCount =
+        review
+            ? Math.toIntExact(reviewAttempts.countBySessionId(session.getId()))
+            : attempt.getAnsweredCount();
+    int correctCount =
+        review
+            ? Math.toIntExact(reviewAttempts.countBySessionIdAndCorrectTrue(session.getId()))
+            : attempt.getCorrectCount();
+    boolean completed =
+        review
+            ? answeredCount
+                == sessionQuestions.findByIdSessionIdOrderByIdPositionAsc(session.getId()).size()
+            : answeredCount == 5;
     boolean nextDayAvailable = false;
-    if (completed) {
+    if (completed && !review) {
       boolean passed = attempt.getState() == DayAttemptState.PASSED;
       if (day.getState() != DayProgressState.PASSED) {
         day.finishFirst(passed, now);
@@ -248,12 +267,12 @@ public class LearningAnswerFinalizer {
             awarded,
             summary.totalXp(),
             summary.level(),
-            attempt.getCorrectCount(),
-            attempt.getAnsweredCount(),
-            attempt.getState(),
-            day.getState(),
+            correctCount,
+            answeredCount,
+            review ? null : attempt.getState(),
+            review ? null : day.getState(),
             nextDayAvailable,
-            false);
+            reviewPromptEligible);
     session.finalizeAnswer(json.writeValueAsString(result), completed, now);
     sessions.saveAndFlush(session);
     idempotency.record(
@@ -263,6 +282,57 @@ public class LearningAnswerFinalizer {
         payloadHash,
         result);
     return result;
+  }
+
+  private boolean updateReviewPolicy(
+      LearningSession session,
+      int questionId,
+      UUID factId,
+      boolean first,
+      boolean correct,
+      Instant now) {
+    var queueKey =
+        new ReviewQueueEntryId(session.getStudentAccountId(), session.getVersion(), questionId);
+    var entry = reviewQueue.findById(queueKey);
+    if (first) {
+      if (!correct && entry.isEmpty())
+        reviewQueue.saveAndFlush(
+            new ReviewQueueEntry(
+                session.getStudentAccountId(),
+                session.getVersion(),
+                questionId,
+                ReviewQueueReason.AUTO_FIRST_WRONG,
+                true,
+                now,
+                null));
+      return false;
+    }
+    var masteryKey =
+        new ReviewMasteryId(session.getStudentAccountId(), session.getVersion(), questionId);
+    boolean mastered = masteries.existsById(masteryKey);
+    if (correct) {
+      if (!mastered)
+        masteries.saveAndFlush(
+            new ReviewMastery(
+                session.getStudentAccountId(), session.getVersion(), questionId, factId, now));
+      entry.ifPresent(
+          row -> {
+            row.releaseAuto(now);
+            reviewQueue.saveAndFlush(row);
+          });
+      return false;
+    }
+    boolean priorCorrect =
+        mastered
+            || firstAnswers
+                .findByStudentAccountIdAndVersionAndQuestionId(
+                    session.getStudentAccountId(), session.getVersion(), questionId)
+                .map(FirstAnswer::isCorrect)
+                .orElse(false);
+    return priorCorrect
+        && (entry.isEmpty()
+            || !entry.get().isActive()
+            || entry.get().getReason() != ReviewQueueReason.USER_AFTER_LATER_WRONG);
   }
 
   private void appendXp(UUID studentId, XpKind kind, UUID sourceId, int amount, Instant at) {

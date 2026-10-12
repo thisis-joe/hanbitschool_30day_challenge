@@ -49,6 +49,8 @@ class LearningPersistenceContractIT {
   @Autowired IdempotencyRecordRepository idempotencyRecords;
   @Autowired FirstAnswerRepository firstAnswers;
   @Autowired ReviewAttemptRepository reviewAttempts;
+  @Autowired ReviewMasteryRepository masteries;
+  @Autowired ReviewQueueEntryRepository reviewQueue;
   @Autowired LastAnswerRepository lastAnswers;
   @Autowired XpEntryRepository xpEntries;
   @Autowired StudentLearningAccess access;
@@ -307,9 +309,8 @@ class LearningPersistenceContractIT {
             () ->
                 jdbc.update(
                     "insert into first_answers"
-                        + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,"
-                        + "choice,timed_out,correct,answered_at,response_millis) values"
-                        + " (?,?,?,?,?,?,?,null,false,false,?,0)",
+                        + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,choice,timed_out,correct,answered_at,response_millis)"
+                        + " values (?,?,?,?,?,?,?,null,false,false,?,0)",
                     UUID.randomUUID(),
                     context.student(),
                     VERSION,
@@ -329,9 +330,8 @@ class LearningPersistenceContractIT {
             () ->
                 jdbc.update(
                     "insert into first_answers"
-                        + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,"
-                        + "choice,timed_out,correct,answered_at,response_millis) values"
-                        + " (?,?,?,?,?,?,?,'X',false,false,?,-1)",
+                        + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,choice,timed_out,correct,answered_at,response_millis)"
+                        + " values (?,?,?,?,?,?,?,'X',false,false,?,-1)",
                     UUID.randomUUID(),
                     context.student(),
                     VERSION,
@@ -1444,6 +1444,283 @@ class LearningPersistenceContractIT {
     row.put("answered_at", now());
     row.put("response_millis", 0L);
     return row;
+  }
+
+  @Test
+  void v6MasteryAndQueueTablesUseOnlyNoActionForeignKeys() {
+    for (String table : new String[] {"review_masteries", "review_queue_entries"}) {
+      assertThat(jdbc.queryForObject("select to_regclass(?)::text", String.class, table))
+          .isEqualTo(table);
+      assertThat(
+              jdbc.queryForList(
+                  "select confdeltype::text from pg_constraint where conrelid=cast(? as regclass)"
+                      + " and contype='f'",
+                  String.class,
+                  table))
+          .isNotEmpty()
+          .containsOnly("a");
+    }
+    assertThat(
+            jdbc.queryForList(
+                "select conname from pg_constraint where conrelid='review_masteries'::regclass and"
+                    + " contype='f' order by conname",
+                String.class))
+        .containsExactly(
+            "review_masteries_first_correct_identity_fk",
+            "review_masteries_question_fk",
+            "review_masteries_student_fk");
+    assertThat(
+            jdbc.queryForList(
+                "select conname from pg_constraint where conrelid='review_queue_entries'::regclass"
+                    + " and contype='c' order by conname",
+                String.class))
+        .containsExactly(
+            "review_queue_entries_active_release_check",
+            "review_queue_entries_reason_check",
+            "review_queue_entries_release_time_check");
+  }
+
+  @Test
+  void v6PrivateEntitiesAreMappedForJpaValidation() {
+    var fact = reviewRow("REVIEW");
+    insertReview(fact);
+    var owner = (UUID) fact.get("student_account_id");
+    var source = (UUID) fact.get("id");
+    var key = new ReviewMasteryId(owner, VERSION, 1);
+    masteries.saveAndFlush(new ReviewMastery(owner, VERSION, 1, source, clock.instant()));
+    reviewQueue.saveAndFlush(
+        new ReviewQueueEntry(
+            owner, VERSION, 1, ReviewQueueReason.AUTO_FIRST_WRONG, true, clock.instant(), null));
+    entityManager.clear();
+    var mastery = masteries.findById(key).orElseThrow();
+    assertThat(mastery.getStudentAccountId()).isEqualTo(owner);
+    assertThat(mastery.getVersion()).isEqualTo(VERSION);
+    assertThat(mastery.getQuestionId()).isEqualTo(1);
+    assertThat(mastery.getMasteredAt()).isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+    assertThat(mastery.getFirstCorrectAttemptId()).isEqualTo(source);
+    // A detached replacement cannot rewrite the immutable first-correct timestamp or source.
+    masteries.saveAndFlush(
+        new ReviewMastery(owner, VERSION, 1, UUID.randomUUID(), clock.instant().plusSeconds(30)));
+    entityManager.clear();
+    var reloaded = masteries.findById(key).orElseThrow();
+    assertThat(reloaded.getFirstCorrectAttemptId()).isEqualTo(source);
+    assertThat(reloaded.getMasteredAt()).isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+    var queueKey = new ReviewQueueEntryId(owner, VERSION, 1);
+    var entry = reviewQueue.findById(queueKey).orElseThrow();
+    assertThat(entry.getStudentAccountId()).isEqualTo(owner);
+    assertThat(entry.getVersion()).isEqualTo(VERSION);
+    assertThat(entry.getQuestionId()).isEqualTo(1);
+    assertThat(entry.getReason()).isEqualTo(ReviewQueueReason.AUTO_FIRST_WRONG);
+    assertThat(entry.isActive()).isTrue();
+    assertThat(entry.getCreatedAt()).isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+    entry.releaseAuto(clock.instant().plusSeconds(1));
+    reviewQueue.saveAndFlush(entry);
+    entityManager.clear();
+    var released = reviewQueue.findById(queueKey).orElseThrow();
+    assertThat(released.isActive()).isFalse();
+    assertThat(released.getReleasedAt()).isEqualTo(Instant.parse("2026-10-12T00:00:01.123456Z"));
+    released.releaseAuto(clock.instant().plusSeconds(2));
+    reviewQueue.saveAndFlush(released);
+    entityManager.clear();
+    assertThat(reviewQueue.findById(queueKey).orElseThrow().getReleasedAt())
+        .isEqualTo(Instant.parse("2026-10-12T00:00:01.123456Z"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"REVIEW", "REPLAY"})
+  void masteryReferencesACorrectRepeatFactWithMatchingStudentVersionAndQuestion(String mode) {
+    var fact = reviewRow(mode);
+    insertReview(fact);
+    var row = masteryRow(fact);
+    insertPrivateRow("review_masteries", row);
+    assertThat(
+            jdbc.queryForObject(
+                "select first_correct_attempt_id from review_masteries where student_account_id=?",
+                UUID.class,
+                fact.get("student_account_id")))
+        .isEqualTo(fact.get("id"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"wrong", "timeout", "missing-source", "student", "version", "question"})
+  void masteryRejectsAnInvalidOrForeignFirstCorrectSource(String invalid) {
+    var fact = reviewRow("REVIEW");
+    if (invalid.equals("wrong") || invalid.equals("timeout")) {
+      fact.put("correct", false);
+      fact.put("outcome", invalid.equals("timeout") ? "TIMED_OUT" : "WRONG");
+      if (invalid.equals("timeout")) {
+        fact.put("timed_out", true);
+        fact.put("choice", null);
+      }
+    }
+    insertReview(fact);
+    var row = masteryRow(fact);
+    switch (invalid) {
+      case "missing-source" -> row.put("first_correct_attempt_id", UUID.randomUUID());
+      case "student" -> row.put("student_account_id", student(2));
+      case "version" -> {
+        var version = "mastery-" + UUID.randomUUID();
+        insertContentVersion(version);
+        row.put("version", version);
+      }
+      case "question" -> row.put("question_id", 2);
+    }
+    assertSqlViolation(
+        "23503",
+        "review_masteries_first_correct_identity_fk",
+        () -> insertPrivateRow("review_masteries", row));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "student_account_id",
+        "version",
+        "question_id",
+        "first_correct_attempt_id",
+        "mastered_at"
+      })
+  void masteryRequiresEveryIdentityAndFirstCorrectField(String column) {
+    var fact = reviewRow("REVIEW");
+    insertReview(fact);
+    var row = masteryRow(fact);
+    row.put(column, null);
+    assertSqlViolation("23502", null, () -> insertPrivateRow("review_masteries", row));
+  }
+
+  @Test
+  void masteryHasOneRowPerStudentVersionAndQuestion() {
+    var fact = reviewRow("REVIEW");
+    insertReview(fact);
+    var row = masteryRow(fact);
+    insertPrivateRow("review_masteries", row);
+    assertSqlViolation(
+        "23505", "review_masteries_pkey", () -> insertPrivateRow("review_masteries", row));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {"student_account_id", "version", "question_id", "reason", "active", "created_at"})
+  void queueRequiresEveryIdentityPolicyAndActivationField(String column) {
+    var row = queueRow();
+    row.put(column, null);
+    assertSqlViolation("23502", null, () -> insertPrivateRow("review_queue_entries", row));
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {
+        "AUTO_FIRST_WRONG,true,NULL",
+        "USER_AFTER_LATER_WRONG,true,NULL",
+        "AUTO_FIRST_WRONG,false,0",
+        "USER_AFTER_LATER_WRONG,false,1"
+      },
+      nullValues = "NULL")
+  void queueAcceptsBothReasonsAndConsistentActiveReleaseTimes(
+      String reason, boolean active, Integer seconds) {
+    var row = queueRow();
+    row.put("reason", reason);
+    row.put("active", active);
+    row.put(
+        "released_at",
+        seconds == null ? null : Timestamp.from(now().toInstant().plusSeconds(seconds)));
+    insertPrivateRow("review_queue_entries", row);
+    assertThat(
+            jdbc.queryForMap(
+                "select * from review_queue_entries where student_account_id=?",
+                row.get("student_account_id")))
+        .containsAllEntriesOf(row);
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"true,0", "false,NULL"},
+      nullValues = "NULL")
+  void queueRejectsInconsistentActiveReleaseTimes(boolean active, Integer seconds) {
+    var row = queueRow();
+    row.put("active", active);
+    row.put("released_at", seconds == null ? null : now());
+    assertSqlViolation(
+        "23514",
+        "review_queue_entries_active_release_check",
+        () -> insertPrivateRow("review_queue_entries", row));
+  }
+
+  @Test
+  void queueCannotReleaseBeforeItsActivation() {
+    var row = queueRow();
+    row.put("active", false);
+    row.put("released_at", Timestamp.from(now().toInstant().minusNanos(1000)));
+    assertSqlViolation(
+        "23514",
+        "review_queue_entries_release_time_check",
+        () -> insertPrivateRow("review_queue_entries", row));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"USER", "AUTO", "", "UNKNOWN"})
+  void queueRejectsUnknownReasons(String reason) {
+    var row = queueRow();
+    row.put("reason", reason);
+    assertSqlViolation(
+        "23514",
+        "review_queue_entries_reason_check",
+        () -> insertPrivateRow("review_queue_entries", row));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"student", "version", "question"})
+  void queueCannotReferenceMissingOwnershipOrContent(String invalid) {
+    var row = queueRow();
+    switch (invalid) {
+      case "student" -> row.put("student_account_id", UUID.randomUUID());
+      case "version" -> row.put("version", "missing-version");
+      case "question" -> row.put("question_id", 151);
+    }
+    assertSqlViolation("23503", null, () -> insertPrivateRow("review_queue_entries", row));
+  }
+
+  @Test
+  void queueHasOneRowPerStudentVersionAndQuestion() {
+    var row = queueRow();
+    insertPrivateRow("review_queue_entries", row);
+    row.put("reason", "USER_AFTER_LATER_WRONG");
+    assertSqlViolation(
+        "23505", "review_queue_entries_pkey", () -> insertPrivateRow("review_queue_entries", row));
+  }
+
+  private java.util.LinkedHashMap<String, Object> masteryRow(java.util.Map<String, Object> fact) {
+    var row = new java.util.LinkedHashMap<String, Object>();
+    row.put("student_account_id", fact.get("student_account_id"));
+    row.put("version", VERSION);
+    row.put("question_id", 1);
+    row.put("first_correct_attempt_id", fact.get("id"));
+    row.put("mastered_at", now());
+    return row;
+  }
+
+  private java.util.LinkedHashMap<String, Object> queueRow() {
+    var row = new java.util.LinkedHashMap<String, Object>();
+    row.put("student_account_id", student(1));
+    row.put("version", VERSION);
+    row.put("question_id", 1);
+    row.put("reason", "AUTO_FIRST_WRONG");
+    row.put("active", true);
+    row.put("created_at", now());
+    row.put("released_at", null);
+    return row;
+  }
+
+  private void insertPrivateRow(String table, java.util.LinkedHashMap<String, Object> row) {
+    jdbc.update(
+        "insert into "
+            + table
+            + "("
+            + String.join(",", row.keySet())
+            + ") values ("
+            + String.join(",", java.util.Collections.nCopies(row.size(), "?"))
+            + ")",
+        row.values().toArray());
   }
 
   private void insertReview(java.util.LinkedHashMap<String, Object> row) {

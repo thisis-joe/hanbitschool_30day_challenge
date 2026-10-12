@@ -201,7 +201,7 @@ class LearningSessionIT extends LearningApiTestSupport {
             new InvalidFirst(
                 "{\"mode\":\"FIRST\",\"dayNumber\":1,\"questionIds\":[]}", "requestId"),
             new InvalidFirst(
-                "{\"mode\":\"REVIEW\",\"dayNumber\":1,\"questionIds\":[],\"requestId\":\""
+                "{\"mode\":null,\"dayNumber\":1,\"questionIds\":[],\"requestId\":\""
                     + requestId
                     + "\"}",
                 "mode"),

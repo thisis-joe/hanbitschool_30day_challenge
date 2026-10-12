@@ -23,6 +23,8 @@ public class LearningSessionModule {
   private final DayProgressRepository progress;
   private final DayAttemptRepository attempts;
   private final FirstAnswerRepository firstAnswers;
+  private final ReviewAttemptRepository reviewAttempts;
+  private final ReviewQueueEntryRepository reviewQueue;
   private final XpLedger xp;
   private final LearningIdempotency idempotency;
   private final RequestFingerprint fingerprints;
@@ -38,6 +40,8 @@ public class LearningSessionModule {
       DayProgressRepository progress,
       DayAttemptRepository attempts,
       FirstAnswerRepository firstAnswers,
+      ReviewAttemptRepository reviewAttempts,
+      ReviewQueueEntryRepository reviewQueue,
       XpLedger xp,
       LearningIdempotency idempotency,
       RequestFingerprint fingerprints,
@@ -51,6 +55,8 @@ public class LearningSessionModule {
     this.progress = progress;
     this.attempts = attempts;
     this.firstAnswers = firstAnswers;
+    this.reviewAttempts = reviewAttempts;
+    this.reviewQueue = reviewQueue;
     this.xp = xp;
     this.idempotency = idempotency;
     this.fingerprints = fingerprints;
@@ -91,7 +97,7 @@ public class LearningSessionModule {
   public LearningSessionView start(
       AccountPrincipal principal, StartLearningSessionCommand command) {
     var student = access.lockStudent(principal);
-    validateDayLearning(command);
+    validateStart(command);
     String version = content.activeVersion().getVersion();
     String payloadHash = fingerprints.start(command);
     var replay =
@@ -120,6 +126,46 @@ public class LearningSessionModule {
         return resumed;
       }
       throw conflict();
+    }
+
+    if (command.mode() == LearningMode.REVIEW) {
+      var questions =
+          command.questionIds().stream()
+              .map(
+                  questionId -> {
+                    var entry =
+                        reviewQueue.findById(
+                            new ReviewQueueEntryId(
+                                student.studentAccountId(), version, questionId));
+                    if (entry.isEmpty() || !entry.get().isActive())
+                      throw ApiException.validation("questionIds", "다시 볼 문제에 있는 활성 문항을 선택해 주세요.");
+                    return content.requireQuestion(version, questionId);
+                  })
+              .toList();
+      var now = LearningTime.persistable(clock.instant());
+      var session =
+          sessions.saveAndFlush(
+              new LearningSession(
+                  UUID.randomUUID(),
+                  student.studentAccountId(),
+                  version,
+                  LearningMode.REVIEW,
+                  null,
+                  LearningSessionState.QUESTION_ACTIVE,
+                  1,
+                  LearningTime.deadline(clock, questions.getFirst().getTimeLimitSeconds()),
+                  null,
+                  now,
+                  now));
+      sessionQuestions.saveAllAndFlush(toSessionQuestions(session.getId(), version, questions));
+      var created = view(session, version);
+      idempotency.record(
+          student.studentAccountId(),
+          IdempotencyOperation.START_SESSION,
+          command.requestId(),
+          payloadHash,
+          created);
+      return created;
     }
 
     int cap = calendar.calendarCap(student.startDate());
@@ -252,11 +298,12 @@ public class LearningSessionModule {
 
   LearningSessionView view(LearningSession session, String activeVersion) {
     requireActiveVersion(session.getVersion(), activeVersion);
-    var questions =
-        sessionQuestions.findByIdSessionIdOrderByIdPositionAsc(session.getId());
+    var questions = sessionQuestions.findByIdSessionIdOrderByIdPositionAsc(session.getId());
     for (var row : questions) requireActiveVersion(row.getVersion(), activeVersion);
     int answeredCount =
-        attempts.findBySessionId(session.getId()).map(DayAttempt::getAnsweredCount).orElse(0);
+        session.getMode() == LearningMode.REVIEW
+            ? Math.toIntExact(reviewAttempts.countBySessionId(session.getId()))
+            : attempts.findBySessionId(session.getId()).map(DayAttempt::getAnsweredCount).orElse(0);
     var row =
         questions.stream()
             .filter(candidate -> candidate.getPosition() == session.getCurrentPosition())
@@ -301,16 +348,30 @@ public class LearningSessionModule {
   }
 
   private boolean sameTarget(LearningSession active, StartLearningSessionCommand command) {
-    return active.getMode() == command.mode()
-        && java.util.Objects.equals(active.getDay(), command.dayNumber());
+    if (active.getMode() != command.mode()
+        || !java.util.Objects.equals(active.getDay(), command.dayNumber())) return false;
+    return active.getMode() != LearningMode.REVIEW
+        || sessionQuestions.findByIdSessionIdOrderByIdPositionAsc(active.getId()).stream()
+            .map(LearningSessionQuestion::getQuestionId)
+            .toList()
+            .equals(command.questionIds());
   }
 
-  private void validateDayLearning(StartLearningSessionCommand command) {
+  private void validateStart(StartLearningSessionCommand command) {
     if (command == null) throw ApiException.validation("request", "요청 내용을 입력해 주세요.");
-    if (command.requestId() == null)
-      throw ApiException.validation("requestId", "요청 ID를 입력해 주세요.");
-    if (command.mode() != LearningMode.FIRST && command.mode() != LearningMode.REPLAY)
-      throw ApiException.validation("mode", "FIRST 또는 REPLAY 학습을 선택해 주세요.");
+    if (command.requestId() == null) throw ApiException.validation("requestId", "요청 ID를 입력해 주세요.");
+    if (command.mode() == null) throw ApiException.validation("mode", "학습 모드를 선택해 주세요.");
+    if (command.mode() == LearningMode.REVIEW) {
+      if (command.dayNumber() != null)
+        throw ApiException.validation("dayNumber", "복습에는 회차를 지정할 수 없습니다.");
+      if (command.questionIds() == null
+          || command.questionIds().isEmpty()
+          || command.questionIds().size() > 150
+          || command.questionIds().stream().anyMatch(id -> id == null || id < 1 || id > 150)
+          || new java.util.HashSet<>(command.questionIds()).size() != command.questionIds().size())
+        throw ApiException.validation("questionIds", "중복 없이 문항 1에서 150 사이를 선택해 주세요.");
+      return;
+    }
     if (command.dayNumber() == null || command.dayNumber() < 1 || command.dayNumber() > 30)
       throw ApiException.validation("dayNumber", "회차는 1에서 30 사이여야 합니다.");
     if (command.questionIds() != null && !command.questionIds().isEmpty())
