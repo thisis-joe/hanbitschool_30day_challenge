@@ -180,6 +180,16 @@ class ClassroomAccessIT extends ApiTestSupport {
             + " review_queue_entries(student_account_id,version,question_id,reason,active,created_at)"
             + " values (?,'hanbit-v1',1,'USER_AFTER_LATER_WRONG',true,current_timestamp)",
         student.getId());
+    jdbc.update(
+        "insert into private_bookmarks(student_account_id,version,question_id,created_at)"
+            + " values (?,'hanbit-v1',1,current_timestamp)",
+        student.getId());
+    jdbc.update(
+        "insert into"
+            + " last_answers(student_account_id,version,question_id,source_type,source_id,choice,timed_out,correct,outcome,answered_at)"
+            + " values (?,'hanbit-v1',1,'REPEAT',?,'O',false,true,'CORRECT',current_timestamp)",
+        student.getId(),
+        fact);
     int index = 0;
     for (var login : List.of(assigned, schoolReader)) {
       for (String path : paths) {
@@ -188,14 +198,40 @@ class ClassroomAccessIT extends ApiTestSupport {
         assertThat(result.getResponse().getContentAsString())
             .doesNotContain(
                 "reviewQueue",
+                "review_queue",
+                "inReviewQueue",
                 "mastery",
                 "mastered",
+                "review_masteries",
+                "privateBookmark",
+                "private_bookmarks",
+                "bookmarked",
+                "lastAnswer",
+                "last_answers",
+                "lastOutcome",
+                "lastAnsweredAt",
+                "reviewPromptEligible",
                 "firstCorrectAttempt",
+                "correctChoice",
+                "explanation",
                 "AUTO_FIRST_WRONG",
                 "USER_AFTER_LATER_WRONG",
                 fact.toString());
       }
     }
-    assertThat(node(mvc.perform(get(publicPath)).andReturn())).isEqualTo(publicBefore);
+    var publicAfter = mvc.perform(get(publicPath)).andExpect(status().isOk()).andReturn();
+    assertThat(node(publicAfter)).isEqualTo(publicBefore);
+    assertThat(publicAfter.getResponse().getContentAsString())
+        .doesNotContain(
+            "reviewQueue",
+            "mastery",
+            "privateBookmark",
+            "bookmarked",
+            "lastAnswer",
+            "lastOutcome",
+            "reviewPromptEligible",
+            "correctChoice",
+            "explanation",
+            fact.toString());
   }
 }
