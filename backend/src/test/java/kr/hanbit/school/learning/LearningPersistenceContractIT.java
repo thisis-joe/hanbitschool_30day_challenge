@@ -36,6 +36,7 @@ class LearningPersistenceContractIT {
   @Autowired EntityManager entityManager;
   @Autowired LearningSessionRepository sessions;
   @Autowired DayAttemptRepository attempts;
+  @Autowired IdempotencyRecordRepository idempotencyRecords;
   @Autowired StudentLearningAccess access;
 
   @BeforeEach
@@ -170,6 +171,25 @@ class LearningPersistenceContractIT {
   }
 
   @Test
+  void sessionQuestionsMustUseTheOwningSessionsContentVersion() {
+    var otherVersion = "contract-" + UUID.randomUUID();
+    insertContentVersion(otherVersion);
+    var student = student(1);
+    var session = UUID.randomUUID();
+    insertSession(session, student, "QUESTION_ACTIVE", now());
+    insertSessionQuestion(session, 1, VERSION, 1);
+
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from learning_session_questions where session_id=?",
+                Integer.class,
+                session))
+        .isEqualTo(1);
+    assertThatThrownBy(() -> insertSessionQuestion(session, 2, otherVersion, 1))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
   void idempotencyKeysAreScopedByOperation() {
     var student = student(1);
     var requestId = UUID.randomUUID();
@@ -185,6 +205,69 @@ class LearningPersistenceContractIT {
                 requestId))
         .isEqualTo(2);
     assertThatThrownBy(() -> insertIdempotency(student, "START_SESSION", requestId))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void idempotencyEntityRoundTripsAnObjectJsonbSnapshot() {
+    var student = student(1);
+    var requestId = UUID.randomUUID();
+    var responseJson = "{\"status\":\"stored\",\"nested\":{\"value\":7}}";
+    idempotencyRecords.saveAndFlush(
+        new IdempotencyRecord(
+            student,
+            IdempotencyOperation.START_SESSION,
+            requestId,
+            "b".repeat(64),
+            responseJson,
+            clock.instant()));
+    entityManager.clear();
+
+    var reloaded =
+        idempotencyRecords
+            .findById(
+                new IdempotencyRecordId(
+                    student, IdempotencyOperation.START_SESSION, requestId))
+            .orElseThrow();
+    assertThat(reloaded.getStudentAccountId()).isEqualTo(student);
+    assertThat(reloaded.getOperation()).isEqualTo(IdempotencyOperation.START_SESSION);
+    assertThat(reloaded.getRequestId()).isEqualTo(requestId);
+    assertThat(reloaded.getPayloadHash()).isEqualTo("b".repeat(64));
+    assertThat(reloaded.getResponseJson()).contains("\"status\"", "\"stored\"");
+    assertThat(reloaded.getCreatedAt())
+        .isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+    assertThat(
+            jdbc.queryForObject(
+                "select jsonb_typeof(response_json) from idempotency_records"
+                    + " where student_account_id=? and operation='START_SESSION' and request_id=?",
+                String.class,
+                student,
+                requestId))
+        .isEqualTo("object");
+    assertThat(
+            jdbc.queryForObject(
+                "select response_json->'nested'->>'value' from idempotency_records"
+                    + " where student_account_id=? and operation='START_SESSION' and request_id=?",
+                String.class,
+                student,
+                requestId))
+        .isEqualTo("7");
+  }
+
+  @Test
+  void idempotencyEntityRejectsAnUppercasePayloadHash() {
+    var student = student(1);
+
+    assertThatThrownBy(
+            () ->
+                idempotencyRecords.saveAndFlush(
+                    new IdempotencyRecord(
+                        student,
+                        IdempotencyOperation.START_SESSION,
+                        UUID.randomUUID(),
+                        "A".repeat(64),
+                        "{\"ok\":true}",
+                        clock.instant())))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
@@ -324,13 +407,31 @@ class LearningPersistenceContractIT {
   }
 
   private void insertSessionQuestion(UUID session, int position, int questionId) {
+    insertSessionQuestion(session, position, VERSION, questionId);
+  }
+
+  private void insertSessionQuestion(
+      UUID session, int position, String version, int questionId) {
     jdbc.update(
         "insert into learning_session_questions(session_id,position,version,question_id)"
             + " values (?,?,?,?)",
         session,
         position,
-        VERSION,
+        version,
         questionId);
+  }
+
+  private void insertContentVersion(String version) {
+    jdbc.update(
+        "insert into content_versions(version,digest,active) values (?,?,false)",
+        version,
+        "c".repeat(64));
+    jdbc.update("insert into content_days(version,day,title) values (?,1,'다른 버전')", version);
+    jdbc.update(
+        "insert into questions"
+            + "(version,question_id,day,position,text,answer,explanation,time_limit_seconds)"
+            + " values (?,1,1,1,'다른 질문','O','다른 설명',10)",
+        version);
   }
 
   private void insertAttempt(

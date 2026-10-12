@@ -30,6 +30,7 @@ create table learning_sessions (
     updated_at timestamptz not null,
     constraint learning_sessions_student_fk foreign key (student_account_id) references accounts(id) on delete no action,
     constraint learning_sessions_version_fk foreign key (version) references content_versions(version) on delete no action,
+    constraint uq_learning_session_version unique (id, version),
     constraint uq_learning_session_identity unique (id, student_account_id, version, day),
     constraint learning_sessions_mode_check check (mode in ('FIRST', 'REVIEW', 'REPLAY')),
     constraint learning_sessions_day_mode_check check (
@@ -55,6 +56,8 @@ create table learning_session_questions (
     question_id integer not null,
     primary key (session_id, position),
     constraint learning_session_questions_session_fk foreign key (session_id) references learning_sessions(id) on delete no action,
+    constraint learning_session_questions_session_version_fk foreign key (session_id, version)
+        references learning_sessions(id, version) on delete no action,
     constraint learning_session_questions_question_fk foreign key (version, question_id) references questions(version, question_id) on delete no action,
     constraint uq_learning_session_question unique (session_id, version, question_id),
     constraint learning_session_questions_position_range check (position between 1 and 150)
