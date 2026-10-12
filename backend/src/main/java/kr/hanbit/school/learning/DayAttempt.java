@@ -147,4 +147,16 @@ public class DayAttempt {
   public Instant getFinishedAt() {
     return finishedAt;
   }
+
+  void recordAnswer(boolean correct, Instant answeredAt) {
+    if (state != DayAttemptState.ACTIVE || answeredCount >= 5)
+      throw new IllegalStateException("진행 중인 회차 시도에만 답변을 추가할 수 있습니다.");
+    answeredCount++;
+    if (correct) correctCount++;
+    currentStreak = correct ? currentStreak + 1 : 0;
+    if (answeredCount == 5) {
+      state = correctCount >= 3 ? DayAttemptState.PASSED : DayAttemptState.RETRY_REQUIRED;
+      finishedAt = LearningTime.persistable(answeredAt);
+    }
+  }
 }

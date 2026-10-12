@@ -100,4 +100,12 @@ public class DayProgress {
     state = DayProgressState.IN_PROGRESS;
     updatedAt = LearningTime.persistable(startedAt);
   }
+
+  void finishFirst(boolean passed, Instant finishedAt) {
+    if (state != DayProgressState.IN_PROGRESS)
+      throw new IllegalStateException("진행 중인 회차만 첫 학습을 종료할 수 있습니다.");
+    state = passed ? DayProgressState.PASSED : DayProgressState.RETRY_REQUIRED;
+    passedAt = passed ? LearningTime.persistable(finishedAt) : null;
+    updatedAt = LearningTime.persistable(finishedAt);
+  }
 }

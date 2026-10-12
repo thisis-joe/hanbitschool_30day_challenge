@@ -14,9 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/student/learning")
 public class StudentLearningController {
   private final LearningSessionModule sessions;
+  private final LearningAnswerModule answers;
 
-  public StudentLearningController(LearningSessionModule sessions) {
+  public StudentLearningController(LearningSessionModule sessions, LearningAnswerModule answers) {
     this.sessions = sessions;
+    this.answers = answers;
   }
 
   @GetMapping("/status")
@@ -35,5 +37,21 @@ public class StudentLearningController {
   LearningSessionView session(
       @AuthenticationPrincipal AccountPrincipal principal, @PathVariable UUID sessionId) {
     return sessions.session(principal, sessionId);
+  }
+
+  @PostMapping("/sessions/{sessionId}/answers")
+  AnswerResult answer(
+      @AuthenticationPrincipal AccountPrincipal principal,
+      @PathVariable UUID sessionId,
+      @RequestBody SubmitAnswerCommand command) {
+    return answers.answer(principal, sessionId, command);
+  }
+
+  @PostMapping("/sessions/{sessionId}/advance")
+  LearningSessionView advance(
+      @AuthenticationPrincipal AccountPrincipal principal,
+      @PathVariable UUID sessionId,
+      @RequestBody AdvanceLearningSessionCommand command) {
+    return answers.advance(principal, sessionId, command);
   }
 }

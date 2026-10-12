@@ -123,4 +123,22 @@ public class LearningSession {
   public Instant getUpdatedAt() {
     return updatedAt;
   }
+
+  void finalizeAnswer(String resultJson, boolean completed, Instant answeredAt) {
+    if (state != LearningSessionState.QUESTION_ACTIVE)
+      throw new IllegalStateException("활성 문항만 답변을 확정할 수 있습니다.");
+    state = completed ? LearningSessionState.COMPLETED : LearningSessionState.AWAITING_ADVANCE;
+    lastResultJson = resultJson;
+    updatedAt = LearningTime.persistable(answeredAt);
+  }
+
+  void openNextQuestion(Instant deadline, Instant openedAt) {
+    if (state != LearningSessionState.AWAITING_ADVANCE)
+      throw new IllegalStateException("확정된 답변 뒤에만 다음 문항을 열 수 있습니다.");
+    currentPosition++;
+    deadlineAt = LearningTime.persistable(deadline);
+    lastResultJson = null;
+    state = LearningSessionState.QUESTION_ACTIVE;
+    updatedAt = LearningTime.persistable(openedAt);
+  }
 }

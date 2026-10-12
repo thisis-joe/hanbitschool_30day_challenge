@@ -225,7 +225,7 @@ public class LearningSessionModule {
         : NextLearningAction.START_FIRST;
   }
 
-  private Integer earliestUnpassed(UUID studentId, String version, int cap) {
+  Integer earliestUnpassed(UUID studentId, String version, int cap) {
     if (cap == 0) return null;
     var byDay = new HashMap<Integer, DayProgress>();
     for (var row :
@@ -238,31 +238,27 @@ public class LearningSessionModule {
     return null;
   }
 
-  private LearningSessionView view(LearningSession session, String activeVersion) {
+  LearningSessionView view(LearningSession session, String activeVersion) {
     requireActiveVersion(session.getVersion(), activeVersion);
     var questions =
         sessionQuestions.findByIdSessionIdOrderByIdPositionAsc(session.getId());
     for (var row : questions) requireActiveVersion(row.getVersion(), activeVersion);
     int answeredCount =
         attempts.findBySessionId(session.getId()).map(DayAttempt::getAnsweredCount).orElse(0);
-    QuestionPrompt prompt = null;
-    if (session.getState() == LearningSessionState.QUESTION_ACTIVE) {
-      var row =
-          questions.stream()
-              .filter(candidate -> candidate.getPosition() == session.getCurrentPosition())
-              .findFirst()
-              .orElseThrow(() -> new IllegalStateException("현재 세션 문항을 찾을 수 없습니다."));
-      LearningQuestion question =
-          content.requireQuestion(activeVersion, row.getQuestionId());
-      prompt =
-          new QuestionPrompt(
-              question.getQuestionId(),
-              question.getDay(),
-              row.getPosition(),
-              question.getText(),
-              question.getTimeLimitSeconds(),
-              session.getDeadlineAt());
-    }
+    var row =
+        questions.stream()
+            .filter(candidate -> candidate.getPosition() == session.getCurrentPosition())
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("현재 세션 문항을 찾을 수 없습니다."));
+    LearningQuestion question = content.requireQuestion(activeVersion, row.getQuestionId());
+    QuestionPrompt prompt =
+        new QuestionPrompt(
+            question.getQuestionId(),
+            question.getDay(),
+            row.getPosition(),
+            question.getText(),
+            question.getTimeLimitSeconds(),
+            session.getDeadlineAt());
     return new LearningSessionView(
         session.getId(),
         session.getVersion(),
@@ -309,7 +305,7 @@ public class LearningSessionModule {
       throw ApiException.validation("questionIds", "FIRST 학습에는 문항 목록을 지정할 수 없습니다.");
   }
 
-  private void requireActiveVersion(String sessionVersion, String activeVersion) {
+  void requireActiveVersion(String sessionVersion, String activeVersion) {
     if (!java.util.Objects.equals(sessionVersion, activeVersion))
       throw new ApiException(
           409, "CONTENT_VERSION_MISMATCH", "현재 콘텐츠와 세션 콘텐츠가 일치하지 않습니다.");

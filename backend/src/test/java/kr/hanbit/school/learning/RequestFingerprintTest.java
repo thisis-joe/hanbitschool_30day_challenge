@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.UUID;
+import kr.hanbit.school.content.AnswerChoice;
 import org.junit.jupiter.api.Test;
 
 class RequestFingerprintTest {
@@ -39,5 +40,47 @@ class RequestFingerprintTest {
         new StartLearningSessionCommand(LearningMode.REVIEW, null, List.of(1, 2), requestId),
         new StartLearningSessionCommand(LearningMode.REVIEW, null, List.of(2, 1), requestId));
     assertThat(commands.stream().map(fingerprints::start).toList()).doesNotHaveDuplicates();
+  }
+
+  @Test
+  void answerFingerprintIncludesTheTypedPayloadAndCanonicalSessionPath() {
+    // Independent Python hashlib SHA-256 of the UTF-8 fields, without a trailing LF.
+    var sessionId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    assertThat(
+            fingerprints.answer(sessionId, new SubmitAnswerCommand(requestId, 1, AnswerChoice.O)))
+        .isEqualTo("5430d184ab7c4a70f060df5673d8c3306612ed2f081e38e12ebeccd80de4068f");
+  }
+
+  @Test
+  void advanceFingerprintIncludesTheCanonicalSessionPathAndRequestId() {
+    var sessionId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    assertThat(fingerprints.advance(sessionId, new AdvanceLearningSessionCommand(requestId)))
+        .isEqualTo("3b729e5e63697f2865186cc2a9051938b3bc4c34055b313346a5834cfdf9aa84");
+  }
+
+  @Test
+  void changingSessionQuestionChoiceOrRequestIdChangesAnswerAndAdvanceFingerprints() {
+    var sessionId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    var otherSession = UUID.fromString("00000000-0000-0000-0000-000000000003");
+    var otherRequest = UUID.fromString("00000000-0000-0000-0000-000000000004");
+    var command = new SubmitAnswerCommand(requestId, 1, AnswerChoice.O);
+    assertThat(
+            List.of(
+                fingerprints.answer(sessionId, command),
+                fingerprints.answer(otherSession, command),
+                fingerprints.answer(
+                    sessionId, new SubmitAnswerCommand(requestId, 2, AnswerChoice.O)),
+                fingerprints.answer(
+                    sessionId, new SubmitAnswerCommand(requestId, 1, AnswerChoice.X)),
+                fingerprints.answer(sessionId, new SubmitAnswerCommand(requestId, 1, null)),
+                fingerprints.answer(
+                    sessionId, new SubmitAnswerCommand(otherRequest, 1, AnswerChoice.O))))
+        .doesNotHaveDuplicates();
+    assertThat(
+            List.of(
+                fingerprints.advance(sessionId, new AdvanceLearningSessionCommand(requestId)),
+                fingerprints.advance(otherSession, new AdvanceLearningSessionCommand(requestId)),
+                fingerprints.advance(sessionId, new AdvanceLearningSessionCommand(otherRequest))))
+        .doesNotHaveDuplicates();
   }
 }

@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
@@ -32,6 +33,22 @@ public class RequestFingerprint {
             + "\nrequestId="
             + (command.requestId() == null ? "null" : "uuid:" + command.requestId());
     return sha256(normalized);
+  }
+
+  public String answer(UUID sessionId, SubmitAnswerCommand command) {
+    return sha256(
+        "operation=SUBMIT_ANSWER\nmethod=POST\npath="
+            + START_PATH + "/" + sessionId + "/answers"
+            + "\nquestionId=int:" + command.questionId()
+            + "\nchoice=enum:" + value(command.choice())
+            + "\nrequestId=uuid:" + command.requestId());
+  }
+
+  public String advance(UUID sessionId, AdvanceLearningSessionCommand command) {
+    return sha256(
+        "operation=ADVANCE_SESSION\nmethod=POST\npath="
+            + START_PATH + "/" + sessionId + "/advance"
+            + "\nrequestId=uuid:" + command.requestId());
   }
 
   private String value(Enum<?> value) {

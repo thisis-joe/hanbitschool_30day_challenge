@@ -33,6 +33,10 @@ public interface LearningSessionRepository extends JpaRepository<LearningSession
       @Param("sessionId") UUID sessionId,
       @Param("studentAccountId") UUID studentAccountId);
 
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select s from LearningSession s where s.id = :sessionId")
+  Optional<LearningSession> findLockedById(@Param("sessionId") UUID sessionId);
+
   @Query(
       "select s.id from LearningSession s"
           + " where s.state = kr.hanbit.school.learning.LearningSessionState.QUESTION_ACTIVE"
