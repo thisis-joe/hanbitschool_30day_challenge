@@ -1,0 +1,5 @@
+# 터널 ID와 자격 증명은 .env.prod.local에서 주입합니다(compose.prod.yml 참고).
+ingress:
+  - hostname: hanbit.thisis-joe.com
+    service: http://web:80
+  - service: http_status:404
