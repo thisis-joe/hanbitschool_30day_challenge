@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import jakarta.persistence.EntityManager;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,10 +19,13 @@ import kr.hanbit.school.support.LearningTestClockConfiguration;
 import kr.hanbit.school.support.MutableClock;
 import kr.hanbit.school.support.PostgresTestConfiguration;
 import kr.hanbit.school.support.TestFixtures;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -292,6 +296,26 @@ class LearningPersistenceContractIT {
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
+  @ParameterizedTest
+  @ValueSource(ints = {0, 31})
+  void dayProgressRejectsDaysOutsideTheCourse(int day) {
+    var student = student(1);
+
+    assertCheckViolation(
+        "day_progress_day_range",
+        () ->
+            jdbc.update(
+                "insert into day_progress"
+                    + "(id,student_account_id,version,day,state,created_at,updated_at)"
+                    + " values (?,?,?,?,'NOT_STARTED',?,?)",
+                UUID.randomUUID(),
+                student,
+                VERSION,
+                day,
+                now(),
+                now()));
+  }
+
   @Test
   void onlyOneNonCompletedSessionPerStudentIsAllowed() {
     var student = student(1);
@@ -321,22 +345,129 @@ class LearningPersistenceContractIT {
   void dayLearningSessionsRequireANonNullDay(LearningMode mode) {
     var student = student(1);
 
-    assertThatThrownBy(
-            () ->
-                sessions.saveAndFlush(
-                    new LearningSession(
-                        UUID.randomUUID(),
-                        student,
-                        VERSION,
-                        mode,
-                        null,
-                        LearningSessionState.QUESTION_ACTIVE,
-                        1,
-                        LearningTime.deadline(clock, 10),
-                        null,
-                        clock.instant(),
-                        clock.instant())))
-        .isInstanceOf(DataIntegrityViolationException.class);
+    assertCheckViolation(
+        "learning_sessions_day_mode_check",
+        () ->
+            sessions.saveAndFlush(
+                new LearningSession(
+                    UUID.randomUUID(),
+                    student,
+                    VERSION,
+                    mode,
+                    null,
+                    LearningSessionState.QUESTION_ACTIVE,
+                    1,
+                    LearningTime.deadline(clock, 10),
+                    null,
+                    clock.instant(),
+                    clock.instant())));
+  }
+
+  @Test
+  void reviewSessionPersistsWithoutADay() {
+    var student = student(1);
+    var session =
+        sessions.saveAndFlush(
+            new LearningSession(
+                UUID.randomUUID(),
+                student,
+                VERSION,
+                LearningMode.REVIEW,
+                null,
+                LearningSessionState.QUESTION_ACTIVE,
+                1,
+                LearningTime.deadline(clock, 10),
+                null,
+                clock.instant(),
+                clock.instant()));
+    entityManager.clear();
+
+    var reloaded = sessions.findById(session.getId()).orElseThrow();
+    assertThat(reloaded.getMode()).isEqualTo(LearningMode.REVIEW);
+    assertThat(reloaded.getDay()).isNull();
+  }
+
+  @Test
+  void reviewSessionRejectsADayNumber() {
+    var student = student(1);
+
+    assertCheckViolation(
+        "learning_sessions_day_mode_check",
+        () ->
+            sessions.saveAndFlush(
+                new LearningSession(
+                    UUID.randomUUID(),
+                    student,
+                    VERSION,
+                    LearningMode.REVIEW,
+                    1,
+                    LearningSessionState.QUESTION_ACTIVE,
+                    1,
+                    LearningTime.deadline(clock, 10),
+                    null,
+                    clock.instant(),
+                    clock.instant())));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"FIRST, 0", "FIRST, 31", "REPLAY, 0", "REPLAY, 31"})
+  void dayLearningSessionsRejectDaysOutsideTheCourse(LearningMode mode, int day) {
+    var student = student(1);
+
+    assertCheckViolation(
+        "learning_sessions_day_mode_check",
+        () ->
+            sessions.saveAndFlush(
+                new LearningSession(
+                    UUID.randomUUID(),
+                    student,
+                    VERSION,
+                    mode,
+                    day,
+                    LearningSessionState.QUESTION_ACTIVE,
+                    1,
+                    LearningTime.deadline(clock, 10),
+                    null,
+                    clock.instant(),
+                    clock.instant())));
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 31})
+  void dayAttemptsRejectDaysOutsideTheCourse(int day) {
+    assertInvalidAttempt(day, 1, "ACTIVE", 0, 0, 0, false, "day_attempts_day_range");
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {-1, 0})
+  void dayAttemptsRejectNonpositiveAttemptNumbers(int attemptNumber) {
+    assertInvalidAttempt(
+        1, attemptNumber, "ACTIVE", 0, 0, 0, false, "day_attempts_number_positive");
+  }
+
+  @Test
+  void dayAttemptsRejectAnUnknownState() {
+    assertInvalidAttempt(1, 1, "UNKNOWN", 5, 3, 1, true, "day_attempts_state_check");
+  }
+
+  @ParameterizedTest
+  @CsvSource({"-1, 0, 0", "6, 3, 1", "5, -1, 0", "3, 4, 0", "5, 3, -1", "5, 3, 4"})
+  void dayAttemptsRejectCountsOutsideTheirOwnAndRelationalBounds(
+      int answered, int correct, int streak) {
+    assertInvalidAttempt(
+        1, 1, "ACTIVE", answered, correct, streak, false, "day_attempts_counts_check");
+  }
+
+  @ParameterizedTest
+  @CsvSource({"ACTIVE, true", "PASSED, false", "RETRY_REQUIRED, false"})
+  void dayAttemptsRequireFinishedAtExactlyForTerminalStates(String state, boolean finished) {
+    assertInvalidAttempt(1, 1, state, 5, 3, 1, finished, "day_attempts_finished_at_check");
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = DayAttemptState.class, names = {"PASSED", "RETRY_REQUIRED"})
+  void terminalDayAttemptsRequireAllFiveAnswers(DayAttemptState state) {
+    assertInvalidAttempt(1, 1, state.name(), 4, 2, 1, true, "day_attempts_terminal_count_check");
   }
 
   @Test
@@ -389,6 +520,18 @@ class LearningPersistenceContractIT {
 
     assertThatThrownBy(() -> insertSessionQuestion(session, 1, 2))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {0, 151})
+  void sessionQuestionPositionsMustBeWithinTheFixedOrder(int position) {
+    var student = student(1);
+    var session = UUID.randomUUID();
+    insertSession(session, student, "QUESTION_ACTIVE", now());
+
+    assertCheckViolation(
+        "learning_session_questions_position_range",
+        () -> insertSessionQuestion(session, position, 1));
   }
 
   @Test
@@ -517,7 +660,7 @@ class LearningPersistenceContractIT {
   }
 
   @Test
-  void ownershipAndExpiryQueriesNeverReturnAnotherStudentsSession() {
+  void ownedSessionQueriesHideAnotherStudentsSession() {
     var owner = student(1);
     var stranger = student(2);
     var deadline = LearningTime.deadline(clock, 10);
@@ -539,8 +682,36 @@ class LearningPersistenceContractIT {
     assertThat(sessions.findActiveByStudentAccountId(owner)).isPresent();
     assertThat(sessions.findOwned(session.getId(), stranger)).isEmpty();
     assertThat(sessions.findLockedOwned(session.getId(), stranger)).isEmpty();
-    assertThat(sessions.findExpiredIds(deadline, PageRequest.of(0, 100)))
-        .containsExactly(session.getId());
+  }
+
+  @Test
+  void expiryQueryFiltersStatesAndUsesDeadlineThenUuidOrderAcrossPages() {
+    var earlier = UUID.fromString("00000000-0000-4000-8000-000000000002");
+    var tied = UUID.fromString("00000000-0000-4000-8000-000000000003");
+    var atBoundary = UUID.fromString("00000000-0000-4000-8000-000000000001");
+    var future = UUID.fromString("00000000-0000-4000-8000-000000000004");
+    var awaiting = UUID.fromString("00000000-0000-4000-8000-000000000005");
+    var completed = UUID.fromString("00000000-0000-4000-8000-000000000006");
+    var observedAt = Instant.parse("2026-10-12T00:00:00.123456Z");
+    var earlierDeadline = Timestamp.from(Instant.parse("2026-10-11T23:59:50.123456Z"));
+    insertSession(tied, student(1), "QUESTION_ACTIVE", earlierDeadline);
+    insertSession(earlier, student(2), "QUESTION_ACTIVE", earlierDeadline);
+    insertSession(atBoundary, student(3), "QUESTION_ACTIVE", Timestamp.from(observedAt));
+    insertSession(
+        future,
+        student(4),
+        "QUESTION_ACTIVE",
+        Timestamp.from(Instant.parse("2026-10-12T00:00:10.123456Z")));
+    insertSession(awaiting, student(5), "AWAITING_ADVANCE", earlierDeadline);
+    insertSession(completed, student(6), "COMPLETED", earlierDeadline);
+
+    assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(0, 100)))
+        .containsExactly(earlier, tied, atBoundary);
+    assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(0, 2)))
+        .containsExactly(earlier, tied);
+    assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(1, 2)))
+        .containsExactly(atBoundary);
+    assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(2, 2))).isEmpty();
   }
 
   @Test
@@ -548,11 +719,20 @@ class LearningPersistenceContractIT {
     var student = student(1);
     var progress = insertProgress(student);
     var session = UUID.randomUUID();
+    var laterSession = UUID.randomUUID();
     insertSession(session, student, "COMPLETED", now());
+    insertSession(laterSession, student, "COMPLETED", now());
     insertAttempt(UUID.randomUUID(), session, progress, student, 1);
+    insertAttempt(UUID.randomUUID(), laterSession, progress, student, 7);
+    var stranger = student(2);
+    var otherVersion = "empty-attempt-scope-" + UUID.randomUUID();
+    insertContentVersion(otherVersion);
     entityManager.clear();
 
-    assertThat(attempts.nextAttemptNumber(student, VERSION, 1)).isEqualTo(2);
+    assertThat(attempts.nextAttemptNumber(student, VERSION, 1)).isEqualTo(8);
+    assertThat(attempts.nextAttemptNumber(stranger, VERSION, 1)).isEqualTo(1);
+    assertThat(attempts.nextAttemptNumber(student, otherVersion, 1)).isEqualTo(1);
+    assertThat(attempts.nextAttemptNumber(student, VERSION, 2)).isEqualTo(1);
   }
 
   @Test
@@ -593,6 +773,57 @@ class LearningPersistenceContractIT {
     var teacher = fixtures.teacher(school);
     var classroom = fixtures.classroom(school, teacher, "1", number);
     return fixtures.student(classroom, number, "학생", "별빛" + number).getId();
+  }
+
+  private void assertCheckViolation(String constraint, ThrowingCallable write) {
+    assertThatThrownBy(write)
+        .isInstanceOfSatisfying(
+            DataIntegrityViolationException.class,
+            error ->
+                assertThat(error.getMostSpecificCause())
+                    .isInstanceOfSatisfying(
+                        SQLException.class,
+                        sqlError -> {
+                          assertThat(sqlError.getSQLState()).isEqualTo("23514");
+                          assertThat(sqlError.getMessage()).contains("\"" + constraint + "\"");
+                        }));
+  }
+
+  private void assertInvalidAttempt(
+      int day,
+      int attemptNumber,
+      String state,
+      int answered,
+      int correct,
+      int streak,
+      boolean finished,
+      String constraint) {
+    var student = student(1);
+    var progress = insertProgress(student);
+    var session = UUID.randomUUID();
+    insertSession(session, student, "COMPLETED", now());
+
+    assertCheckViolation(
+        constraint,
+        () ->
+            jdbc.update(
+                "insert into day_attempts"
+                    + "(id,session_id,day_progress_id,student_account_id,version,day,attempt_number,state,"
+                    + "answered_count,correct_count,current_streak,catch_up,started_at,finished_at)"
+                    + " values (?,?,?,?,?,?,?,?,?,?,?,false,?,?)",
+                UUID.randomUUID(),
+                session,
+                progress,
+                student,
+                VERSION,
+                day,
+                attemptNumber,
+                state,
+                answered,
+                correct,
+                streak,
+                now(),
+                finished ? now() : null));
   }
 
   private Timestamp now() {
