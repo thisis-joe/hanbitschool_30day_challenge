@@ -24,11 +24,11 @@ public class ContentVersion {
 
   protected ContentVersion() {}
 
-  public ContentVersion(String version, String digest, boolean active) {
+  public ContentVersion(String version, String digest, boolean active, Instant createdAt) {
     this.version = version;
     this.digest = digest;
     this.active = active;
-    this.createdAt = Instant.now();
+    this.createdAt = createdAt;
   }
 
   public String getVersion() {

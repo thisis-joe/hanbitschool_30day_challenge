@@ -2,6 +2,8 @@ package kr.hanbit.school.content;
 
 import java.io.IOException;
 import java.text.Normalizer;
+import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ public class ContentImporter {
   private final ContentVersionRepository versions;
   private final ContentDayRepository days;
   private final LearningQuestionRepository questions;
+  private final Clock clock;
 
   public ContentImporter(
       ObjectMapper mapper,
@@ -23,13 +26,15 @@ public class ContentImporter {
       QuestionTimeLimit timeLimit,
       ContentVersionRepository versions,
       ContentDayRepository days,
-      LearningQuestionRepository questions) {
+      LearningQuestionRepository questions,
+      Clock clock) {
     this.mapper = mapper;
     this.digest = digest;
     this.timeLimit = timeLimit;
     this.versions = versions;
     this.days = days;
     this.questions = questions;
+    this.clock = clock;
   }
 
   @Transactional
@@ -52,7 +57,9 @@ public class ContentImporter {
 
     if (versions.findByActiveTrue().isPresent())
       throw new IllegalStateException("다른 학습 콘텐츠 버전이 활성화되어 있습니다.");
-    versions.save(new ContentVersion(version, expectedDigest, true));
+    versions.save(
+        new ContentVersion(
+            version, expectedDigest, true, clock.instant().truncatedTo(ChronoUnit.MICROS)));
     var dayRows = new ArrayList<ContentDay>(30);
     var questionRows = new ArrayList<LearningQuestion>(150);
     for (var day : document.days()) {

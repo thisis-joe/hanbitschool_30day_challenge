@@ -3,11 +3,18 @@ package kr.hanbit.school.content;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import jakarta.persistence.EntityManager;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import kr.hanbit.school.support.PostgresTestConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,18 +23,37 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest(properties = {"hanbit.bootstrap.id=", "hanbit.bootstrap.password="})
-@Import(PostgresTestConfiguration.class)
+@Import({PostgresTestConfiguration.class, ContentBootstrapIT.FixedClockConfiguration.class})
 @Transactional
 class ContentBootstrapIT {
   private static final String VERSION = "hanbit-v1";
   private static final String DIGEST =
       "775b8cd7314ecfad9f93ad0ced97d4ca956093ae48b148d4fa438959214dfaeb";
+  private static final Instant CLOCK_INSTANT = Instant.parse("2026-10-12T00:00:00.123456789Z");
 
   @Autowired ContentBootstrap bootstrap;
   @Autowired ContentImporter importer;
   @Autowired ContentCatalog catalog;
   @Autowired JdbcTemplate jdbc;
   @Autowired ObjectMapper mapper;
+  @Autowired ContentVersionRepository versions;
+  @Autowired EntityManager entityManager;
+
+  @Test
+  void bootstrapInstallUsesInjectedClockAndPreservesMicrosecondTimestampAfterReload() {
+    deleteAllContent();
+
+    bootstrap.initialize();
+
+    Instant expected = Instant.parse("2026-10-12T00:00:00.123456Z");
+    var installed = versions.findById(VERSION).orElseThrow();
+    assertThat(installed.getCreatedAt()).isEqualTo(expected);
+    entityManager.flush();
+    entityManager.clear();
+    assertThat(versions.findById(VERSION).orElseThrow().getCreatedAt())
+        .isEqualTo(expected)
+        .isEqualTo(installed.getCreatedAt());
+  }
 
   @Test
   void bootstrapInstallsTheActiveCatalogAndCatalogKeepsQuestionOrder() {
@@ -216,5 +242,14 @@ class ContentBootstrapIT {
         VERSION,
         VERSION,
         VERSION);
+  }
+
+  @TestConfiguration(proxyBeanMethods = false)
+  static class FixedClockConfiguration {
+    @Bean
+    @Primary
+    Clock contentClock() {
+      return Clock.fixed(CLOCK_INSTANT, ZoneId.of("Asia/Seoul"));
+    }
   }
 }
