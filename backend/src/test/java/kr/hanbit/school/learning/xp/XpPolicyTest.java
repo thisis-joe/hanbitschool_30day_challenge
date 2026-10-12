@@ -1,6 +1,7 @@
 package kr.hanbit.school.learning.xp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -44,5 +45,14 @@ class XpPolicyTest {
     assertThat(policy.level(7499)).isEqualTo(2);
     assertThat(policy.level(7500)).isEqualTo(3);
     assertThat(policy.level(7_500_000_000L)).isEqualTo(2_000_001);
+  }
+
+  @Test
+  void levelSupportsTheLargestIntLevelAndRejectsOverflowInsteadOfWrapping() {
+    assertThat(policy.level(8_053_063_676_249L)).isEqualTo(Integer.MAX_VALUE);
+    assertThatThrownBy(() -> policy.level(8_053_063_676_250L))
+        .isInstanceOf(ArithmeticException.class);
+    assertThatThrownBy(() -> policy.level(Long.MAX_VALUE))
+        .isInstanceOf(ArithmeticException.class);
   }
 }

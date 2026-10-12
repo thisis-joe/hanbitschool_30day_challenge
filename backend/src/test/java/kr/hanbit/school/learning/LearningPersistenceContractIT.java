@@ -146,6 +146,158 @@ class LearningPersistenceContractIT {
     assertThat(reloaded.getOutcome()).isEqualTo(AnswerOutcome.TIMED_OUT);
   }
 
+  @ParameterizedTest
+  @CsvSource(value = {"O,false,true,CORRECT", "X,false,false,WRONG", "NULL,true,false,TIMED_OUT"},
+      nullValues = "NULL")
+  void firstAnswerRoundTripsDerivedOutcomesAndLongResponseDuration(
+      AnswerChoice choice, boolean timedOut, boolean correct, AnswerOutcome outcome) {
+    var context = answerContext(1);
+    var answer = firstAnswers.saveAndFlush(
+        new FirstAnswer(UUID.randomUUID(), context.student(), VERSION, 1, context.session(),
+            context.attempt(), UUID.randomUUID(), choice, timedOut, correct,
+            clock.instant(), 3_000_000_000L));
+    entityManager.clear();
+
+    var reloaded = firstAnswers.findById(answer.getId()).orElseThrow();
+    assertThat(reloaded.getChoice()).isEqualTo(choice);
+    assertThat(reloaded.isTimedOut()).isEqualTo(timedOut);
+    assertThat(reloaded.isCorrect()).isEqualTo(correct);
+    assertThat(reloaded.getOutcome()).isEqualTo(outcome);
+    assertThat(reloaded.getResponseMillis()).isEqualTo(3_000_000_000L);
+    assertThat(reloaded.getAnsweredAt())
+        .isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+  }
+
+  @Test
+  void mergingAReplacementCannotRewriteTheFirstAnswerFact() {
+    var context = answerContext(1);
+    var id = UUID.randomUUID();
+    var request = UUID.randomUUID();
+    firstAnswers.saveAndFlush(new FirstAnswer(id, context.student(), VERSION, 1,
+        context.session(), context.attempt(), request, AnswerChoice.O, false, true,
+        clock.instant(), 0));
+    entityManager.clear();
+
+    firstAnswers.saveAndFlush(new FirstAnswer(id, context.student(), VERSION, 2,
+        context.session(), context.attempt(), UUID.randomUUID(), null, true, false,
+        clock.instant().plusSeconds(30), 30_000));
+    entityManager.clear();
+
+    var reloaded = firstAnswers.findById(id).orElseThrow();
+    assertThat(reloaded.getQuestionId()).isEqualTo(1);
+    assertThat(reloaded.getRequestId()).isEqualTo(request);
+    assertThat(reloaded.getChoice()).isEqualTo(AnswerChoice.O);
+    assertThat(reloaded.getOutcome()).isEqualTo(AnswerOutcome.CORRECT);
+    assertThat(reloaded.getResponseMillis()).isZero();
+    assertThat(reloaded.getAnsweredAt())
+        .isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+    assertThat(firstAnswers.countByStudentAccountIdAndVersion(context.student(), VERSION))
+        .isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @CsvSource(value = {
+      "NULL,false,false", "NULL,false,true", "O,true,false", "X,true,false",
+      "NULL,true,true", "O,true,true", "Y,false,false"
+  }, nullValues = "NULL")
+  void firstAnswersRejectInvalidChoiceTimeoutAndCorrectCombinations(
+      String choice, boolean timedOut, boolean correct) {
+    var context = answerContext(1);
+
+    assertSqlViolation("23514", null,
+        () -> insertFirstAnswer(context.student(), VERSION, 1, context.session(),
+            context.attempt(), choice, timedOut, correct));
+  }
+
+  @ParameterizedTest
+  @CsvSource(value = {"NULL,false", "false,NULL"}, nullValues = "NULL")
+  void firstAnswersRejectNullOutcomeBooleans(Boolean timedOut, Boolean correct) {
+    var context = answerContext(1);
+
+    assertSqlViolation("23502", null,
+        () -> insertFirstAnswer(context.student(), VERSION, 1, context.session(),
+            context.attempt(), "O", timedOut, correct));
+  }
+
+  @Test
+  void firstAnswersCannotClaimAnotherStudentsSessionAndAttempt() {
+    var context = answerContext(1);
+    var stranger = student(2);
+
+    assertSqlViolation("23503", "first_answers_session_identity_fk",
+        () -> insertFirstAnswer(stranger, VERSION, 1, context.session(),
+            context.attempt(), "O", false, true));
+  }
+
+  @Test
+  void firstAnswersCannotChangeTheOwningSessionsContentVersion() {
+    var context = answerContext(1);
+    var otherVersion = "answer-fk-" + UUID.randomUUID();
+    insertContentVersion(otherVersion);
+
+    assertSqlViolation("23503", "first_answers_session_identity_fk",
+        () -> insertFirstAnswer(context.student(), otherVersion, 1, context.session(),
+            context.attempt(), "O", false, true));
+  }
+
+  @Test
+  void firstAnswersCannotUseAnAttemptFromAnotherSessionOfTheSameStudent() {
+    var context = answerContext(1);
+    var otherSession = UUID.randomUUID();
+    insertSession(otherSession, context.student(), "COMPLETED", now());
+
+    assertSqlViolation("23503", "first_answers_attempt_identity_fk",
+        () -> insertFirstAnswer(context.student(), VERSION, 1, otherSession,
+            context.attempt(), "O", false, true));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"student", "question", "session", "attempt"})
+  void firstAnswersRejectMissingReferencedFacts(String missing) {
+    var context = answerContext(1);
+
+    assertSqlViolation("23503", null,
+        () -> insertFirstAnswer(
+            missing.equals("student") ? UUID.randomUUID() : context.student(), VERSION,
+            missing.equals("question") ? 151 : 1,
+            missing.equals("session") ? UUID.randomUUID() : context.session(),
+            missing.equals("attempt") ? UUID.randomUUID() : context.attempt(),
+            "O", false, true));
+  }
+
+  @Test
+  void firstAnswerQueriesKeepStudentVersionAndQuestionScope() {
+    var owner = answerContext(1);
+    var stranger = answerContext(2);
+    var otherVersion = "answer-scope-" + UUID.randomUUID();
+    insertContentVersion(otherVersion);
+    jdbc.update("update learning_sessions set state='COMPLETED' where id=?", owner.session());
+    var otherContext = answerContext(owner.student(), otherVersion);
+    var first = firstAnswers.saveAndFlush(new FirstAnswer(UUID.randomUUID(), owner.student(),
+        VERSION, 1, owner.session(), owner.attempt(), UUID.randomUUID(), AnswerChoice.O,
+        false, true, clock.instant(), 0));
+    firstAnswers.saveAndFlush(new FirstAnswer(UUID.randomUUID(), owner.student(), VERSION, 2,
+        owner.session(), owner.attempt(), UUID.randomUUID(), AnswerChoice.X,
+        false, false, clock.instant(), 0));
+    var other = firstAnswers.saveAndFlush(new FirstAnswer(UUID.randomUUID(), owner.student(),
+        otherVersion, 1, otherContext.session(), otherContext.attempt(), UUID.randomUUID(),
+        AnswerChoice.X, false, false, clock.instant(), 0));
+    firstAnswers.saveAndFlush(new FirstAnswer(UUID.randomUUID(), stranger.student(), VERSION, 1,
+        stranger.session(), stranger.attempt(), UUID.randomUUID(), null,
+        true, false, clock.instant(), 0));
+    entityManager.clear();
+
+    assertThat(firstAnswers.findByStudentAccountIdAndVersionAndQuestionId(owner.student(), VERSION, 1))
+        .get().extracting(FirstAnswer::getId).isEqualTo(first.getId());
+    assertThat(firstAnswers.findByStudentAccountIdAndVersionAndQuestionId(owner.student(), otherVersion, 1))
+        .get().extracting(FirstAnswer::getId).isEqualTo(other.getId());
+    assertThat(firstAnswers.findByStudentAccountIdAndVersionAndQuestionId(stranger.student(), VERSION, 2))
+        .isEmpty();
+    assertThat(firstAnswers.countByStudentAccountIdAndVersion(owner.student(), VERSION)).isEqualTo(2);
+    assertThat(firstAnswers.countByStudentAccountIdAndVersion(owner.student(), otherVersion)).isEqualTo(1);
+    assertThat(firstAnswers.countByStudentAccountIdAndVersion(stranger.student(), VERSION)).isEqualTo(1);
+  }
+
   @Test
   void firstAnswerRejectsANullChoiceUnlessItIsTimedOut() {
     var context = answerContext(1);
@@ -232,6 +384,117 @@ class LearningPersistenceContractIT {
         .isEqualTo(Instant.parse("2026-10-12T00:00:30.123456Z"));
   }
 
+  @ParameterizedTest
+  @CsvSource(value = {"O,false,true,CORRECT", "X,false,false,WRONG", "NULL,true,false,TIMED_OUT"},
+      nullValues = "NULL")
+  void lastAnswerRoundTripsEveryConsistentOutcome(
+      AnswerChoice choice, boolean timedOut, boolean correct, AnswerOutcome outcome) {
+    var owner = student(1);
+    var source = UUID.randomUUID();
+    lastAnswers.saveAndFlush(new LastAnswer(owner, VERSION, 1, AnswerSourceType.FIRST, source,
+        choice, timedOut, correct, outcome, clock.instant()));
+    entityManager.clear();
+
+    var reloaded = lastAnswers.findById(new LastAnswerId(owner, VERSION, 1)).orElseThrow();
+    assertThat(reloaded.getSourceType()).isEqualTo(AnswerSourceType.FIRST);
+    assertThat(reloaded.getSourceId()).isEqualTo(source);
+    assertThat(reloaded.getChoice()).isEqualTo(choice);
+    assertThat(reloaded.isTimedOut()).isEqualTo(timedOut);
+    assertThat(reloaded.isCorrect()).isEqualTo(correct);
+    assertThat(reloaded.getOutcome()).isEqualTo(outcome);
+    assertThat(reloaded.getAnsweredAt())
+        .isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+  }
+
+  @ParameterizedTest
+  @CsvSource(value = {
+      "NULL,false,true,CORRECT", "NULL,false,false,WRONG",
+      "O,true,true,CORRECT", "O,true,false,WRONG",
+      "O,false,false,CORRECT", "O,false,true,WRONG",
+      "NULL,true,true,TIMED_OUT", "O,true,false,TIMED_OUT",
+      "NULL,false,false,TIMED_OUT", "O,false,false,TIMED_OUT",
+      "NULL,true,false,CORRECT", "NULL,true,false,WRONG",
+      "O,false,true,UNKNOWN", "Y,false,true,CORRECT"
+  }, nullValues = "NULL")
+  void lastAnswersRejectInconsistentOutcomesWithoutNullCheckLoopholes(
+      String choice, boolean timedOut, boolean correct, String outcome) {
+    var owner = student(1);
+
+    assertSqlViolation("23514", null,
+        () -> insertLastAnswer(owner, VERSION, 1, "FIRST", UUID.randomUUID(), choice,
+            timedOut, correct, outcome));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"sourceType", "sourceId", "timedOut", "correct", "outcome"})
+  void lastAnswersRequireExplicitSourceAndOutcomeFields(String missing) {
+    var owner = student(1);
+
+    assertSqlViolation("23502", null,
+        () -> insertLastAnswer(owner, VERSION, 1,
+            missing.equals("sourceType") ? null : "FIRST",
+            missing.equals("sourceId") ? null : UUID.randomUUID(), "O",
+            missing.equals("timedOut") ? null : false,
+            missing.equals("correct") ? null : true,
+            missing.equals("outcome") ? null : "CORRECT"));
+  }
+
+  @Test
+  void lastAnswersRejectAnUnknownSourceType() {
+    var owner = student(1);
+
+    assertSqlViolation("23514", "last_answers_source_type_check",
+        () -> insertLastAnswer(owner, VERSION, 1, "UNKNOWN", UUID.randomUUID(), "O",
+            false, true, "CORRECT"));
+  }
+
+  @Test
+  void lastAnswersHaveOneRowPerStudentVersionAndQuestion() {
+    var owner = student(1);
+    insertLastAnswer(owner, VERSION, 1, "FIRST", UUID.randomUUID(), "O", false, true, "CORRECT");
+
+    assertSqlViolation("23505", "last_answers_pkey",
+        () -> insertLastAnswer(owner, VERSION, 1, "REPEAT", UUID.randomUUID(), null,
+            true, false, "TIMED_OUT"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"student", "version", "question"})
+  void lastAnswersRejectMissingStudentOrContent(String missing) {
+    var owner = student(1);
+
+    assertSqlViolation("23503", null,
+        () -> insertLastAnswer(missing.equals("student") ? UUID.randomUUID() : owner,
+            missing.equals("version") ? "missing-version" : VERSION,
+            missing.equals("question") ? 151 : 1, "FIRST", UUID.randomUUID(), "O",
+            false, true, "CORRECT"));
+  }
+
+  @Test
+  void lastAnswerQueriesKeepStudentAndVersionScope() {
+    var owner = student(1);
+    var stranger = student(2);
+    var otherVersion = "last-answer-scope-" + UUID.randomUUID();
+    insertContentVersion(otherVersion);
+    insertLastAnswer(owner, VERSION, 1, "FIRST", UUID.randomUUID(), "O", false, true, "CORRECT");
+    insertLastAnswer(owner, VERSION, 2, "REPEAT", UUID.randomUUID(), "X", false, false, "WRONG");
+    insertLastAnswer(owner, otherVersion, 1, "REPEAT", UUID.randomUUID(), null, true, false, "TIMED_OUT");
+    insertLastAnswer(stranger, VERSION, 1, "FIRST", UUID.randomUUID(), "O", false, true, "CORRECT");
+    entityManager.clear();
+
+    assertThat(lastAnswers.findByIdStudentAccountIdAndIdVersion(owner, VERSION))
+        .extracting(LastAnswer::getQuestionId).containsExactlyInAnyOrder(1, 2);
+    assertThat(lastAnswers.findByIdStudentAccountIdAndIdVersion(owner, otherVersion))
+        .singleElement().satisfies(answer -> {
+          assertThat(answer.getStudentAccountId()).isEqualTo(owner);
+          assertThat(answer.getVersion()).isEqualTo(otherVersion);
+          assertThat(answer.getOutcome()).isEqualTo(AnswerOutcome.TIMED_OUT);
+        });
+    assertThat(lastAnswers.findByIdStudentAccountIdAndIdVersion(stranger, VERSION))
+        .singleElement().extracting(LastAnswer::getStudentAccountId).isEqualTo(stranger);
+    assertThat(lastAnswers.findByIdStudentAccountIdAndIdVersion(stranger, otherVersion)).isEmpty();
+  }
+
   @Test
   void xpEntriesUseOneRuleVersionAndRejectADuplicateKindAndSource() {
     var student = student(1);
@@ -260,6 +523,73 @@ class LearningPersistenceContractIT {
                         565,
                         clock.instant())))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void xpSourceUniquenessIsGlobalWithinEachKind() {
+    var owner = student(1);
+    var stranger = student(2);
+    var source = UUID.randomUUID();
+    for (XpKind kind : XpKind.values()) {
+      xpEntries.saveAndFlush(new XpEntry(UUID.randomUUID(), owner, kind, source, 1, clock.instant()));
+      assertThat(xpEntries.countByKindAndSourceId(kind, source)).isEqualTo(1);
+    }
+
+    assertSqlViolation("23505", "uq_xp_source",
+        () -> insertXpEntry(stranger, "FIRST_ANSWER", source, 565, "learning-v1"));
+  }
+
+  @Test
+  void mergingAReplacementCannotRewriteAnXpFact() {
+    var owner = student(1);
+    var stranger = student(2);
+    var id = UUID.randomUUID();
+    var source = UUID.randomUUID();
+    xpEntries.saveAndFlush(new XpEntry(id, owner, XpKind.FIRST_ANSWER, source, 565, clock.instant()));
+    entityManager.clear();
+
+    xpEntries.saveAndFlush(new XpEntry(id, stranger, XpKind.REPEAT_ANSWER, UUID.randomUUID(), 1,
+        clock.instant().plusSeconds(30)));
+    entityManager.clear();
+
+    var reloaded = xpEntries.findById(id).orElseThrow();
+    assertThat(reloaded.getStudentAccountId()).isEqualTo(owner);
+    assertThat(reloaded.getKind()).isEqualTo(XpKind.FIRST_ANSWER);
+    assertThat(reloaded.getSourceId()).isEqualTo(source);
+    assertThat(reloaded.getAmount()).isEqualTo(565);
+    assertThat(reloaded.getRuleVersion()).isEqualTo("learning-v1");
+    assertThat(reloaded.getCreatedAt())
+        .isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+    assertThat(xpEntries.sumAmountByStudentAccountId(owner)).isEqualTo(565);
+    assertThat(xpEntries.sumAmountByStudentAccountId(stranger)).isZero();
+  }
+
+  @ParameterizedTest
+  @CsvSource({"0,learning-v1,FIRST_ANSWER", "-1,learning-v1,FIRST_ANSWER",
+      "1,learning-v2,FIRST_ANSWER", "1,learning-v1,UNKNOWN"})
+  void xpEntriesRejectNonpositiveAmountsUnknownRulesAndUnknownKinds(
+      int amount, String rule, String kind) {
+    var owner = student(1);
+
+    assertSqlViolation("23514", null,
+        () -> insertXpEntry(owner, kind, UUID.randomUUID(), amount, rule));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"kind", "source", "rule"})
+  void xpEntriesRequireKindSourceAndRule(String missing) {
+    var owner = student(1);
+
+    assertSqlViolation("23502", null,
+        () -> insertXpEntry(owner, missing.equals("kind") ? null : "FIRST_ANSWER",
+            missing.equals("source") ? null : UUID.randomUUID(), 1,
+            missing.equals("rule") ? null : "learning-v1"));
+  }
+
+  @Test
+  void xpEntriesRejectAnUnknownStudent() {
+    assertSqlViolation("23503", "xp_entries_student_fk",
+        () -> insertXpEntry(UUID.randomUUID(), "FIRST_ANSWER", UUID.randomUUID(), 1, "learning-v1"));
   }
 
   @Test
@@ -776,6 +1106,10 @@ class LearningPersistenceContractIT {
   }
 
   private void assertCheckViolation(String constraint, ThrowingCallable write) {
+    assertSqlViolation("23514", constraint, write);
+  }
+
+  private void assertSqlViolation(String state, String constraint, ThrowingCallable write) {
     assertThatThrownBy(write)
         .isInstanceOfSatisfying(
             DataIntegrityViolationException.class,
@@ -784,8 +1118,10 @@ class LearningPersistenceContractIT {
                     .isInstanceOfSatisfying(
                         SQLException.class,
                         sqlError -> {
-                          assertThat(sqlError.getSQLState()).isEqualTo("23514");
-                          assertThat(sqlError.getMessage()).contains("\"" + constraint + "\"");
+                          assertThat(sqlError.getSQLState()).isEqualTo(state);
+                          if (constraint != null) {
+                            assertThat(sqlError.getMessage()).contains("\"" + constraint + "\"");
+                          }
                         }));
   }
 
@@ -918,11 +1254,23 @@ class LearningPersistenceContractIT {
   }
 
   private AnswerContext answerContext(int number) {
-    var student = student(number);
-    var progress = insertProgress(student);
+    return answerContext(student(number), VERSION);
+  }
+
+  private AnswerContext answerContext(UUID student, String version) {
+    var progress = UUID.randomUUID();
+    jdbc.update(
+        "insert into day_progress"
+            + "(id,student_account_id,version,day,state,created_at,updated_at)"
+            + " values (?,?,?,1,'IN_PROGRESS',?,?)",
+        progress, student, version, now(), now());
     var session = UUID.randomUUID();
     var attempt = UUID.randomUUID();
-    insertSession(session, student, "QUESTION_ACTIVE", now());
+    jdbc.update(
+        "insert into learning_sessions"
+            + "(id,student_account_id,version,mode,day,state,current_position,deadline_at,created_at,updated_at)"
+            + " values (?,?,?,'FIRST',1,'QUESTION_ACTIVE',1,?,?,?)",
+        session, student, version, now(), now(), now());
     jdbc.update(
         "insert into day_attempts"
             + "(id,session_id,day_progress_id,student_account_id,version,day,attempt_number,state,"
@@ -932,10 +1280,38 @@ class LearningPersistenceContractIT {
         session,
         progress,
         student,
-        VERSION,
+        version,
         1,
         now());
     return new AnswerContext(student, session, attempt);
+  }
+
+  private void insertFirstAnswer(
+      UUID student, String version, int question, UUID session,
+      UUID attempt, String choice, Boolean timedOut, Boolean correct) {
+    jdbc.update(
+        "insert into first_answers"
+            + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,"
+            + "choice,timed_out,correct,answered_at,response_millis) values (?,?,?,?,?,?,?,?,?,?,?,0)",
+        UUID.randomUUID(), student, version, question, session, attempt, UUID.randomUUID(),
+        choice, timedOut, correct, now());
+  }
+
+  private void insertLastAnswer(
+      UUID student, String version, int question, String sourceType, UUID sourceId,
+      String choice, Boolean timedOut, Boolean correct, String outcome) {
+    jdbc.update(
+        "insert into last_answers"
+            + "(student_account_id,version,question_id,source_type,source_id,choice,timed_out,"
+            + "correct,outcome,answered_at) values (?,?,?,?,?,?,?,?,?,?)",
+        student, version, question, sourceType, sourceId, choice, timedOut, correct, outcome, now());
+  }
+
+  private void insertXpEntry(UUID student, String kind, UUID source, int amount, String rule) {
+    jdbc.update(
+        "insert into xp_entries(id,student_account_id,kind,source_id,amount,rule_version,created_at)"
+            + " values (?,?,?,?,?,?,?)",
+        UUID.randomUUID(), student, kind, source, amount, rule, now());
   }
 
   private record AnswerContext(UUID student, UUID session, UUID attempt) {}
