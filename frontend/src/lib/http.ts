@@ -1,4 +1,5 @@
 import type { ApiError } from '../features/auth/types';
+import { learningClock } from '../features/learning/serverClock';
 export class HttpError extends Error {
   constructor(
     public status: number,
@@ -39,6 +40,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     credentials: 'same-origin',
     cache: 'no-store',
   });
+  learningClock.observeHttpDate(response.headers.get('Date'));
   if (!response.ok) {
     let error: ApiError;
     try {

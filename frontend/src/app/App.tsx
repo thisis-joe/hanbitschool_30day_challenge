@@ -6,6 +6,7 @@ import { useCurrentAccount, useAcceptAccount, meKey } from '../features/auth/que
 import { logout } from '../features/auth/api';
 import { FormError, useSubmission } from '../features/auth/FormParts';
 import { refreshCsrf, setUnauthorizedHandler } from '../lib/http';
+import { clearAllPendingCommands } from '../features/learning/pendingCommands';
 export function App() {
   const client = useQueryClient();
   const session = useCurrentAccount();
@@ -15,6 +16,7 @@ export function App() {
   useEffect(() => {
     void refreshCsrf().catch(() => {});
     setUnauthorizedHandler(() => {
+      clearAllPendingCommands();
       void client.cancelQueries();
       client.clear();
       client.setQueryData(meKey, null);
