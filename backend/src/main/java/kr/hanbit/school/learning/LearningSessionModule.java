@@ -91,7 +91,7 @@ public class LearningSessionModule {
   public LearningSessionView start(
       AccountPrincipal principal, StartLearningSessionCommand command) {
     var student = access.lockStudent(principal);
-    validateFirst(command);
+    validateDayLearning(command);
     String version = content.activeVersion().getVersion();
     String payloadHash = fingerprints.start(command);
     var replay =
@@ -127,15 +127,26 @@ public class LearningSessionModule {
     if (requestedDay > cap)
       throw new ApiException(403, "DAY_NOT_YET_AVAILABLE", "아직 시작할 수 없는 회차입니다.");
     Integer earliest = earliestUnpassed(student.studentAccountId(), version, cap);
-    if (earliest == null || requestedDay < earliest)
-      throw ApiException.validation("dayNumber", "FIRST는 가장 앞선 미시작 회차만 시작할 수 있습니다.");
-    if (requestedDay > earliest)
-      throw new ApiException(409, "PREVIOUS_DAY_NOT_PASSED", "앞선 회차를 먼저 통과해 주세요.");
     var existingProgress =
         progress.findByStudentAccountIdAndVersionAndDay(
             student.studentAccountId(), version, requestedDay);
-    if (existingProgress.isPresent()
-        && existingProgress.get().getState() != DayProgressState.NOT_STARTED) throw conflict();
+    if (command.mode() == LearningMode.FIRST) {
+      if (earliest == null || requestedDay < earliest)
+        throw ApiException.validation("dayNumber", "FIRST는 가장 앞선 미시작 회차만 시작할 수 있습니다.");
+      if (requestedDay > earliest)
+        throw new ApiException(409, "PREVIOUS_DAY_NOT_PASSED", "앞선 회차를 먼저 통과해 주세요.");
+      if (existingProgress.isPresent()
+          && existingProgress.get().getState() != DayProgressState.NOT_STARTED) throw conflict();
+    } else if (existingProgress.isEmpty()
+        || existingProgress.get().getState() != DayProgressState.PASSED) {
+      if (earliest != null && requestedDay > earliest)
+        throw new ApiException(409, "PREVIOUS_DAY_NOT_PASSED", "앞선 회차를 먼저 통과해 주세요.");
+      if (existingProgress.isEmpty()
+          || existingProgress.get().getState() == DayProgressState.NOT_STARTED)
+        throw ApiException.validation("dayNumber", "시작하지 않은 회차는 재도전할 수 없습니다.");
+      if (!java.util.Objects.equals(earliest, requestedDay)
+          || existingProgress.get().getState() != DayProgressState.RETRY_REQUIRED) throw conflict();
+    }
 
     var questions = content.questionsForDay(version, requestedDay);
     if (questions.size() != 5)
@@ -153,7 +164,8 @@ public class LearningSessionModule {
                     null,
                     now,
                     now));
-    progressRow.startFirst(now);
+    if (command.mode() == LearningMode.FIRST) progressRow.startFirst(now);
+    else progressRow.startReplay(now);
     progress.saveAndFlush(progressRow);
     var session =
         sessions.saveAndFlush(
@@ -161,7 +173,7 @@ public class LearningSessionModule {
                 UUID.randomUUID(),
                 student.studentAccountId(),
                 version,
-                LearningMode.FIRST,
+                command.mode(),
                 requestedDay,
                 LearningSessionState.QUESTION_ACTIVE,
                 1,
@@ -293,16 +305,16 @@ public class LearningSessionModule {
         && java.util.Objects.equals(active.getDay(), command.dayNumber());
   }
 
-  private void validateFirst(StartLearningSessionCommand command) {
+  private void validateDayLearning(StartLearningSessionCommand command) {
     if (command == null) throw ApiException.validation("request", "요청 내용을 입력해 주세요.");
     if (command.requestId() == null)
       throw ApiException.validation("requestId", "요청 ID를 입력해 주세요.");
-    if (command.mode() != LearningMode.FIRST)
-      throw ApiException.validation("mode", "현재는 FIRST 학습만 시작할 수 있습니다.");
+    if (command.mode() != LearningMode.FIRST && command.mode() != LearningMode.REPLAY)
+      throw ApiException.validation("mode", "FIRST 또는 REPLAY 학습을 선택해 주세요.");
     if (command.dayNumber() == null || command.dayNumber() < 1 || command.dayNumber() > 30)
       throw ApiException.validation("dayNumber", "회차는 1에서 30 사이여야 합니다.");
     if (command.questionIds() != null && !command.questionIds().isEmpty())
-      throw ApiException.validation("questionIds", "FIRST 학습에는 문항 목록을 지정할 수 없습니다.");
+      throw ApiException.validation("questionIds", "회차 학습에는 문항 목록을 지정할 수 없습니다.");
   }
 
   void requireActiveVersion(String sessionVersion, String activeVersion) {

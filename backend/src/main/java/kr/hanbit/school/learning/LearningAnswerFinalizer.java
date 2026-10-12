@@ -28,6 +28,7 @@ public class LearningAnswerFinalizer {
   private final DayAttemptRepository attempts;
   private final DayProgressRepository progress;
   private final FirstAnswerRepository firstAnswers;
+  private final ReviewAttemptRepository reviewAttempts;
   private final LastAnswerRepository lastAnswers;
   private final XpEntryRepository xpEntries;
   private final XpPolicy xpPolicy;
@@ -47,6 +48,7 @@ public class LearningAnswerFinalizer {
       DayAttemptRepository attempts,
       DayProgressRepository progress,
       FirstAnswerRepository firstAnswers,
+      ReviewAttemptRepository reviewAttempts,
       LastAnswerRepository lastAnswers,
       XpEntryRepository xpEntries,
       XpPolicy xpPolicy,
@@ -64,6 +66,7 @@ public class LearningAnswerFinalizer {
     this.attempts = attempts;
     this.progress = progress;
     this.firstAnswers = firstAnswers;
+    this.reviewAttempts = reviewAttempts;
     this.lastAnswers = lastAnswers;
     this.xpEntries = xpEntries;
     this.xpPolicy = xpPolicy;
@@ -95,10 +98,8 @@ public class LearningAnswerFinalizer {
     var question = currentQuestion(session);
     if (question.getQuestionId() != command.questionId()
         || session.getState() != LearningSessionState.QUESTION_ACTIVE) {
-      if (firstAnswers
-          .findByStudentAccountIdAndVersionAndQuestionId(
-              studentId, session.getVersion(), command.questionId())
-          .isPresent()) throw LearningAnswerModule.alreadyFinalized();
+      if (hasFinalizedAnswer(session, command.questionId()))
+        throw LearningAnswerModule.alreadyFinalized();
       if (question.getQuestionId() != command.questionId())
         throw new ApiException(409, "QUESTION_MISMATCH", "현재 문항과 제출 문항이 일치하지 않습니다.");
       throw LearningAnswerModule.alreadyFinalized();
@@ -131,8 +132,8 @@ public class LearningAnswerFinalizer {
       SubmitAnswerCommand command,
       Instant receivedAt,
       String payloadHash) {
-    if (session.getMode() != LearningMode.FIRST)
-      throw new ApiException(409, "SESSION_CONFLICT", "현재는 FIRST 답변만 확정할 수 있습니다.");
+    if (session.getMode() != LearningMode.FIRST && session.getMode() != LearningMode.REPLAY)
+      throw new ApiException(409, "SESSION_CONFLICT", "현재 회차 답변을 확정할 수 없습니다.");
     var attempt = attempts.findBySessionId(session.getId()).orElseThrow();
     var day = progress.findById(attempt.getDayProgressId()).orElseThrow();
     boolean timedOut = receivedAt.isAfter(session.getDeadlineAt());
@@ -146,21 +147,44 @@ public class LearningAnswerFinalizer {
                     session.getDeadlineAt().minusSeconds(question.getTimeLimitSeconds()),
                     receivedAt)
                 .toMillis());
-    var fact =
-        firstAnswers.saveAndFlush(
-            new FirstAnswer(
-                UUID.randomUUID(),
-                session.getStudentAccountId(),
-                session.getVersion(),
-                question.getQuestionId(),
-                session.getId(),
-                attempt.getId(),
-                command.requestId(),
-                choice,
-                timedOut,
-                correct,
-                now,
-                responseMillis));
+    UUID factId = UUID.randomUUID();
+    AnswerOutcome outcome =
+        timedOut ? AnswerOutcome.TIMED_OUT : correct ? AnswerOutcome.CORRECT : AnswerOutcome.WRONG;
+    boolean first = session.getMode() == LearningMode.FIRST;
+    if (first) {
+      firstAnswers.saveAndFlush(
+          new FirstAnswer(
+              factId,
+              session.getStudentAccountId(),
+              session.getVersion(),
+              question.getQuestionId(),
+              session.getId(),
+              attempt.getId(),
+              command.requestId(),
+              choice,
+              timedOut,
+              correct,
+              now,
+              responseMillis));
+    } else {
+      reviewAttempts.saveAndFlush(
+          new ReviewAttempt(
+              factId,
+              session.getStudentAccountId(),
+              session.getVersion(),
+              question.getQuestionId(),
+              session.getId(),
+              attempt.getId(),
+              LearningMode.REPLAY,
+              command.requestId(),
+              choice,
+              timedOut,
+              correct,
+              outcome,
+              now,
+              responseMillis));
+    }
+    var sourceType = first ? AnswerSourceType.FIRST : AnswerSourceType.REPEAT;
 
     var lastKey =
         new LastAnswerId(
@@ -174,39 +198,51 @@ public class LearningAnswerFinalizer {
                         session.getStudentAccountId(),
                         session.getVersion(),
                         question.getQuestionId(),
-                        AnswerSourceType.FIRST,
-                        fact.getId(),
+                        sourceType,
+                        factId,
                         choice,
                         timedOut,
                         correct,
-                        fact.getOutcome(),
+                        outcome,
                         now));
-    last.update(
-        AnswerSourceType.FIRST, fact.getId(), choice, timedOut, correct, fact.getOutcome(), now);
+    last.update(sourceType, factId, choice, timedOut, correct, outcome, now);
     lastAnswers.saveAndFlush(last);
+    if (!first && attempt.getAnsweredCount() == 4)
+      attempt.classifyReplayCompletion(
+          calendar.isCatchUp(session.getDay(), currentCalendarCap(session)));
     attempt.recordAnswer(correct, now);
-    int awarded = xpPolicy.firstAnswer(correct, attempt.getCurrentStreak(), attempt.isCatchUp());
-    appendXp(session.getStudentAccountId(), XpKind.FIRST_ANSWER, fact.getId(), awarded, now);
+    int awarded =
+        first
+            ? xpPolicy.firstAnswer(correct, attempt.getCurrentStreak(), attempt.isCatchUp())
+            : xpPolicy.repeatAnswer();
+    appendXp(
+        session.getStudentAccountId(),
+        first ? XpKind.FIRST_ANSWER : XpKind.REPEAT_ANSWER,
+        factId,
+        awarded,
+        now);
 
     boolean completed = attempt.getAnsweredCount() == 5;
     boolean nextDayAvailable = false;
     if (completed) {
       boolean passed = attempt.getState() == DayAttemptState.PASSED;
-      day.finishFirst(passed, now);
-      progress.saveAndFlush(day);
-      if (passed) {
-        int passXp = xpPolicy.firstPass(attempt.isCatchUp());
-        appendXp(session.getStudentAccountId(), XpKind.FIRST_DAY_PASS, day.getId(), passXp, now);
-        awarded += passXp;
-        nextDayAvailable = nextDayAvailable(session);
+      if (day.getState() != DayProgressState.PASSED) {
+        day.finishFirst(passed, now);
+        progress.saveAndFlush(day);
+        if (passed) {
+          int passXp = xpPolicy.firstPass(attempt.isCatchUp());
+          appendXp(session.getStudentAccountId(), XpKind.FIRST_DAY_PASS, day.getId(), passXp, now);
+          awarded += passXp;
+        }
       }
+      if (day.getState() == DayProgressState.PASSED) nextDayAvailable = nextDayAvailable(session);
     }
     var summary = xp.summary(session.getStudentAccountId());
     var result =
         new AnswerResult(
-            fact.getId(),
+            factId,
             question.getQuestionId(),
-            fact.getOutcome(),
+            outcome,
             question.getAnswer(),
             question.getExplanation(),
             awarded,
@@ -234,14 +270,27 @@ public class LearningAnswerFinalizer {
   }
 
   private boolean nextDayAvailable(LearningSession session) {
+    int cap = currentCalendarCap(session);
+    var earliest =
+        sessionModule.earliestUnpassed(session.getStudentAccountId(), session.getVersion(), cap);
+    return earliest != null && earliest > session.getDay();
+  }
+
+  private int currentCalendarCap(LearningSession session) {
     var profile =
         profiles.findById(session.getStudentAccountId()).orElseThrow(ApiException::unauthorized);
     var classroom =
         classrooms.findById(profile.getClassroomId()).orElseThrow(ApiException::unauthorized);
-    int cap = calendar.calendarCap(classroom.getStartDate());
-    var earliest =
-        sessionModule.earliestUnpassed(session.getStudentAccountId(), session.getVersion(), cap);
-    return earliest != null && earliest > session.getDay();
+    return calendar.calendarCap(classroom.getStartDate());
+  }
+
+  boolean hasFinalizedAnswer(LearningSession session, int questionId) {
+    if (session.getMode() == LearningMode.FIRST)
+      return firstAnswers
+          .findByStudentAccountIdAndVersionAndQuestionId(
+              session.getStudentAccountId(), session.getVersion(), questionId)
+          .isPresent();
+    return reviewAttempts.existsBySessionIdAndQuestionId(session.getId(), questionId);
   }
 
   private LearningQuestion currentQuestion(LearningSession session) {

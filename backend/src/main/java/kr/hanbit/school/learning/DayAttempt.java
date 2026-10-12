@@ -159,4 +159,10 @@ public class DayAttempt {
       finishedAt = LearningTime.persistable(answeredAt);
     }
   }
+
+  void classifyReplayCompletion(boolean catchUp) {
+    if (state != DayAttemptState.ACTIVE || answeredCount != 4)
+      throw new IllegalStateException("마지막 답변 확정 전에만 재도전의 지연 여부를 정할 수 있습니다.");
+    this.catchUp = catchUp;
+  }
 }

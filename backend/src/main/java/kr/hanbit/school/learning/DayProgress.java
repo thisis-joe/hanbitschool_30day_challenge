@@ -108,4 +108,12 @@ public class DayProgress {
     passedAt = passed ? LearningTime.persistable(finishedAt) : null;
     updatedAt = LearningTime.persistable(finishedAt);
   }
+
+  void startReplay(Instant startedAt) {
+    if (state == DayProgressState.PASSED) return;
+    if (state != DayProgressState.RETRY_REQUIRED)
+      throw new IllegalStateException("재도전이 필요한 회차만 다시 시작할 수 있습니다.");
+    state = DayProgressState.IN_PROGRESS;
+    updatedAt = LearningTime.persistable(startedAt);
+  }
 }

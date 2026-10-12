@@ -19,7 +19,6 @@ public class LearningAnswerModule {
   private final LearningSessionModule sessionModule;
   private final LearningSessionRepository sessions;
   private final LearningSessionQuestionRepository sessionQuestions;
-  private final FirstAnswerRepository firstAnswers;
   private final ContentCatalog content;
   private final LearningIdempotency idempotency;
   private final RequestFingerprint fingerprints;
@@ -33,7 +32,6 @@ public class LearningAnswerModule {
       LearningSessionModule sessionModule,
       LearningSessionRepository sessions,
       LearningSessionQuestionRepository sessionQuestions,
-      FirstAnswerRepository firstAnswers,
       ContentCatalog content,
       LearningIdempotency idempotency,
       RequestFingerprint fingerprints,
@@ -44,7 +42,6 @@ public class LearningAnswerModule {
     this.sessionModule = sessionModule;
     this.sessions = sessions;
     this.sessionQuestions = sessionQuestions;
-    this.firstAnswers = firstAnswers;
     this.content = content;
     this.idempotency = idempotency;
     this.fingerprints = fingerprints;
@@ -87,10 +84,7 @@ public class LearningAnswerModule {
                     fingerprints.answer(sessionId, command),
                     AnswerResult.class);
             if (replay.isPresent()) return replay.get();
-            if (firstAnswers
-                .findByStudentAccountIdAndVersionAndQuestionId(
-                    student.studentAccountId(), owned.getVersion(), command.questionId())
-                .isPresent()) throw alreadyFinalized();
+            if (finalizer.hasFinalizedAnswer(owned, command.questionId())) throw alreadyFinalized();
             throw failure;
           });
     }

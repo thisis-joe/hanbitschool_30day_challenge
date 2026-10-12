@@ -48,6 +48,7 @@ class LearningPersistenceContractIT {
   @Autowired DayAttemptRepository attempts;
   @Autowired IdempotencyRecordRepository idempotencyRecords;
   @Autowired FirstAnswerRepository firstAnswers;
+  @Autowired ReviewAttemptRepository reviewAttempts;
   @Autowired LastAnswerRepository lastAnswers;
   @Autowired XpEntryRepository xpEntries;
   @Autowired StudentLearningAccess access;
@@ -307,8 +308,8 @@ class LearningPersistenceContractIT {
                 jdbc.update(
                     "insert into first_answers"
                         + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,"
-                        + "choice,timed_out,correct,answered_at,response_millis)"
-                        + " values (?,?,?,?,?,?,?,null,false,false,?,0)",
+                        + "choice,timed_out,correct,answered_at,response_millis) values"
+                        + " (?,?,?,?,?,?,?,null,false,false,?,0)",
                     UUID.randomUUID(),
                     context.student(),
                     VERSION,
@@ -329,8 +330,8 @@ class LearningPersistenceContractIT {
                 jdbc.update(
                     "insert into first_answers"
                         + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,"
-                        + "choice,timed_out,correct,answered_at,response_millis)"
-                        + " values (?,?,?,?,?,?,?,'X',false,false,?,-1)",
+                        + "choice,timed_out,correct,answered_at,response_millis) values"
+                        + " (?,?,?,?,?,?,?,'X',false,false,?,-1)",
                     UUID.randomUUID(),
                     context.student(),
                     VERSION,
@@ -478,7 +479,8 @@ class LearningPersistenceContractIT {
     insertContentVersion(otherVersion);
     insertLastAnswer(owner, VERSION, 1, "FIRST", UUID.randomUUID(), "O", false, true, "CORRECT");
     insertLastAnswer(owner, VERSION, 2, "REPEAT", UUID.randomUUID(), "X", false, false, "WRONG");
-    insertLastAnswer(owner, otherVersion, 1, "REPEAT", UUID.randomUUID(), null, true, false, "TIMED_OUT");
+    insertLastAnswer(
+        owner, otherVersion, 1, "REPEAT", UUID.randomUUID(), null, true, false, "TIMED_OUT");
     insertLastAnswer(stranger, VERSION, 1, "FIRST", UUID.randomUUID(), "O", false, true, "CORRECT");
     entityManager.clear();
 
@@ -588,8 +590,11 @@ class LearningPersistenceContractIT {
 
   @Test
   void xpEntriesRejectAnUnknownStudent() {
-    assertSqlViolation("23503", "xp_entries_student_fk",
-        () -> insertXpEntry(UUID.randomUUID(), "FIRST_ANSWER", UUID.randomUUID(), 1, "learning-v1"));
+    assertSqlViolation(
+        "23503",
+        "xp_entries_student_fk",
+        () ->
+            insertXpEntry(UUID.randomUUID(), "FIRST_ANSWER", UUID.randomUUID(), 1, "learning-v1"));
   }
 
   @Test
@@ -1098,6 +1103,359 @@ class LearningPersistenceContractIT {
             error -> assertThat(error.code()).isEqualTo("UNAUTHENTICATED"));
   }
 
+  @Test
+  void reviewAttemptEntityNormalizesTimeAndCannotBeRewrittenByMerge() {
+    var row = reviewRow("REPLAY");
+    var fact =
+        new ReviewAttempt(
+            (UUID) row.get("id"),
+            (UUID) row.get("student_account_id"),
+            VERSION,
+            1,
+            (UUID) row.get("session_id"),
+            (UUID) row.get("day_attempt_id"),
+            LearningMode.REPLAY,
+            (UUID) row.get("request_id"),
+            AnswerChoice.O,
+            false,
+            true,
+            AnswerOutcome.CORRECT,
+            clock.instant(),
+            3_000_000_000L);
+    reviewAttempts.saveAndFlush(fact);
+    entityManager.clear();
+    var replacement =
+        new ReviewAttempt(
+            (UUID) row.get("id"),
+            (UUID) row.get("student_account_id"),
+            VERSION,
+            2,
+            (UUID) row.get("session_id"),
+            (UUID) row.get("day_attempt_id"),
+            LearningMode.REPLAY,
+            UUID.randomUUID(),
+            null,
+            true,
+            false,
+            AnswerOutcome.TIMED_OUT,
+            clock.instant().plusSeconds(30),
+            30L);
+    reviewAttempts.saveAndFlush(replacement);
+    entityManager.clear();
+    var reloaded = reviewAttempts.findById(fact.getId()).orElseThrow();
+    assertThat(reloaded.getQuestionId()).isEqualTo(1);
+    assertThat(reloaded.getStudentAccountId()).isEqualTo(row.get("student_account_id"));
+    assertThat(reloaded.getVersion()).isEqualTo(VERSION);
+    assertThat(reloaded.getSessionId()).isEqualTo(row.get("session_id"));
+    assertThat(reloaded.getDayAttemptId()).isEqualTo(row.get("day_attempt_id"));
+    assertThat(reloaded.getMode()).isEqualTo(LearningMode.REPLAY);
+    assertThat(reloaded.getRequestId()).isEqualTo(row.get("request_id"));
+    assertThat(reloaded.getChoice()).isEqualTo(AnswerChoice.O);
+    assertThat(reloaded.isTimedOut()).isFalse();
+    assertThat(reloaded.isCorrect()).isTrue();
+    assertThat(reloaded.getOutcome()).isEqualTo(AnswerOutcome.CORRECT);
+    assertThat(reloaded.getAnsweredAt()).isEqualTo(Instant.parse("2026-10-12T00:00:00.123456Z"));
+    assertThat(reloaded.getResponseMillis()).isEqualTo(3_000_000_000L);
+    assertThat(reviewAttempts.existsBySessionIdAndQuestionId(fact.getSessionId(), 1)).isTrue();
+    assertThat(reviewAttempts.existsBySessionIdAndQuestionId(fact.getSessionId(), 2)).isFalse();
+    assertThat(reviewAttempts.existsBySessionIdAndQuestionId(UUID.randomUUID(), 1)).isFalse();
+  }
+
+  @Test
+  void v5ReviewAttemptsExistAndAllForeignKeysPreventImplicitDeletion() {
+    assertThat(jdbc.queryForObject("select to_regclass('review_attempts')::text", String.class))
+        .isEqualTo("review_attempts");
+    assertThat(
+            jdbc.queryForList(
+                "select conname from pg_constraint where conrelid='review_attempts'::regclass and"
+                    + " contype='f' order by conname",
+                String.class))
+        .containsExactly(
+            "review_attempts_attempt_identity_fk",
+            "review_attempts_question_fk",
+            "review_attempts_session_identity_fk",
+            "review_attempts_session_question_fk",
+            "review_attempts_student_fk");
+    assertThat(
+            jdbc.queryForList(
+                "select confdeltype::text from pg_constraint where"
+                    + " conrelid='review_attempts'::regclass and contype='f'",
+                String.class))
+        .containsOnly("a");
+    assertThat(
+            jdbc.queryForList(
+                "select conname from pg_constraint where conrelid='review_attempts'::regclass and"
+                    + " contype='c' order by conname",
+                String.class))
+        .containsExactly(
+            "review_attempts_choice_check",
+            "review_attempts_day_attempt_mode_check",
+            "review_attempts_mode_check",
+            "review_attempts_outcome_check",
+            "review_attempts_response_millis_check");
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {"O,false,true,CORRECT", "X,false,false,WRONG", "NULL,true,false,TIMED_OUT"},
+      nullValues = "NULL")
+  void reviewAttemptsAcceptConsistentReplayFactsAndLongResponseMillis(
+      String choice, boolean timedOut, boolean correct, String outcome) {
+    var row = reviewRow("REPLAY");
+    row.put("choice", choice);
+    row.put("timed_out", timedOut);
+    row.put("correct", correct);
+    row.put("outcome", outcome);
+    row.put("response_millis", 3_000_000_000L);
+    insertReview(row);
+    var stored = jdbc.queryForMap("select * from review_attempts where id=?", row.get("id"));
+    assertThat(stored.get("choice")).isEqualTo(choice);
+    assertThat(stored.get("outcome")).isEqualTo(outcome);
+    assertThat(stored.get("request_id")).isEqualTo(row.get("request_id"));
+    assertThat(stored.get("response_millis")).isEqualTo(3_000_000_000L);
+    assertThat(stored.get("answered_at")).isEqualTo(now());
+  }
+
+  @Test
+  void reviewStorageAllowsReviewWithoutADayAttemptForTheNextTask() {
+    var row = reviewRow("REVIEW");
+    insertReview(row);
+    assertThat(
+            jdbc.queryForObject(
+                "select day_attempt_id is null and mode='REVIEW' from review_attempts where id=?",
+                Boolean.class,
+                row.get("id")))
+        .isTrue();
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "id",
+        "student_account_id",
+        "version",
+        "question_id",
+        "session_id",
+        "mode",
+        "request_id",
+        "timed_out",
+        "correct",
+        "outcome",
+        "answered_at",
+        "response_millis"
+      })
+  void reviewAttemptsRequireEveryNonnullableIdentityAndOutcomeField(String missing) {
+    var row = reviewRow("REPLAY");
+    row.put(missing, null);
+    assertSqlViolation("23502", null, () -> insertReview(row));
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      value = {
+        "NULL,false,true,CORRECT",
+        "NULL,false,false,WRONG",
+        "O,true,true,CORRECT",
+        "O,true,false,WRONG",
+        "O,false,false,CORRECT",
+        "O,false,true,WRONG",
+        "NULL,true,true,TIMED_OUT",
+        "O,true,false,TIMED_OUT",
+        "NULL,false,false,TIMED_OUT",
+        "O,false,false,TIMED_OUT",
+        "NULL,true,false,CORRECT",
+        "NULL,true,false,WRONG",
+        "O,false,true,UNKNOWN",
+        "Y,false,true,CORRECT"
+      },
+      nullValues = "NULL")
+  void reviewAttemptsRejectEveryInconsistentOutcomeAndInvalidChoice(
+      String choice, boolean timedOut, boolean correct, String outcome) {
+    var row = reviewRow("REPLAY");
+    row.put("choice", choice);
+    row.put("timed_out", timedOut);
+    row.put("correct", correct);
+    row.put("outcome", outcome);
+    assertSqlViolation("23514", null, () -> insertReview(row));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"FIRST", "UNKNOWN"})
+  void reviewAttemptsRejectModesOtherThanReplayAndReview(String mode) {
+    var row = reviewRow("REPLAY");
+    row.put("mode", mode);
+    assertSqlViolation("23514", null, () -> insertReview(row));
+  }
+
+  @Test
+  void replayFactsRequireADayAttempt() {
+    var row = reviewRow("REPLAY");
+    row.put("day_attempt_id", null);
+    assertCheckViolation("review_attempts_day_attempt_mode_check", () -> insertReview(row));
+  }
+
+  @Test
+  void reviewFactsCannotClaimADayAttempt() {
+    var row = reviewRow("REPLAY");
+    row.put("mode", "REVIEW");
+    assertCheckViolation("review_attempts_day_attempt_mode_check", () -> insertReview(row));
+  }
+
+  @Test
+  void reviewAttemptsRejectNegativeResponseMillis() {
+    var row = reviewRow("REPLAY");
+    row.put("response_millis", -1);
+    assertCheckViolation("review_attempts_response_millis_check", () -> insertReview(row));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {"student_account_id", "version", "question_id", "session_id", "day_attempt_id"})
+  void reviewAttemptsRejectMissingReferencedIdentities(String missing) {
+    var row = reviewRow("REPLAY");
+    row.put(
+        missing,
+        missing.equals("version")
+            ? "missing-version"
+            : missing.equals("question_id") ? 151 : UUID.randomUUID());
+    assertSqlViolation("23503", null, () -> insertReview(row));
+  }
+
+  @Test
+  void reviewAttemptsCannotClaimAnotherStudentsSession() {
+    var row = reviewRow("REPLAY");
+    row.put("student_account_id", student(2));
+    assertSqlViolation("23503", "review_attempts_session_identity_fk", () -> insertReview(row));
+  }
+
+  @Test
+  void reviewAttemptsCannotClaimAnotherContentVersion() {
+    var row = reviewRow("REPLAY");
+    var other = "repeat-version-" + UUID.randomUUID();
+    insertContentVersion(other);
+    row.put("version", other);
+    assertSqlViolation("23503", "review_attempts_session_identity_fk", () -> insertReview(row));
+  }
+
+  @Test
+  void reviewAttemptsMustUseTheOwningSessionsMode() {
+    var row = reviewRow("REPLAY");
+    jdbc.update("update learning_sessions set mode='FIRST' where id=?", row.get("session_id"));
+    assertSqlViolation("23503", "review_attempts_session_identity_fk", () -> insertReview(row));
+  }
+
+  @Test
+  void reviewAttemptsCannotUseAnAttemptFromAnotherSession() {
+    var row = reviewRow("REPLAY");
+    var otherSession = UUID.randomUUID();
+    insertSession(otherSession, (UUID) row.get("student_account_id"), "COMPLETED", now());
+    var otherAttempt = UUID.randomUUID();
+    var progress =
+        jdbc.queryForObject(
+            "select day_progress_id from day_attempts where id=?",
+            UUID.class,
+            row.get("day_attempt_id"));
+    insertAttempt(otherAttempt, otherSession, progress, (UUID) row.get("student_account_id"), 2);
+    row.put("day_attempt_id", otherAttempt);
+    assertSqlViolation("23503", "review_attempts_attempt_identity_fk", () -> insertReview(row));
+  }
+
+  @Test
+  void reviewAttemptsMustReferenceAQuestionInTheirFixedSessionOrder() {
+    var row = reviewRow("REPLAY");
+    row.put("question_id", 2);
+    assertSqlViolation("23503", "review_attempts_session_question_fk", () -> insertReview(row));
+  }
+
+  @Test
+  void reviewAttemptsHaveOneFactPerSessionQuestion() {
+    var row = reviewRow("REPLAY");
+    insertReview(row);
+    row.put("id", UUID.randomUUID());
+    row.put("request_id", UUID.randomUUID());
+    assertSqlViolation("23505", "uq_review_attempt_session_question", () -> insertReview(row));
+  }
+
+  @Test
+  void newRepeatSessionsMayAnswerTheSameQuestionAgain() {
+    var first = reviewRow("REPLAY");
+    insertReview(first);
+    jdbc.update(
+        "update learning_sessions set state='COMPLETED' where id=?", first.get("session_id"));
+    var next = UUID.randomUUID();
+    var student = (UUID) first.get("student_account_id");
+    var progress =
+        jdbc.queryForObject(
+            "select day_progress_id from day_attempts where id=?",
+            UUID.class,
+            first.get("day_attempt_id"));
+    insertSession(next, student, "COMPLETED", now());
+    jdbc.update("update learning_sessions set mode='REPLAY' where id=?", next);
+    insertSessionQuestion(next, 1, 1);
+    var attempt = UUID.randomUUID();
+    insertAttempt(attempt, next, progress, student, 2);
+    first.put("id", UUID.randomUUID());
+    first.put("session_id", next);
+    first.put("day_attempt_id", attempt);
+    first.put("request_id", UUID.randomUUID());
+    insertReview(first);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from review_attempts where student_account_id=?",
+                Integer.class,
+                student))
+        .isEqualTo(2);
+  }
+
+  private java.util.LinkedHashMap<String, Object> reviewRow(String mode) {
+    AnswerContext context;
+    if (mode.equals("REPLAY")) {
+      context = answerContext(1);
+      jdbc.update("update learning_sessions set mode='REPLAY' where id=?", context.session());
+    } else {
+      var student = student(1);
+      var session = UUID.randomUUID();
+      jdbc.update(
+          "insert into"
+              + " learning_sessions(id,student_account_id,version,mode,day,state,current_position,deadline_at,created_at,updated_at)"
+              + " values (?,?,?,'REVIEW',null,'QUESTION_ACTIVE',1,?,?,?)",
+          session,
+          student,
+          VERSION,
+          now(),
+          now(),
+          now());
+      context = new AnswerContext(student, session, null);
+    }
+    insertSessionQuestion(context.session(), 1, 1);
+    var row = new java.util.LinkedHashMap<String, Object>();
+    row.put("id", UUID.randomUUID());
+    row.put("student_account_id", context.student());
+    row.put("version", VERSION);
+    row.put("question_id", 1);
+    row.put("session_id", context.session());
+    row.put("day_attempt_id", context.attempt());
+    row.put("mode", mode);
+    row.put("request_id", UUID.randomUUID());
+    row.put("choice", "O");
+    row.put("timed_out", false);
+    row.put("correct", true);
+    row.put("outcome", "CORRECT");
+    row.put("answered_at", now());
+    row.put("response_millis", 0L);
+    return row;
+  }
+
+  private void insertReview(java.util.LinkedHashMap<String, Object> row) {
+    jdbc.update(
+        "insert into review_attempts("
+            + String.join(",", row.keySet())
+            + ") values ("
+            + String.join(",", java.util.Collections.nCopies(row.size(), "?"))
+            + ")",
+        row.values().toArray());
+  }
+
   private UUID student(int number) {
     var school = fixtures.school("계약 학교 " + UUID.randomUUID());
     var teacher = fixtures.teacher(school);
@@ -1270,7 +1628,12 @@ class LearningPersistenceContractIT {
         "insert into learning_sessions"
             + "(id,student_account_id,version,mode,day,state,current_position,deadline_at,created_at,updated_at)"
             + " values (?,?,?,'FIRST',1,'QUESTION_ACTIVE',1,?,?,?)",
-        session, student, version, now(), now(), now());
+        session,
+        student,
+        version,
+        now(),
+        now(),
+        now());
     jdbc.update(
         "insert into day_attempts"
             + "(id,session_id,day_progress_id,student_account_id,version,day,attempt_number,state,"
@@ -1291,10 +1654,19 @@ class LearningPersistenceContractIT {
       UUID attempt, String choice, Boolean timedOut, Boolean correct) {
     jdbc.update(
         "insert into first_answers"
-            + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,"
-            + "choice,timed_out,correct,answered_at,response_millis) values (?,?,?,?,?,?,?,?,?,?,?,0)",
-        UUID.randomUUID(), student, version, question, session, attempt, UUID.randomUUID(),
-        choice, timedOut, correct, now());
+            + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,choice,timed_out,correct,answered_at,response_millis)"
+            + " values (?,?,?,?,?,?,?,?,?,?,?,0)",
+        UUID.randomUUID(),
+        student,
+        version,
+        question,
+        session,
+        attempt,
+        UUID.randomUUID(),
+        choice,
+        timedOut,
+        correct,
+        now());
   }
 
   private void insertLastAnswer(
@@ -1309,9 +1681,16 @@ class LearningPersistenceContractIT {
 
   private void insertXpEntry(UUID student, String kind, UUID source, int amount, String rule) {
     jdbc.update(
-        "insert into xp_entries(id,student_account_id,kind,source_id,amount,rule_version,created_at)"
+        "insert into"
+            + " xp_entries(id,student_account_id,kind,source_id,amount,rule_version,created_at)"
             + " values (?,?,?,?,?,?,?)",
-        UUID.randomUUID(), student, kind, source, amount, rule, now());
+        UUID.randomUUID(),
+        student,
+        kind,
+        source,
+        amount,
+        rule,
+        now());
   }
 
   private record AnswerContext(UUID student, UUID session, UUID attempt) {}
