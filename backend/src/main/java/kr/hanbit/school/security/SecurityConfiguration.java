@@ -62,6 +62,8 @@ public class SecurityConfiguration {
                     .hasRole("ADMIN")
                     .requestMatchers("/api/staff/**")
                     .hasAnyRole("TEACHER", "ADMIN")
+                    .requestMatchers("/api/student/**")
+                    .hasRole("STUDENT")
                     .anyRequest()
                     .authenticated())
         .exceptionHandling(

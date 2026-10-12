@@ -63,6 +63,11 @@ public class TestFixtures {
   }
 
   public Classroom classroom(School s, Account teacher, String grade, int n) {
+    return classroom(s, teacher, grade, n, LocalDate.of(2026, 10, 12));
+  }
+
+  public Classroom classroom(
+      School s, Account teacher, String grade, int n, LocalDate startDate) {
     var c =
         classes.saveAndFlush(
             new Classroom(
@@ -76,7 +81,7 @@ public class TestFixtures {
                     .toUpperCase()
                     .replace('0', 'A')
                     .replace('1', 'B'),
-                LocalDate.of(2026, 10, 12)));
+                startDate));
     teachers.saveAndFlush(new ClassroomTeacher(c.getId(), teacher.getId()));
     return c;
   }

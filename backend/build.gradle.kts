@@ -14,8 +14,13 @@ dependencies {
  testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
  testImplementation("org.springframework.boot:spring-boot-starter-security-test")
  testImplementation("org.springframework.boot:spring-boot-testcontainers")
+ testImplementation("org.awaitility:awaitility")
  testImplementation("org.testcontainers:testcontainers-junit-jupiter")
  testImplementation("org.testcontainers:testcontainers-postgresql")
  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
-tasks.withType<Test> { useJUnitPlatform(); testLogging { events("failed", "skipped"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT } }
+tasks.withType<Test> {
+ useJUnitPlatform()
+ systemProperty("hanbit.learning.expiry-enabled", "false")
+ testLogging { events("failed", "skipped"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT }
+}
