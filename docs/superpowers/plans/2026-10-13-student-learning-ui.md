@@ -58,7 +58,7 @@
 
 대기 명령은 `PendingLearningCommand = {kind:'START',command:StartLearningSessionCommand} | {kind:'ANSWER',sessionId:string,command:SubmitAnswerCommand} | {kind:'ADVANCE',sessionId:string,command:AdvanceLearningSessionCommand}`이다. command 안에는 서버 필드만 있다. 학생 scope는 저장 key와 hook에서 관리하고 body에 보내지 않는다.
 
-## Task 1: typed API·서버 시각·대기 명령·학생별 query
+### Task 1: typed API·서버 시각·대기 명령·학생별 query
 
 **Files:**
 - Create: `frontend/src/features/learning/{types,api,serverClock,pendingCommands,queries,useLearningActions}.ts`.
@@ -83,7 +83,7 @@
 - [ ] **Step 4: Verify GREEN and full frontend.** Step 2 재실행 후 `npx --yes --package=node@24 --package=pnpm@11.25.0 -c 'pnpm --dir frontend test && pnpm --dir frontend build && pnpm --dir frontend lint'`. 기존 30개와 신규 behavioral tests 모두 PASS, build/lint exit 0.
 - [ ] **Step 5: Commit.** `feat: add resilient student learning client`.
 
-## Task 2: 문제·확정 해설·재개·완료 결과 화면
+### Task 2: 문제·확정 해설·재개·완료 결과 화면
 
 **Files:**
 - Create: `frontend/src/features/learning/{LearningSessionPage,LearningResultPage}.tsx`, `learning.css`.
@@ -104,7 +104,7 @@
 - [ ] **Step 5: Verify GREEN and frontend regression.** Repeat Step 3, then full pinned test/build/lint. Read React best-practices guidance for the edited TSX; keep hooks unconditional and effect dependencies complete.
 - [ ] **Step 6: Commit.** `feat: add student question and result screens`.
 
-## Task 3: 학습 홈·개인 목록·동의·학생 로그인 연결
+### Task 3: 학습 홈·개인 목록·동의·학생 로그인 연결
 
 **Files:**
 - Create: `frontend/src/features/learning/{LearningDashboardPage,PersonalQuestionsPage,QuestionFeedbackActions}.tsx`.
@@ -126,7 +126,7 @@
 - [ ] **Step 5: Verify GREEN and full frontend.** Repeat Step 3 then pinned test/build/lint. No route-dependent warnings/unhandled request or React warnings may be silently ignored.
 - [ ] **Step 6: Commit.** `feat: connect student learning home and personal questions`.
 
-## Task 4: 실제 브라우저·PostgreSQL 검증과 실행 인계
+### Task 4: 실제 브라우저·PostgreSQL 검증과 실행 인계
 
 **Files:**
 - Create: `frontend/e2e/learning-flow.spec.ts`.
