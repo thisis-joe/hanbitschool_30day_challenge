@@ -8,6 +8,19 @@ test('teacher logout student login back and protected route', async ({ page }) =
   await expect(page.getByText('김민수', { exact: true })).toBeVisible();
   await signOut(page);
   await studentLogin(page, '한빛학교', c.gradeLabel, 1, 1, 'Student!2026');
+  let logoutRequests = 0;
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/auth/logout')) logoutRequests++;
+  });
+  await page.getByRole('link', { name: /한빛학교.*배움터/ }).click();
+  await expect(page).toHaveURL(/\/student\/account$/);
+  await expect(page.getByRole('heading', { name: '숲친구', exact: true })).toBeVisible();
+  expect((await page.request.get('/api/auth/me')).status()).toBe(200);
+  expect(logoutRequests).toBe(0);
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/student\/account$/);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: '숲친구', exact: true })).toBeVisible();
   await page.goBack();
   await expect(page.getByText('가입 학생 명단', { exact: true })).toHaveCount(0);
   await page.goto('/staff/classrooms');
