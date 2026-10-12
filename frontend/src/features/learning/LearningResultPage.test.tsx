@@ -312,6 +312,57 @@ it('resultReloadRestoresAndRetriesTheSameUncertainStart', async () => {
   expect(readPendingCommand('student-a')).toBeNull();
 });
 
+// A retained START must not block direct recovery to the active session from fresh conflict status.
+it('resultConflictRecoveryLinkRemainsUsableWhenCanonicalReadFails', async () => {
+  const other = '44444444-4444-4444-8444-444444444444';
+  const pending = {
+    kind: 'START' as const,
+    command: { requestId, mode: 'FIRST' as const, dayNumber: 2, questionIds: null },
+  };
+  writePendingCommand('student-a', pending);
+  let conflict = false;
+  let otherReads = 0;
+  const bodies: unknown[] = [];
+  const otherSession = {
+    ...activeSession,
+    sessionId: other,
+    question: { ...activeSession.question!, text: '복구할 활성 세션 문항입니다.' },
+  };
+  server.use(
+    http.get('*/api/student/learning/status', () =>
+      HttpResponse.json(
+        conflict
+          ? { ...finishedStatus, nextAction: 'CONTINUE_SESSION', activeSession: otherSession }
+          : finishedStatus,
+      ),
+    ),
+    http.get('*/api/student/learning/sessions/:id', ({ params }) => {
+      if (params.id !== other) return json(completed);
+      otherReads++;
+      return otherReads === 1 ? HttpResponse.error() : json(otherSession);
+    }),
+    http.post('*/api/student/learning/sessions', async ({ request }) => {
+      bodies.push(await request.json());
+      conflict = true;
+      return HttpResponse.json(
+        { code: 'SESSION_CONFLICT', message: '진행 중인 학습이 있어요.', fieldErrors: {} },
+        { status: 409 },
+      );
+    }),
+  );
+  setup();
+  await userEvent.click(await screen.findByRole('button', { name: '같은 학습 시작 다시 확인' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('연결을 확인하고 다시 시도해 주세요.');
+  expect(screen.getByRole('button', { name: '이어풀기' })).toBeDisabled();
+  expect(readPendingCommand('student-a')).toEqual(pending);
+  const recovery = screen.getByRole('link', { name: '진행 중인 학습 이어풀기' });
+  expect(recovery).toHaveAttribute('href', `/student/learning/sessions/${other}`);
+  await userEvent.click(recovery);
+  expect(await screen.findByText('복구할 활성 세션 문항입니다.')).toBeVisible();
+  expect(bodies).toEqual([pending.command]);
+  expect(readPendingCommand('student-a')).toEqual(pending);
+});
+
 // A failed result GET after reload must not hide a persisted start's recovery control.
 it('uncertainStartCanBeRetriedWhenTheReloadResultReadFails', async () => {
   writePendingCommand('student-a', {

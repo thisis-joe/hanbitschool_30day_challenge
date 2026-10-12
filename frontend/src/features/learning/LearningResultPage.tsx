@@ -163,6 +163,14 @@ export function LearningResultPage() {
           </button>
         </div>
       ) : null}
+      {next?.activeSession ? (
+        <Link
+          className="button secondary learning-recovery"
+          to={`/student/learning/sessions/${next.activeSession.sessionId}`}
+        >
+          진행 중인 학습 이어풀기
+        </Link>
+      ) : null}
       {view && result ? (
         <div className="learning-card learning-result">
           <p className="learning-eyebrow">
