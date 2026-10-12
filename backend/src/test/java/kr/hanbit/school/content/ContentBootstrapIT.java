@@ -95,7 +95,7 @@ class ContentBootstrapIT {
 
   @Test
   void conflictingActiveVersionPreventsCanonicalInstallWithoutWrites() {
-    jdbc.update("delete from content_versions");
+    deleteAllContent();
     jdbc.update(
         "insert into content_versions(version,digest,active) values ('other-v1',?,true)",
         "a".repeat(64));
@@ -138,7 +138,7 @@ class ContentBootstrapIT {
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void failedInstallLeavesNoVersionRows() {
     String failedVersion = "rollback-v1";
-    jdbc.update("delete from content_versions");
+    deleteAllContent();
     try {
       jdbc.execute(
           """
@@ -182,14 +182,14 @@ class ContentBootstrapIT {
     } finally {
       jdbc.execute("drop trigger if exists reject_rollback_question on questions");
       jdbc.execute("drop function if exists reject_rollback_question()");
-      jdbc.update("delete from content_versions");
+      deleteAllContent();
       bootstrap.initialize();
     }
   }
 
   @Test
   void importerInstallsAllRowsAtomicallyWhenVersionIsMissing() {
-    jdbc.update("delete from content_versions");
+    deleteAllContent();
 
     importer.install(VERSION, DIGEST, new ClassPathResource("content/hanbit-v1.json"));
 
@@ -197,6 +197,12 @@ class ContentBootstrapIT {
         .isEqualTo(1);
     assertThat(jdbc.queryForObject("select count(*) from content_days", Integer.class)).isEqualTo(30);
     assertThat(jdbc.queryForObject("select count(*) from questions", Integer.class)).isEqualTo(150);
+  }
+
+  private void deleteAllContent() {
+    jdbc.update("delete from questions");
+    jdbc.update("delete from content_days");
+    jdbc.update("delete from content_versions");
   }
 
   private String rowVersions() {

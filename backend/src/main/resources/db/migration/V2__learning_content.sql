@@ -13,7 +13,7 @@ create table content_days (
     day integer not null,
     title text not null,
     primary key (version, day),
-    constraint content_days_version_fk foreign key (version) references content_versions(version) on delete cascade,
+    constraint content_days_version_fk foreign key (version) references content_versions(version) on delete no action,
     constraint content_days_day_range check (day between 1 and 30),
     -- Java 21 Character.isWhitespace, explicitly excluding nonbreaking spaces.
     constraint content_days_title_nonblank check (
@@ -31,7 +31,7 @@ create table questions (
     explanation text not null,
     time_limit_seconds integer not null,
     primary key (version, question_id),
-    constraint questions_day_fk foreign key (version, day) references content_days(version, day) on delete cascade,
+    constraint questions_day_fk foreign key (version, day) references content_days(version, day) on delete no action,
     constraint questions_position_unique unique (version, day, position),
     constraint questions_id_positive check (question_id > 0),
     constraint questions_position_range check (position between 1 and 5),

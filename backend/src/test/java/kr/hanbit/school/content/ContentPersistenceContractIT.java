@@ -3,6 +3,7 @@ package kr.hanbit.school.content;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.sql.SQLException;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -17,13 +18,29 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest(properties = {"hanbit.bootstrap.id=", "hanbit.bootstrap.password="})
 @Import(PostgresTestConfiguration.class)
 @Transactional
 class ContentPersistenceContractIT {
   @Autowired JdbcTemplate jdbc;
+  @Autowired PlatformTransactionManager transactionManager;
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void deletingVersionWithDaysIsRejectedByContentDayForeignKey() {
+    assertParentDeletionRejected(false, "content_days_version_fk");
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void deletingDayWithQuestionsIsRejectedByQuestionForeignKey() {
+    assertParentDeletionRejected(true, "questions_day_fk");
+  }
 
   @Test
   void learningTablesAndPostgresTextColumnsExist() {
@@ -151,6 +168,62 @@ class ContentPersistenceContractIT {
                     "hanbit-v1"))
         .isInstanceOf(DataIntegrityViolationException.class)
         .hasStackTraceContaining(table + "_" + column + "_nonblank");
+  }
+
+  private void assertParentDeletionRejected(boolean withQuestion, String constraint) {
+    String version = "delete-contract-" + UUID.randomUUID();
+    var transaction = new TransactionTemplate(transactionManager);
+    try {
+      transaction.executeWithoutResult(
+          status -> {
+            jdbc.update(
+                "insert into content_versions(version,digest,active) values (?, ?, false)",
+                version,
+                "a".repeat(64));
+            jdbc.update("insert into content_days(version,day,title) values (?,1,'첫날')", version);
+            if (withQuestion) insertQuestion(version, 1, 1, 1, "설명");
+          });
+      assertContentRowCounts(version, withQuestion);
+
+      assertThatThrownBy(
+              () ->
+                  transaction.executeWithoutResult(
+                      status ->
+                          jdbc.update(
+                              withQuestion
+                                  ? "delete from content_days where version=? and day=1"
+                                  : "delete from content_versions where version=?",
+                              version)))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .rootCause()
+          .isInstanceOfSatisfying(
+              SQLException.class,
+              error -> {
+                assertThat(error.getSQLState()).isEqualTo("23503");
+                assertThat(error.getMessage())
+                    .contains("violates foreign key constraint \"" + constraint + "\"");
+              });
+
+      // These queries run after the rejected transaction has rolled back, not in its cache.
+      assertContentRowCounts(version, withQuestion);
+    } finally {
+      transaction.executeWithoutResult(
+          status -> {
+            jdbc.update("delete from questions where version=?", version);
+            jdbc.update("delete from content_days where version=?", version);
+            jdbc.update("delete from content_versions where version=?", version);
+          });
+    }
+  }
+
+  private void assertContentRowCounts(String version, boolean withQuestion) {
+    for (String table : new String[] {"content_versions", "content_days", "questions"}) {
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from " + table + " where version=?", Integer.class, version))
+          .as(table)
+          .isEqualTo(table.equals("questions") && !withQuestion ? 0 : 1);
+    }
   }
 
   private void insertQuestion(String version, int id, int day, int position, String explanation) {
