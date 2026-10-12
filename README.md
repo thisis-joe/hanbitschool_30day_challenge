@@ -28,6 +28,18 @@ docker compose -p hanbit-local --env-file .env.local -f infra/compose.local.yml 
 
 이 실행 묶음은 로컬 HTTP용이므로 세션 쿠키의 Secure가 꺼집니다. 기본 서버 설정은 HttpOnly·Secure·SameSite=Lax와 유휴 만료 30분입니다. 학교 운영 서버·도메인·TLS 설정은 별도의 배포 단계에서 정합니다.
 
+## 운영 배포 (맥미니 + Cloudflare Tunnel)
+
+`https://hanbit.thisis-joe.com`은 이 맥미니의 Docker(Colima) 스택을 Cloudflare Tunnel `hanbit`으로 공개합니다. 공인 포트를 열지 않으며, TLS는 Cloudflare가 종료합니다. 운영 스택은 `local` 프로필을 쓰지 않으므로 세션 쿠키가 Secure입니다.
+
+`.env.prod.local`(Git 제외)에 DB·초기 관리자 값과 `HANBIT_TUNNEL_ID`, `HANBIT_TUNNEL_CREDENTIALS`(터널 자격 증명 JSON 경로)를 둡니다.
+
+```bash
+docker compose -p hanbit-prod --env-file .env.prod.local -f infra/compose.prod.yml up --build -d --wait
+```
+
+모든 서비스는 `restart: unless-stopped`이므로 Colima가 켜지면 함께 올라옵니다. 로컬 확인용 포트는 `127.0.0.1:8089`입니다.
+
 ## 사용 흐름
 
 1. 초기 관리자가 교직원 로그인 화면에 로그인하고 **교사 계정**에서 교사 이름과 아이디를 발급합니다. 초기 비밀번호는 발급 직후 현재 화면에서만 보이며 목록·새로고침으로 복구되지 않습니다.
