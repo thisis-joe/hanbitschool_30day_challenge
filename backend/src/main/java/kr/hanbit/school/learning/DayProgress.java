@@ -93,4 +93,11 @@ public class DayProgress {
   public Instant getUpdatedAt() {
     return updatedAt;
   }
+
+  void startFirst(Instant startedAt) {
+    if (state != DayProgressState.NOT_STARTED)
+      throw new IllegalStateException("미시작 회차만 첫 학습을 시작할 수 있습니다.");
+    state = DayProgressState.IN_PROGRESS;
+    updatedAt = LearningTime.persistable(startedAt);
+  }
 }

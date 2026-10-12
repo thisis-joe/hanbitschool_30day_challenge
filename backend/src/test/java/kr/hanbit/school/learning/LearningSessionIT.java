@@ -127,6 +127,39 @@ class LearningSessionIT extends LearningApiTestSupport {
   }
 
   @Test
+  void startsAnExplicitNotStartedProgressRowWithoutReplacingItsIdentity() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+    var progressId = learning.progress(student, 1, DayProgressState.NOT_STARTED);
+    var login = client.loginStudent(student);
+    assertThat(node(status(login)).path("nextAction").asString()).isEqualTo("START_FIRST");
+    assertThat(learning.count("learning_sessions", student)).isZero();
+    assertThat(learning.count("day_attempts", student)).isZero();
+    clock.setInstant(java.time.Instant.parse("2026-10-12T00:00:05.987654321Z"));
+
+    var started = send("/api/student/learning/sessions", login, startBody(1, UUID.randomUUID()));
+
+    assertThat(started.getResponse().getStatus()).isEqualTo(200);
+    var sessionId = UUID.fromString(node(started).path("sessionId").asString());
+    assertThat(progress.findById(progressId)).get().satisfies(row -> {
+      assertThat(row.getState()).isEqualTo(DayProgressState.IN_PROGRESS);
+      assertThat(row.getPassedAt()).isNull();
+      assertThat(row.getCreatedAt())
+          .isEqualTo(java.time.Instant.parse("2026-10-12T00:00:00.123456Z"));
+      assertThat(row.getUpdatedAt())
+          .isEqualTo(java.time.Instant.parse("2026-10-12T00:00:05.987654Z"));
+    });
+    assertThat(attempts.findBySessionId(sessionId)).get()
+        .satisfies(attempt -> {
+          assertThat(attempt.getDayProgressId()).isEqualTo(progressId);
+          assertThat(attempt.getAttemptNumber()).isEqualTo(1);
+          assertThat(attempt.getVersion()).isEqualTo("hanbit-v1");
+          assertThat(attempt.isCatchUp()).isFalse();
+        });
+    assertThat(learning.count("day_progress", student)).isEqualTo(1);
+    assertThat(learning.count("learning_sessions", student)).isEqualTo(1);
+  }
+
+  @Test
   void rejectsEveryInvalidFirstCommandShapeWithValidationErrors() throws Exception {
     var student = learning.student(LocalDate.of(2026, 10, 12));
     var principal = AuthenticationModule.principal(student);

@@ -131,26 +131,30 @@ public class LearningSessionModule {
       throw ApiException.validation("dayNumber", "FIRST는 가장 앞선 미시작 회차만 시작할 수 있습니다.");
     if (requestedDay > earliest)
       throw new ApiException(409, "PREVIOUS_DAY_NOT_PASSED", "앞선 회차를 먼저 통과해 주세요.");
-    if (progress
-        .findByStudentAccountIdAndVersionAndDay(
-            student.studentAccountId(), version, requestedDay)
-        .isPresent()) throw conflict();
+    var existingProgress =
+        progress.findByStudentAccountIdAndVersionAndDay(
+            student.studentAccountId(), version, requestedDay);
+    if (existingProgress.isPresent()
+        && existingProgress.get().getState() != DayProgressState.NOT_STARTED) throw conflict();
 
     var questions = content.questionsForDay(version, requestedDay);
     if (questions.size() != 5)
       throw new IllegalStateException("회차 학습 문항은 정확히 5개여야 합니다.");
     var now = LearningTime.persistable(clock.instant());
     var progressRow =
-        progress.saveAndFlush(
-            new DayProgress(
-                UUID.randomUUID(),
-                student.studentAccountId(),
-                version,
-                requestedDay,
-                DayProgressState.IN_PROGRESS,
-                null,
-                now,
-                now));
+        existingProgress.orElseGet(
+            () ->
+                new DayProgress(
+                    UUID.randomUUID(),
+                    student.studentAccountId(),
+                    version,
+                    requestedDay,
+                    DayProgressState.NOT_STARTED,
+                    null,
+                    now,
+                    now));
+    progressRow.startFirst(now);
+    progress.saveAndFlush(progressRow);
     var session =
         sessions.saveAndFlush(
             new LearningSession(
