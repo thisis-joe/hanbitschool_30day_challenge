@@ -8,7 +8,7 @@ import java.util.Objects;
 public final class MutableClock extends Clock {
   public static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
-  private Instant instant = Instant.EPOCH;
+  private volatile Instant instant = Instant.EPOCH;
   private final ZoneId zone;
 
   public MutableClock() {

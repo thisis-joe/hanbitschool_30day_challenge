@@ -1041,12 +1041,15 @@ class LearningPersistenceContractIT {
     insertSession(completed, student(6), "COMPLETED", earlierDeadline);
 
     assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(0, 100)))
-        .containsExactly(earlier, tied, atBoundary);
+        .containsExactly(earlier, tied);
     assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(0, 2)))
         .containsExactly(earlier, tied);
-    assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(1, 2)))
-        .containsExactly(atBoundary);
+    assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(1, 2))).isEmpty();
     assertThat(sessions.findExpiredIds(observedAt, PageRequest.of(2, 2))).isEmpty();
+    assertThat(sessions.findExpiredIds(observedAt.plusNanos(1), PageRequest.of(0, 100)))
+        .containsExactly(earlier, tied, atBoundary);
+    assertThat(sessions.findExpiredIds(observedAt.plusNanos(1), PageRequest.of(1, 2)))
+        .containsExactly(atBoundary);
   }
 
   @Test
