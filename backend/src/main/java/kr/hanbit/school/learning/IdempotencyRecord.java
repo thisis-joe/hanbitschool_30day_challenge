@@ -7,9 +7,11 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Immutable;
 import org.hibernate.type.SqlTypes;
 
 @Entity
+@Immutable
 @Table(name = "idempotency_records")
 public class IdempotencyRecord {
   @EmbeddedId private IdempotencyRecordId id;
