@@ -77,6 +77,25 @@ class LearningAccessIT extends LearningApiTestSupport {
   }
 
   @Test
+  void brokenStudentContextTakesPrecedenceOverInvalidFirstPayload() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+    var login = client.loginStudent(student);
+    jdbc.update("delete from student_profiles where account_id=?", student.getId());
+
+    var result =
+        startRaw(
+            login,
+            "{\"mode\":\"FIRST\",\"dayNumber\":0,\"questionIds\":[1],\"requestId\":\""
+                + UUID.randomUUID()
+                + "\"}");
+
+    assertThat(result.getResponse().getStatus()).isEqualTo(401);
+    assertThat(node(result).path("code").asString()).isEqualTo("UNAUTHENTICATED");
+    assertThat(learning.count("day_progress", student)).isZero();
+    assertThat(learning.count("learning_sessions", student)).isZero();
+  }
+
+  @Test
   void idempotencyUsesTypedPayloadAndOperationScope() throws Exception {
     var student = learning.student(LocalDate.of(2026, 10, 12));
     var requestId = UUID.randomUUID();

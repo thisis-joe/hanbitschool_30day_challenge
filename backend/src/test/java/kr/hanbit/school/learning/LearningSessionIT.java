@@ -1,12 +1,15 @@
 package kr.hanbit.school.learning;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import kr.hanbit.school.account.AuthenticationModule;
+import kr.hanbit.school.shared.web.ApiException;
 import kr.hanbit.school.support.LearningApiTestSupport;
 import kr.hanbit.school.support.LearningTestClockConfiguration;
 import kr.hanbit.school.support.PostgresTestConfiguration;
@@ -26,6 +29,7 @@ import org.springframework.context.annotation.Import;
   SessionTestClient.class
 })
 class LearningSessionIT extends LearningApiTestSupport {
+  @Autowired LearningSessionModule module;
   @Autowired LearningSessionRepository sessions;
   @Autowired LearningSessionQuestionRepository sessionQuestions;
   @Autowired DayProgressRepository progress;
@@ -102,6 +106,82 @@ class LearningSessionIT extends LearningApiTestSupport {
               assertThat(attempt.getState()).isEqualTo(DayAttemptState.ACTIVE);
               assertThat(attempt.isCatchUp()).isTrue();
             });
+  }
+
+  @Test
+  void startsTodaysFirstDayAsAnOnTimeAttempt() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+
+    var response =
+        send(
+            "/api/student/learning/sessions",
+            client.loginStudent(student),
+            startBody(1, UUID.randomUUID()));
+
+    assertThat(response.getResponse().getStatus()).isEqualTo(200);
+    var sessionId = UUID.fromString(node(response).path("sessionId").asString());
+    assertThat(attempts.findBySessionId(sessionId))
+        .get()
+        .extracting(DayAttempt::isCatchUp)
+        .isEqualTo(false);
+  }
+
+  @Test
+  void rejectsEveryInvalidFirstCommandShapeWithValidationErrors() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+    var principal = AuthenticationModule.principal(student);
+    assertThatThrownBy(() -> module.start(principal, null))
+        .isInstanceOfSatisfying(
+            ApiException.class,
+            error -> {
+              assertThat(error.status()).isEqualTo(400);
+              assertThat(error.code()).isEqualTo("VALIDATION_ERROR");
+              assertThat(error.error().fieldErrors()).containsKey("request");
+            });
+
+    var login = client.loginStudent(student);
+    var requestId = UUID.randomUUID();
+    var cases =
+        java.util.List.of(
+            new InvalidFirst(
+                "{\"mode\":\"FIRST\",\"dayNumber\":1,\"questionIds\":[]}", "requestId"),
+            new InvalidFirst(
+                "{\"mode\":\"REVIEW\",\"dayNumber\":1,\"questionIds\":[],\"requestId\":\""
+                    + requestId
+                    + "\"}",
+                "mode"),
+            new InvalidFirst(
+                "{\"mode\":\"FIRST\",\"questionIds\":[],\"requestId\":\""
+                    + UUID.randomUUID()
+                    + "\"}",
+                "dayNumber"),
+            new InvalidFirst(
+                "{\"mode\":\"FIRST\",\"dayNumber\":0,\"questionIds\":[],\"requestId\":\""
+                    + UUID.randomUUID()
+                    + "\"}",
+                "dayNumber"),
+            new InvalidFirst(
+                "{\"mode\":\"FIRST\",\"dayNumber\":31,\"questionIds\":[],\"requestId\":\""
+                    + UUID.randomUUID()
+                    + "\"}",
+                "dayNumber"),
+            new InvalidFirst(
+                "{\"mode\":\"FIRST\",\"dayNumber\":1,\"questionIds\":[1],\"requestId\":\""
+                    + UUID.randomUUID()
+                    + "\"}",
+                "questionIds"));
+    for (var invalid : cases) {
+      var response = startRaw(login, invalid.body());
+      assertThat(response.getResponse().getStatus()).as(invalid.field()).isEqualTo(400);
+      assertThat(node(response).path("code").asString())
+          .as(invalid.field())
+          .isEqualTo("VALIDATION_ERROR");
+      assertThat(node(response).path("fieldErrors").has(invalid.field()))
+          .as(invalid.field())
+          .isTrue();
+    }
+    assertThat(learning.count("day_progress", student)).isZero();
+    assertThat(learning.count("learning_sessions", student)).isZero();
   }
 
   @Test
@@ -244,4 +324,6 @@ class LearningSessionIT extends LearningApiTestSupport {
   private Map<String, Object> startBody(int day, UUID requestId) {
     return Map.of("mode", "FIRST", "dayNumber", day, "questionIds", java.util.List.of(), "requestId", requestId);
   }
+
+  private record InvalidFirst(String body, String field) {}
 }

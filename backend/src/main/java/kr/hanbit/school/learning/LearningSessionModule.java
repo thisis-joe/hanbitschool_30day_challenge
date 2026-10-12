@@ -90,8 +90,8 @@ public class LearningSessionModule {
   @Transactional
   public LearningSessionView start(
       AccountPrincipal principal, StartLearningSessionCommand command) {
-    validateFirst(command);
     var student = access.lockStudent(principal);
+    validateFirst(command);
     String version = content.activeVersion().getVersion();
     String payloadHash = fingerprints.start(command);
     var replay =
