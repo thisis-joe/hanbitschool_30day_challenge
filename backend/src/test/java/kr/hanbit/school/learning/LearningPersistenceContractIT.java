@@ -9,6 +9,10 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 import kr.hanbit.school.account.AuthenticationModule;
+import kr.hanbit.school.content.AnswerChoice;
+import kr.hanbit.school.learning.xp.XpEntry;
+import kr.hanbit.school.learning.xp.XpEntryRepository;
+import kr.hanbit.school.learning.xp.XpKind;
 import kr.hanbit.school.shared.web.ApiException;
 import kr.hanbit.school.support.LearningTestClockConfiguration;
 import kr.hanbit.school.support.MutableClock;
@@ -37,6 +41,9 @@ class LearningPersistenceContractIT {
   @Autowired LearningSessionRepository sessions;
   @Autowired DayAttemptRepository attempts;
   @Autowired IdempotencyRecordRepository idempotencyRecords;
+  @Autowired FirstAnswerRepository firstAnswers;
+  @Autowired LastAnswerRepository lastAnswers;
+  @Autowired XpEntryRepository xpEntries;
   @Autowired StudentLearningAccess access;
 
   @BeforeEach
@@ -58,6 +65,195 @@ class LearningPersistenceContractIT {
           .as(table)
           .isNotNull();
     }
+  }
+
+  @Test
+  void v4TablesExist() {
+    for (String table : new String[] {"first_answers", "last_answers", "xp_entries"}) {
+      assertThat(jdbc.queryForObject("select to_regclass(?)::text", String.class, table))
+          .as(table)
+          .isNotNull();
+    }
+  }
+
+  @Test
+  void firstAnswerIdentityIsImmutableAndUniquePerStudentVersionAndQuestion() {
+    var context = answerContext(1);
+    firstAnswers.saveAndFlush(
+        new FirstAnswer(
+            UUID.randomUUID(),
+            context.student(),
+            VERSION,
+            1,
+            context.session(),
+            context.attempt(),
+            UUID.randomUUID(),
+            AnswerChoice.O,
+            false,
+            true,
+            clock.instant(),
+            1_250));
+
+    assertThatThrownBy(
+            () ->
+                firstAnswers.saveAndFlush(
+                    new FirstAnswer(
+                        UUID.randomUUID(),
+                        context.student(),
+                        VERSION,
+                        1,
+                        context.session(),
+                        context.attempt(),
+                        UUID.randomUUID(),
+                        AnswerChoice.X,
+                        false,
+                        false,
+                        clock.instant(),
+                        1_500)))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void firstAnswerTimeoutRoundTripsAsANullChoiceAndDerivedTimedOutOutcome() {
+    var context = answerContext(1);
+    var answer =
+        firstAnswers.saveAndFlush(
+            new FirstAnswer(
+                UUID.randomUUID(),
+                context.student(),
+                VERSION,
+                1,
+                context.session(),
+                context.attempt(),
+                UUID.randomUUID(),
+                null,
+                true,
+                false,
+                clock.instant(),
+                10_000));
+    entityManager.clear();
+
+    var reloaded = firstAnswers.findById(answer.getId()).orElseThrow();
+    assertThat(reloaded.getChoice()).isNull();
+    assertThat(reloaded.isTimedOut()).isTrue();
+    assertThat(reloaded.isCorrect()).isFalse();
+    assertThat(reloaded.getOutcome()).isEqualTo(AnswerOutcome.TIMED_OUT);
+  }
+
+  @Test
+  void firstAnswerRejectsANullChoiceUnlessItIsTimedOut() {
+    var context = answerContext(1);
+
+    assertThatThrownBy(
+            () ->
+                jdbc.update(
+                    "insert into first_answers"
+                        + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,"
+                        + "choice,timed_out,correct,answered_at,response_millis)"
+                        + " values (?,?,?,?,?,?,?,null,false,false,?,0)",
+                    UUID.randomUUID(),
+                    context.student(),
+                    VERSION,
+                    1,
+                    context.session(),
+                    context.attempt(),
+                    UUID.randomUUID(),
+                    now()))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void firstAnswerRejectsNegativeResponseDuration() {
+    var context = answerContext(1);
+
+    assertThatThrownBy(
+            () ->
+                jdbc.update(
+                    "insert into first_answers"
+                        + "(id,student_account_id,version,question_id,session_id,day_attempt_id,request_id,"
+                        + "choice,timed_out,correct,answered_at,response_millis)"
+                        + " values (?,?,?,?,?,?,?,'X',false,false,?,-1)",
+                    UUID.randomUUID(),
+                    context.student(),
+                    VERSION,
+                    1,
+                    context.session(),
+                    context.attempt(),
+                    UUID.randomUUID(),
+                    now()))
+        .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @Test
+  void lastAnswerProjectionCanBeUpdatedWithoutCreatingHistory() {
+    var student = student(1);
+    var firstSource = UUID.randomUUID();
+    var repeatSource = UUID.randomUUID();
+    lastAnswers.saveAndFlush(
+        new LastAnswer(
+            student,
+            VERSION,
+            1,
+            AnswerSourceType.FIRST,
+            firstSource,
+            AnswerChoice.X,
+            false,
+            false,
+            AnswerOutcome.WRONG,
+            clock.instant()));
+    entityManager.clear();
+
+    var projection =
+        lastAnswers.findById(new LastAnswerId(student, VERSION, 1)).orElseThrow();
+    projection.update(
+        AnswerSourceType.REPEAT,
+        repeatSource,
+        null,
+        true,
+        false,
+        AnswerOutcome.TIMED_OUT,
+        clock.instant().plusSeconds(30));
+    lastAnswers.flush();
+    entityManager.clear();
+
+    var reloaded = lastAnswers.findById(new LastAnswerId(student, VERSION, 1)).orElseThrow();
+    assertThat(lastAnswers.count()).isEqualTo(1);
+    assertThat(reloaded.getSourceType()).isEqualTo(AnswerSourceType.REPEAT);
+    assertThat(reloaded.getSourceId()).isEqualTo(repeatSource);
+    assertThat(reloaded.getChoice()).isNull();
+    assertThat(reloaded.getOutcome()).isEqualTo(AnswerOutcome.TIMED_OUT);
+    assertThat(reloaded.getAnsweredAt())
+        .isEqualTo(Instant.parse("2026-10-12T00:00:30.123456Z"));
+  }
+
+  @Test
+  void xpEntriesUseOneRuleVersionAndRejectADuplicateKindAndSource() {
+    var student = student(1);
+    var source = UUID.randomUUID();
+    var entry =
+        xpEntries.saveAndFlush(
+            new XpEntry(
+                UUID.randomUUID(),
+                student,
+                XpKind.FIRST_ANSWER,
+                source,
+                565,
+                clock.instant()));
+    entityManager.clear();
+
+    assertThat(xpEntries.findById(entry.getId()).orElseThrow().getRuleVersion())
+        .isEqualTo("learning-v1");
+    assertThatThrownBy(
+            () ->
+                xpEntries.saveAndFlush(
+                    new XpEntry(
+                        UUID.randomUUID(),
+                        student,
+                        XpKind.FIRST_ANSWER,
+                        source,
+                        565,
+                        clock.instant())))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
@@ -464,4 +660,27 @@ class LearningPersistenceContractIT {
         "{\"ok\":true}",
         now());
   }
+
+  private AnswerContext answerContext(int number) {
+    var student = student(number);
+    var progress = insertProgress(student);
+    var session = UUID.randomUUID();
+    var attempt = UUID.randomUUID();
+    insertSession(session, student, "QUESTION_ACTIVE", now());
+    jdbc.update(
+        "insert into day_attempts"
+            + "(id,session_id,day_progress_id,student_account_id,version,day,attempt_number,state,"
+            + "answered_count,correct_count,current_streak,catch_up,started_at)"
+            + " values (?,?,?,?,?,?,1,'ACTIVE',0,0,0,false,?)",
+        attempt,
+        session,
+        progress,
+        student,
+        VERSION,
+        1,
+        now());
+    return new AnswerContext(student, session, attempt);
+  }
+
+  private record AnswerContext(UUID student, UUID session, UUID attempt) {}
 }
