@@ -1,6 +1,7 @@
 import { TeacherAccountsPage } from '../features/staff/TeacherAccountsPage';
 import { ClassroomsPage } from '../features/staff/ClassroomsPage';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
+import { HomeRedirect } from './HomeRedirect';
 import { RequireRole } from './RequireRole';
 import { StudentSignupPage } from '../features/auth/StudentSignupPage';
 import { StudentLoginPage } from '../features/auth/StudentLoginPage';
@@ -16,7 +17,7 @@ export function AppRoutes() {
       <Route element={<RequireRole allowed={['TEACHER', 'ADMIN']} />}>
         <Route path="/staff/classrooms" element={<ClassroomsPage />} />
       </Route>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<HomeRedirect />} />
       <Route path="/signup" element={<StudentSignupPage />} />
       <Route path="/login" element={<StudentLoginPage />} />
       <Route path="/staff/login" element={<StaffLoginPage />} />
