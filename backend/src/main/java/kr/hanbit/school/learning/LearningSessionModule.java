@@ -272,7 +272,9 @@ public class LearningSessionModule {
         answeredCount,
         questions.size(),
         prompt,
-        readLastAnswer(session.getLastResultJson()));
+        session.getState() == LearningSessionState.QUESTION_ACTIVE
+            ? null
+            : readLastAnswer(session.getLastResultJson()));
   }
 
   private AnswerResult readLastAnswer(String responseJson) {

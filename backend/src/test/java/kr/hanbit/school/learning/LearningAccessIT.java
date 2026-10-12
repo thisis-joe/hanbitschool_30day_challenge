@@ -203,6 +203,42 @@ class LearningAccessIT extends LearningApiTestSupport {
     }
   }
 
+  @Test
+  void anActiveQuestionNeverExposesStalePersistedFeedback() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+    var login = client.loginStudent(student);
+    var requestId = UUID.randomUUID();
+    var started = send("/api/student/learning/sessions", login, startBody(requestId));
+    assertThat(started.getResponse().getStatus()).isEqualTo(200);
+    var sessionId = UUID.fromString(node(started).path("sessionId").asString());
+    var staleFeedback =
+        new AnswerResult(
+            UUID.randomUUID(), 1, AnswerOutcome.CORRECT,
+            kr.hanbit.school.content.AnswerChoice.O, "서버에만 남아야 하는 이전 해설",
+            565, 565, 1, 1, 1, DayAttemptState.ACTIVE,
+            DayProgressState.IN_PROGRESS, false, false);
+    jdbc.update("update learning_sessions set last_result_json=cast(? as jsonb) where id=?",
+        json.writeValueAsString(staleFeedback), sessionId);
+
+    var fetched = session(login, sessionId);
+    var resumed = send("/api/student/learning/sessions", login, startBody(UUID.randomUUID()));
+    var currentStatus = status(login);
+    assertThat(fetched.getResponse().getStatus()).isEqualTo(200);
+    assertThat(resumed.getResponse().getStatus()).isEqualTo(200);
+    assertThat(currentStatus.getResponse().getStatus()).isEqualTo(200);
+    for (var view : List.of(node(fetched), node(resumed), node(currentStatus).path("activeSession"))) {
+      assertThat(view.path("state").asString()).isEqualTo("QUESTION_ACTIVE");
+      assertThat(view.path("lastAnswer").isNull()).isTrue();
+      assertThat(view.toString()).doesNotContain("correctChoice", "explanation");
+    }
+    assertThat(json.readTree(jdbc.queryForObject(
+        "select last_result_json::text from learning_sessions where id=?",
+        String.class, sessionId))).isEqualTo(json.readTree(json.writeValueAsString(staleFeedback)));
+    var retry = send("/api/student/learning/sessions", login, startBody(requestId));
+    assertThat(node(retry)).isEqualTo(node(started));
+    assertThat(learning.count("first_answers", student)).isZero();
+  }
+
   private void assertUnauthenticatedWithoutLearningWrites(
       kr.hanbit.school.account.Account student,
       org.springframework.mock.web.MockHttpSession login)
