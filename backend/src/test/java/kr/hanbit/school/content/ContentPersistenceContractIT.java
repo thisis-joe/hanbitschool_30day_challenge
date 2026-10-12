@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.UUID;
 import kr.hanbit.school.support.PostgresTestConfiguration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -72,6 +74,22 @@ class ContentPersistenceContractIT {
                         + " values (?,3,1,3,'질문','Y','설명',10)",
                     version))
         .isInstanceOf(DataIntegrityViolationException.class);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"title", "text", "explanation"})
+  void whitespaceOnlyContentIsRejectedByDatabase(String column) {
+    String table = column.equals("title") ? "content_days" : "questions";
+    String identity = column.equals("title") ? "day=1" : "question_id=1";
+
+    assertThatThrownBy(
+            () ->
+                jdbc.update(
+                    "update " + table + " set " + column + "=? where version=? and " + identity,
+                    "\t\n\r",
+                    "hanbit-v1"))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasStackTraceContaining(table + "_" + column + "_nonblank");
   }
 
   private void insertQuestion(String version, int id, int day, int position, String explanation) {

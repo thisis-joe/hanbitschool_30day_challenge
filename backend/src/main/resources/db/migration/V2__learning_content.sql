@@ -15,7 +15,7 @@ create table content_days (
     primary key (version, day),
     constraint content_days_version_fk foreign key (version) references content_versions(version) on delete cascade,
     constraint content_days_day_range check (day between 1 and 30),
-    constraint content_days_title_nonblank check (btrim(title) <> '')
+    constraint content_days_title_nonblank check (title ~ '[^[:space:]]')
 );
 
 create table questions (
@@ -33,8 +33,8 @@ create table questions (
     constraint questions_id_positive check (question_id > 0),
     constraint questions_position_range check (position between 1 and 5),
     constraint questions_id_matches_position check (question_id = (day - 1) * 5 + position),
-    constraint questions_text_nonblank check (btrim(text) <> ''),
+    constraint questions_text_nonblank check (text ~ '[^[:space:]]'),
     constraint questions_answer_choice check (answer in ('O', 'X')),
-    constraint questions_explanation_nonblank check (btrim(explanation) <> ''),
+    constraint questions_explanation_nonblank check (explanation ~ '[^[:space:]]'),
     constraint questions_time_limit_range check (time_limit_seconds between 10 and 15)
 );
