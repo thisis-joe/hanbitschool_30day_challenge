@@ -3,11 +3,15 @@ package kr.hanbit.school.learning;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import kr.hanbit.school.account.AuthenticationModule;
 import kr.hanbit.school.shared.web.ApiException;
 import kr.hanbit.school.support.LearningApiTestSupport;
@@ -65,6 +69,24 @@ class LearningSessionIT extends LearningApiTestSupport {
     var complete = learning.student(LocalDate.of(2026, 9, 13));
     learning.passedThrough(complete, 30);
     assertStatus(complete, 30, null, 30, "COURSE_COMPLETE");
+
+    var dayTwentyNine = learning.student(LocalDate.of(2026, 9, 14));
+    learning.passedThrough(dayTwentyNine, 29);
+    assertStatus(dayTwentyNine, 29, null, 29, "WAIT_FOR_NEXT_DAY");
+
+    var lastDayMissing = learning.student(LocalDate.of(2026, 8, 1));
+    learning.passedThrough(lastDayMissing, 29);
+    assertStatus(lastDayMissing, 30, 30, 29, "START_FIRST");
+
+    var sparse = learning.student(LocalDate.of(2026, 10, 10));
+    learning.progress(sparse, 1, DayProgressState.PASSED);
+    learning.progress(sparse, 3, DayProgressState.PASSED);
+    assertStatus(sparse, 3, 2, 2, "START_FIRST");
+
+    var lastDayRetry = learning.student(LocalDate.of(2026, 8, 1));
+    learning.passedThrough(lastDayRetry, 29);
+    learning.progress(lastDayRetry, 30, DayProgressState.RETRY_REQUIRED);
+    assertStatus(lastDayRetry, 30, 30, 29, "START_REPLAY");
   }
 
   @Test
@@ -307,22 +329,24 @@ class LearningSessionIT extends LearningApiTestSupport {
     var secondLogin = client.loginStudent(student);
     var firstRequest = UUID.randomUUID();
     var secondRequest = UUID.randomUUID();
+    var barrier = new CyclicBarrier(2);
     try (var executor = Executors.newFixedThreadPool(2)) {
-      var results =
-          executor.invokeAll(
-              java.util.List.<Callable<org.springframework.test.web.servlet.MvcResult>>of(
-                  () ->
-                      send(
-                          "/api/student/learning/sessions",
-                          firstLogin,
-                          startBody(1, firstRequest)),
-                  () ->
-                      send(
-                          "/api/student/learning/sessions",
-                          secondLogin,
-                          startBody(1, secondRequest))));
-      var first = results.get(0).get();
-      var second = results.get(1).get();
+      var firstFuture =
+          executor.submit(
+              () -> {
+                barrier.await(5, TimeUnit.SECONDS);
+                return send(
+                    "/api/student/learning/sessions", firstLogin, startBody(1, firstRequest));
+              });
+      var secondFuture =
+          executor.submit(
+              () -> {
+                barrier.await(5, TimeUnit.SECONDS);
+                return send(
+                    "/api/student/learning/sessions", secondLogin, startBody(1, secondRequest));
+              });
+      var first = firstFuture.get(10, TimeUnit.SECONDS);
+      var second = secondFuture.get(10, TimeUnit.SECONDS);
       assertThat(first.getResponse().getStatus()).isEqualTo(200);
       assertThat(second.getResponse().getStatus()).isEqualTo(200);
       assertThat(node(first).path("sessionId")).isEqualTo(node(second).path("sessionId"));
@@ -331,6 +355,157 @@ class LearningSessionIT extends LearningApiTestSupport {
     }
     assertThat(learning.count("learning_sessions", student)).isEqualTo(1);
     assertThat(learning.count("day_progress", student)).isEqualTo(1);
+    assertThat(learning.count("day_attempts", student)).isEqualTo(1);
+    assertThat(learning.count("idempotency_records", student)).isEqualTo(2);
+    assertThat(jdbc.queryForObject(
+        "select count(*) from learning_session_questions q join learning_sessions s"
+            + " on s.id=q.session_id where s.student_account_id=?",
+        Integer.class, student.getId())).isEqualTo(5);
+  }
+
+  @Test
+  void sameKeyConcurrentStartsReturnOneExactSnapshotAcrossTwoLogins() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+    var firstLogin = client.loginStudent(student);
+    var secondLogin = client.loginStudent(student);
+    var requestId = UUID.randomUUID();
+    var barrier = new CyclicBarrier(2);
+    try (var executor = Executors.newFixedThreadPool(2)) {
+      var first = executor.submit(() -> {
+        barrier.await(5, TimeUnit.SECONDS);
+        return send("/api/student/learning/sessions", firstLogin, startBody(1, requestId));
+      });
+      var second = executor.submit(() -> {
+        barrier.await(5, TimeUnit.SECONDS);
+        return send("/api/student/learning/sessions", secondLogin, startBody(1, requestId));
+      });
+      var firstResult = first.get(10, TimeUnit.SECONDS);
+      var secondResult = second.get(10, TimeUnit.SECONDS);
+      assertThat(firstResult.getResponse().getStatus()).isEqualTo(200);
+      assertThat(secondResult.getResponse().getStatus()).isEqualTo(200);
+      assertThat(node(firstResult)).isEqualTo(node(secondResult));
+    }
+    assertThat(learning.count("learning_sessions", student)).isEqualTo(1);
+    assertThat(learning.count("day_progress", student)).isEqualTo(1);
+    assertThat(learning.count("day_attempts", student)).isEqualTo(1);
+    assertThat(learning.count("idempotency_records", student)).isEqualTo(1);
+  }
+
+  @Test
+  void seoulMidnightOpensFirstDayAndDayThirtyIsTheFinalCalendarCap() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+    var login = client.loginStudent(student);
+    clock.setInstant(Instant.parse("2026-10-11T14:59:59.999999999Z"));
+    assertThat(node(status(login)).path("calendarCap").asInt()).isZero();
+    var blocked = send("/api/student/learning/sessions", login, startBody(1, UUID.randomUUID()));
+    assertThat(blocked.getResponse().getStatus()).isEqualTo(403);
+    assertThat(node(blocked).path("code").asString()).isEqualTo("DAY_NOT_YET_AVAILABLE");
+    assertThat(learning.count("day_progress", student)).isZero();
+    assertThat(learning.count("idempotency_records", student)).isZero();
+
+    clock.setInstant(Instant.parse("2026-10-11T15:00:00Z"));
+    assertThat(node(status(login)).path("calendarCap").asInt()).isEqualTo(1);
+    var started = send("/api/student/learning/sessions", login, startBody(1, UUID.randomUUID()));
+    assertThat(started.getResponse().getStatus()).isEqualTo(200);
+
+    clock.setInstant(Instant.parse("2026-10-12T00:00:00.123456789Z"));
+    var finalDay = learning.student(LocalDate.of(2026, 8, 1));
+    learning.passedThrough(finalDay, 29);
+    var finalLogin = client.loginStudent(finalDay);
+    assertThat(node(status(finalLogin)).path("calendarCap").asInt()).isEqualTo(30);
+    var finalStart = send("/api/student/learning/sessions", finalLogin, startBody(30, UUID.randomUUID()));
+    assertThat(finalStart.getResponse().getStatus()).isEqualTo(200);
+    assertThat(node(finalStart).path("question").path("questionId").asInt()).isEqualTo(146);
+    assertThat(attempts.findBySessionId(
+        UUID.fromString(node(finalStart).path("sessionId").asString())))
+        .get().extracting(DayAttempt::isCatchUp).isEqualTo(false);
+  }
+
+  @Test
+  void firstStartRejectsPassedRetryRequiredAndSkippedRetryDaysWithoutWrites() throws Exception {
+    var retry = learning.student(LocalDate.of(2026, 10, 10));
+    learning.progress(retry, 1, DayProgressState.RETRY_REQUIRED);
+    var retryLogin = client.loginStudent(retry);
+    var invalidFirst = send("/api/student/learning/sessions", retryLogin, startBody(1, UUID.randomUUID()));
+    assertThat(invalidFirst.getResponse().getStatus()).isEqualTo(409);
+    assertThat(node(invalidFirst).path("code").asString()).isEqualTo("SESSION_CONFLICT");
+    var skipped = send("/api/student/learning/sessions", retryLogin, startBody(2, UUID.randomUUID()));
+    assertThat(skipped.getResponse().getStatus()).isEqualTo(409);
+    assertThat(node(skipped).path("code").asString()).isEqualTo("PREVIOUS_DAY_NOT_PASSED");
+
+    var passed = learning.student(LocalDate.of(2026, 10, 10));
+    learning.progress(passed, 1, DayProgressState.PASSED);
+    var repeatFirst = send("/api/student/learning/sessions", client.loginStudent(passed),
+        startBody(1, UUID.randomUUID()));
+    assertThat(repeatFirst.getResponse().getStatus()).isEqualTo(400);
+    assertThat(node(repeatFirst).path("code").asString()).isEqualTo("VALIDATION_ERROR");
+    var inProgress = learning.student(LocalDate.of(2026, 10, 10));
+    learning.progress(inProgress, 1, DayProgressState.IN_PROGRESS);
+    var restarted = send("/api/student/learning/sessions", client.loginStudent(inProgress),
+        startBody(1, UUID.randomUUID()));
+    assertThat(restarted.getResponse().getStatus()).isEqualTo(409);
+    assertThat(node(restarted).path("code").asString()).isEqualTo("SESSION_CONFLICT");
+    for (var account : List.of(retry, passed, inProgress)) {
+      assertThat(learning.count("learning_sessions", account)).isZero();
+      assertThat(learning.count("day_attempts", account)).isZero();
+      assertThat(learning.count("idempotency_records", account)).isZero();
+      assertThat(learning.count("day_progress", account)).isEqualTo(1);
+    }
+  }
+
+  @Test
+  void startRetryReturnsEveryOriginalFieldAfterThePersistedSessionMovesOn() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+    var firstLogin = client.loginStudent(student);
+    var requestId = UUID.randomUUID();
+    var first = send("/api/student/learning/sessions", firstLogin, startBody(1, requestId));
+    assertThat(first.getResponse().getStatus()).isEqualTo(200);
+    var sessionId = UUID.fromString(node(first).path("sessionId").asString());
+    // Seed later persisted state directly; Task 4 does not implement answering or advance.
+    jdbc.update("update learning_sessions set current_position=2,deadline_at=? where id=?",
+        Timestamp.from(Instant.parse("2026-10-12T00:01:00.999999Z")), sessionId);
+    jdbc.update("update day_attempts set answered_count=1 where session_id=?", sessionId);
+    clock.setInstant(Instant.parse("2026-10-12T00:00:40Z"));
+    var secondLogin = client.loginStudent(student);
+    var current = session(secondLogin, sessionId);
+    assertThat(node(current).path("question").path("questionId").asInt()).isEqualTo(2);
+    assertThat(node(current).path("answeredCount").asInt()).isEqualTo(1);
+    assertThat(node(current)).isNotEqualTo(node(first));
+
+    var retry = startRaw(secondLogin, "{\"requestId\":\"" + requestId
+        + "\",\"dayNumber\":1,\"mode\":\"FIRST\"}");
+    assertThat(retry.getResponse().getStatus()).isEqualTo(200);
+    assertThat(node(retry)).isEqualTo(node(first));
+    var resumed = send("/api/student/learning/sessions", secondLogin, startBody(1, UUID.randomUUID()));
+    assertThat(node(resumed)).isEqualTo(node(current));
+    assertThat(learning.count("learning_sessions", student)).isEqualTo(1);
+    assertThat(learning.count("day_attempts", student)).isEqualTo(1);
+  }
+
+  @Test
+  void resumePreservesTheStoredMicrosecondDeadlineAndStartCatchUpAcrossMidnight() throws Exception {
+    var student = learning.student(LocalDate.of(2026, 10, 12));
+    var login = client.loginStudent(student);
+    clock.setInstant(Instant.parse("2026-10-12T14:59:59.123456789Z"));
+    var started = send("/api/student/learning/sessions", login, startBody(1, UUID.randomUUID()));
+    assertThat(started.getResponse().getStatus()).isEqualTo(200);
+    var sessionId = UUID.fromString(node(started).path("sessionId").asString());
+    var persistedDeadline = sessions.findById(sessionId).orElseThrow().getDeadlineAt();
+    assertThat(persistedDeadline.getNano() % 1000).isZero();
+    assertThat(Instant.parse(node(started).path("question").path("deadlineAt").asString()))
+        .isEqualTo(persistedDeadline);
+    assertThat(attempts.findBySessionId(sessionId)).get().extracting(DayAttempt::isCatchUp).isEqualTo(false);
+
+    clock.setInstant(Instant.parse("2026-10-12T15:00:00Z"));
+    var secondLogin = client.loginStudent(student);
+    var resumed = send("/api/student/learning/sessions", secondLogin, startBody(1, UUID.randomUUID()));
+    assertThat(resumed.getResponse().getStatus()).isEqualTo(200);
+    assertThat(node(resumed)).isEqualTo(node(started));
+    var fetched = session(secondLogin, sessionId);
+    assertThat(node(fetched)).isEqualTo(node(started));
+    assertThat(node(status(secondLogin)).path("calendarCap").asInt()).isEqualTo(2);
+    assertThat(attempts.findBySessionId(sessionId)).get().extracting(DayAttempt::isCatchUp).isEqualTo(false);
+    assertThat(learning.count("day_attempts", student)).isEqualTo(1);
   }
 
   private void assertStatus(
