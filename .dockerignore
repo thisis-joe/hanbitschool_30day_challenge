@@ -1,0 +1,11 @@
+.git
+.superpowers
+.tooling
+.env*
+**/node_modules
+**/build
+**/dist
+**/.gradle
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo

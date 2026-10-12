@@ -1,0 +1,13 @@
+.worktrees/
+.superpowers/
+.tooling/
+.env
+.env.local
+.env.*.local
+node_modules/
+.gradle/
+build/
+dist/
+test-results/
+playwright-report/
+*.log

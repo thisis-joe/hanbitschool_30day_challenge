@@ -1,0 +1,101 @@
+import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { test, expect } from '@playwright/test';
+import {
+  adminId,
+  adminPassword,
+  provisionClass,
+  signOut,
+  signup,
+  studentLogin,
+  staffLogin,
+} from './helpers';
+test('admin teacher classroom student and real roster', async ({ page, browser }) => {
+  test.setTimeout(300000);
+  const c = await provisionClass(page, adminId, adminPassword);
+  await signOut(page);
+  await signup(page, c);
+  await studentLogin(page, '한빛학교', c.gradeLabel, c.classNumber, 1, 'Student!2026');
+  await expect(page.getByText('숲친구', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('숲친구', { exact: true })).toBeVisible();
+  await expect(page.getByText(c.gradeLabel, { exact: true })).toBeVisible();
+  const before = await (await page.request.get('/api/auth/me')).json();
+  const teacher = await browser.newPage();
+  try {
+    await staffLogin(teacher, c.staffLoginId, c.staffPassword);
+    await teacher.getByRole('button', { name: '명단 보기', exact: true }).click();
+    await expect(teacher.getByText('김민수', { exact: true })).toBeVisible();
+    await expect(teacher.getByText('1번', { exact: true })).toBeVisible();
+    const root = fileURLToPath(new URL('../../', import.meta.url));
+    const args = [
+      'compose',
+      '-p',
+      'hanbit-account-e2e',
+      '--env-file',
+      '.env.e2e.local',
+      '-f',
+      'infra/compose.local.yml',
+    ];
+    try {
+      execFileSync('docker', [...args, 'restart', 'backend', 'web'], {
+        cwd: root,
+        stdio: 'pipe',
+        timeout: 90000,
+      });
+    } catch {
+      throw new Error('테스트 서버 재시작에 실패했습니다.');
+    }
+    await expect
+      .poll(
+        async () => {
+          try {
+            return (await page.request.get('/api/auth/csrf')).status();
+          } catch {
+            return 503;
+          }
+        },
+        { timeout: 90000 },
+      )
+      .toBe(200);
+    await studentLogin(page, '한빛학교', c.gradeLabel, 1, 1, 'Student!2026');
+    const after = await (await page.request.get('/api/auth/me')).json();
+    expect(after).toEqual(before);
+    await staffLogin(teacher, c.staffLoginId, c.staffPassword);
+    await teacher.getByRole('button', { name: '명단 보기', exact: true }).click();
+    await expect(teacher.getByText('김민수', { exact: true })).toBeVisible();
+    const original = readFileSync(root + '.env.e2e.local', 'utf8');
+    writeFileSync(
+      root + '.env.e2e-no-bootstrap.local',
+      original.replace(/^HANBIT_BOOTSTRAP_ADMIN_(ID|PASSWORD)=.*$/gm, 'HANBIT_BOOTSTRAP_ADMIN_$1='),
+    );
+    try {
+      execFileSync(
+        'docker',
+        [
+          'compose',
+          '-p',
+          'hanbit-account-e2e',
+          '--env-file',
+          '.env.e2e-no-bootstrap.local',
+          '-f',
+          'infra/compose.local.yml',
+          'up',
+          '-d',
+          '--force-recreate',
+          '--wait',
+          'backend',
+          'web',
+        ],
+        { cwd: root, stdio: 'pipe', timeout: 120000 },
+      );
+    } catch {
+      throw new Error('부트스트랩 환경 변수 제거 후 재시작에 실패했습니다.');
+    }
+    await staffLogin(teacher, adminId, adminPassword);
+    await expect(teacher).toHaveURL(/\/staff\/classrooms$/);
+  } finally {
+    await teacher.close();
+  }
+});

@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: ${HANBIT_DB_URL:jdbc:postgresql://localhost:5432/hanbit}
+    username: ${POSTGRES_USER:hanbit}
+    password: ${POSTGRES_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+server:
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
+hanbit:
+  bootstrap:
+    id: ${HANBIT_BOOTSTRAP_ADMIN_ID:}
+    password: ${HANBIT_BOOTSTRAP_ADMIN_PASSWORD:}
