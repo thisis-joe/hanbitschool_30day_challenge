@@ -28,6 +28,9 @@ export function StudentAccountPage() {
         </div>
       </dl>
       <div className="actions">
+        <Link className="button" to="/student/learning">
+          학습 홈으로
+        </Link>
         <Link className="button secondary" to="/account/password">
           비밀번호 변경
         </Link>

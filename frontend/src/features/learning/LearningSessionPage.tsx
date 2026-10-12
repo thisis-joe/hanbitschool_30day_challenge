@@ -5,7 +5,7 @@ import { errorMessage, HttpError } from '../../lib/http';
 import { useLearningSession, useLearningStatus } from './queries';
 import { useLearningActions } from './useLearningActions';
 import { useDeadlineCountdown } from './useDeadlineCountdown';
-import './learning.css';
+import { QuestionFeedbackActions } from './QuestionFeedbackActions';
 
 const outcomes = {
   CORRECT: '정답이에요',
@@ -198,6 +198,7 @@ export function LearningSessionPage() {
               </p>
               <p className="learning-explanation">{feedback.explanation}</p>
               <p>이번 답변으로 받은 경험치: {feedback.xpAwarded} XP</p>
+              <QuestionFeedbackActions questionId={feedback.questionId} result={feedback} />
               {view.state === 'COMPLETED' ? (
                 <Link className="button" to={`/student/learning/sessions/${view.sessionId}/result`}>
                   완료하기

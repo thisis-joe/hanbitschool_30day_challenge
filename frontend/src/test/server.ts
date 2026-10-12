@@ -22,6 +22,7 @@ export const teacher = {
   mustChangePassword: false,
 };
 export const server = setupServer(
+  http.get('*/api/student/learning/questions', () => HttpResponse.json([])),
   http.get('*/api/auth/csrf', () =>
     HttpResponse.json({ headerName: 'X-CSRF-TOKEN', token: 'test-token' }),
   ),

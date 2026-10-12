@@ -1,10 +1,11 @@
 import { it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { http, HttpResponse, delay } from 'msw';
 import { server, teacher } from '../test/server';
 import { renderPage } from '../test/render';
 import { RequireRole } from './RequireRole';
+import { sessionId } from '../test/learningFixtures';
 function routes() {
   return (
     <Routes>
@@ -62,4 +63,22 @@ it('unknownRoleNeverRendersProtectedContent', async () => {
   renderPage(routes(), '/admin/teachers');
   expect(await screen.findByRole('alert')).toBeVisible();
   expect(screen.queryByText('교사 계정 발급')).not.toBeInTheDocument();
+});
+
+it('expiredStudentDeepLinkKeepsValidatedResultReturnTo', async () => {
+  function LoginLocation() {
+    return <p>{useLocation().search}</p>;
+  }
+  const path = `/student/learning/sessions/${sessionId}/result`;
+  renderPage(
+    <Routes>
+      <Route element={<RequireRole allowed={['STUDENT']} />}>
+        <Route path={path} element={<p>개인 결과</p>} />
+      </Route>
+      <Route path="/login" element={<LoginLocation />} />
+    </Routes>,
+    path,
+  );
+  expect(await screen.findByText(`?returnTo=${encodeURIComponent(path)}`)).toBeVisible();
+  expect(screen.queryByText('개인 결과')).toBeNull();
 });

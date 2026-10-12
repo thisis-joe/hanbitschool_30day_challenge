@@ -41,7 +41,7 @@ export async function studentLogin(
   await page.getByLabel('번호', { exact: true }).fill(String(number));
   await secretFill(page.getByLabel('비밀번호', { exact: true }), password);
   await page.getByRole('button', { name: '로그인', exact: true }).click();
-  await expect(page).toHaveURL(/\/student\/account$/);
+  await expect(page).toHaveURL(/\/student\/learning$/);
 }
 export async function changeInitialPassword(page: Page, current: string, next: string) {
   await secretFill(page.getByLabel('현재 비밀번호'), current);

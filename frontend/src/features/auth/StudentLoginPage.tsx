@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ClassroomFields } from './ClassroomFields';
 import { loginStudent } from './api';
 import { AuthFrame, FormError, useSubmission } from './FormParts';
-import { useAcceptAccount } from './queries';
+import { studentReturnTo, useAcceptAccount } from './queries';
 import { HttpError } from '../../lib/http';
 import type { ClassroomSelection } from './types';
 export function StudentLoginPage() {
@@ -33,7 +33,9 @@ export function StudentLoginPage() {
               });
               await accept(me);
               setSuccess(true);
-              navigate('/student/account', { replace: true });
+              navigate(studentReturnTo(new URLSearchParams(location.search).get('returnTo')), {
+                replace: true,
+              });
             } catch (error) {
               if (error instanceof HttpError && error.status === 401)
                 throw new HttpError(401, {

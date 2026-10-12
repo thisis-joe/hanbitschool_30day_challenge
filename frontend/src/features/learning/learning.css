@@ -138,11 +138,124 @@
   min-height: 48px;
   white-space: normal;
 }
+.student-header nav a,
+.student-header .nav-button {
+  min-height: 48px;
+}
+.student-header nav {
+  min-width: 0;
+}
+.learning-day-grid {
+  padding: 0;
+  margin: 24px 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.learning-day-card {
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.learning-day-card h2,
+.learning-personal-heading h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+.learning-day-card p {
+  flex: 1;
+  font-size: 0.9rem;
+}
+.learning-filters,
+.learning-tool-buttons,
+.learning-personal-heading,
+.learning-selection {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.learning-filters {
+  margin: 24px 0;
+}
+.learning-filters [aria-current='page'] {
+  border: 2px solid var(--ink);
+  background: #f1ebcf;
+  text-decoration: underline;
+}
+.learning-question-list {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 16px;
+}
+.learning-personal-heading {
+  justify-content: space-between;
+}
+.learning-personal-text {
+  white-space: pre-wrap;
+  line-height: 1.85;
+}
+.learning-select {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  cursor: pointer;
+  margin: 0;
+}
+.learning-select input {
+  width: 24px;
+  min-height: 24px;
+  height: 24px;
+  accent-color: var(--ink);
+}
+.learning-feedback-tools {
+  margin: 20px 0;
+}
+.learning-consent {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: #f8f5e7;
+  border-radius: 12px;
+}
+.learning-consent p {
+  margin-top: 0;
+}
+.learning-selection {
+  margin: 24px 0;
+  justify-content: space-between;
+}
+@media (max-width: 640px) {
+  .student-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .student-header nav {
+    gap: 8px 16px;
+  }
+  .learning-day-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .learning-day-card {
+    padding: 14px;
+  }
+}
 @media (max-width: 500px) {
   .learning-result-stats {
     grid-template-columns: 1fr;
   }
   .learning-result-links .button {
+    width: 100%;
+  }
+  .learning-filters .button,
+  .learning-selection button {
     width: 100%;
   }
 }

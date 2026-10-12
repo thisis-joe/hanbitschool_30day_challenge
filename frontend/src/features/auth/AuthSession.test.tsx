@@ -14,13 +14,21 @@ import {
   readPendingCommand,
   writePendingCommand,
 } from '../learning/pendingCommands';
-import { deferred, requestId, sessionId } from '../../test/learningFixtures';
+import {
+  deferred,
+  learningStatus,
+  personalQuestion,
+  requestId,
+  sessionId,
+} from '../../test/learningFixtures';
 import { App } from '../../app/App';
 import { request } from '../../lib/http';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { meKey, useAcceptAccount, useCurrentAccount } from './queries';
 import * as authApi from './api';
+import * as learningApi from '../learning/api';
+import { learningKeys } from '../learning/queries';
 afterEach(() => {
   clearAllPendingCommands();
   sessionStorage.clear();
@@ -188,4 +196,100 @@ it('csrfRefreshFailureDoesNotUndoPasswordChange', async () => {
   expect(changes).toBe(1);
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   await expect(refreshCsrf()).rejects.toBeDefined();
+});
+
+it('studentPasswordChangeLandsOnLearningHome', async () => {
+  server.use(
+    http.get('*/api/auth/me', () => HttpResponse.json(student)),
+    http.post('*/api/auth/password', () => HttpResponse.json(student)),
+    http.get('*/api/student/learning/status', () => HttpResponse.json(learningStatus)),
+  );
+  renderPage(<App />, '/account/password');
+  const u = userEvent.setup();
+  await u.type(await screen.findByLabelText('현재 비밀번호'), 'Hanbit!2026');
+  await u.type(screen.getByLabelText('새 비밀번호'), 'NextPass!2026');
+  await u.type(screen.getByLabelText('새 비밀번호 확인'), 'NextPass!2026');
+  await u.click(screen.getByRole('button', { name: '비밀번호 변경' }));
+  expect(await screen.findByRole('heading', { name: '나의 학습' })).toBeVisible();
+});
+
+// Removing student key/reset/cancellation would render A's delayed list or pending retry for B.
+it('switchingStudentsDoesNotRenderPreviousLearningData', async () => {
+  const personalReads = vi.spyOn(learningApi, 'getPersonalQuestions');
+  const entered = deferred<void>();
+  const release = deferred<void>();
+  const oldCompleted = deferred<void>();
+  const studentB = {
+    ...student,
+    role: 'STUDENT' as const,
+    accountId: 'student-b',
+    nickname: '새친구',
+  };
+  let current = student;
+  server.use(
+    http.get('*/api/auth/me', () => HttpResponse.json(current)),
+    http.get('*/api/student/learning/status', () =>
+      HttpResponse.json({
+        ...learningStatus,
+        activeSession: null,
+        totalXp: current.accountId === 'student-a' ? 777 : 0,
+      }),
+    ),
+    http.get('*/api/student/learning/questions', async () => {
+      if (current.accountId === 'student-a') {
+        entered.resolve();
+        await release.promise;
+        oldCompleted.resolve();
+        return HttpResponse.json([{ ...personalQuestion, text: '이전 학생 개인 문항' }]);
+      }
+      return HttpResponse.json([{ ...personalQuestion, text: '새 학생 개인 문항' }]);
+    }),
+  );
+  function Switch() {
+    const accept = useAcceptAccount();
+    return (
+      <button
+        onClick={() => {
+          current = studentB;
+          void accept(studentB);
+        }}
+      >
+        학생 바꾸기
+      </button>
+    );
+  }
+  const { client } = renderPage(
+    <>
+      <Switch />
+      <App />
+    </>,
+    '/student/questions?filter=REVIEW_QUEUE',
+  );
+  client.setQueryData(meKey, student);
+  client.setQueryData(learningKeys.questions('student-a', 'REVIEW_QUEUE'), [
+    { ...personalQuestion, text: '이전 학생 개인 문항' },
+  ]);
+  writePendingCommand('student-a', { kind: 'ADVANCE', sessionId, command: { requestId } });
+  await entered.promise;
+  expect(await screen.findByText('이전 학생 개인 문항')).toBeVisible();
+  const oldRequests = personalReads.mock.results.map((result) => result.value as Promise<unknown>);
+  await userEvent.click(screen.getByRole('button', { name: '학생 바꾸기' }));
+  await waitFor(() => expect(client.getQueryData(meKey)).toMatchObject({ accountId: 'student-b' }));
+  expect(await screen.findByText('새 학생 개인 문항')).toBeVisible();
+  expect(screen.queryByText('이전 학생 개인 문항')).toBeNull();
+  expect(screen.queryByRole('button', { name: '같은 요청 다시 확인' })).toBeNull();
+  release.resolve();
+  await oldCompleted.promise;
+  // Await the real old HTTP promises too, including cancellation rejection, before checking late effects.
+  await Promise.allSettled(oldRequests);
+  await waitFor(() =>
+    expect(
+      client.getQueryData(learningKeys.questions('student-a', 'REVIEW_QUEUE')),
+    ).toBeUndefined(),
+  );
+  expect(readPendingCommand('student-a')).toBeNull();
+  expect(screen.queryByText('이전 학생 개인 문항')).toBeNull();
+  await userEvent.click(screen.getByRole('link', { name: '학습 홈' }));
+  expect(await screen.findByText('0 XP')).toBeVisible();
+  expect(screen.queryByText('777 XP')).toBeNull();
 });

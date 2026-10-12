@@ -7,7 +7,6 @@ import type { AccountMe } from '../auth/types';
 import { useLearningSession, useLearningStatus } from './queries';
 import { useLearningActions } from './useLearningActions';
 import type { LearningStatus } from './types';
-import './learning.css';
 
 function availableDay(status: LearningStatus): number | null {
   const day = status.earliestUnpassedDay;

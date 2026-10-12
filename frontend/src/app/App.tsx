@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppRoutes } from './router';
-import { useCurrentAccount, useAcceptAccount, meKey } from '../features/auth/queries';
+import { useCurrentAccount, useAcceptAccount, replaceAccountCache } from '../features/auth/queries';
 import { logout } from '../features/auth/api';
 import { FormError, useSubmission } from '../features/auth/FormParts';
 import { refreshCsrf, setUnauthorizedHandler } from '../lib/http';
@@ -18,8 +18,7 @@ export function App() {
     setUnauthorizedHandler(() => {
       clearAllPendingCommands();
       void client.cancelQueries();
-      client.clear();
-      client.setQueryData(meKey, null);
+      replaceAccountCache(client, null);
     });
     return () => setUnauthorizedHandler(undefined);
   }, [client]);
@@ -27,11 +26,18 @@ export function App() {
   const staff = me && me.role !== 'STUDENT';
   return (
     <>
-      <header className="site-header">
+      <header className={`site-header${me?.role === 'STUDENT' ? ' student-header' : ''}`}>
         <Link className="brand" to="/">
           한빛학교<span>배움터</span>
         </Link>
         <nav aria-label="주 메뉴">
+          {me?.role === 'STUDENT' ? (
+            <>
+              <Link to="/student/learning">학습 홈</Link>
+              <Link to="/student/questions?filter=REVIEW_QUEUE">나의 문제</Link>
+              <Link to="/student/account">내 정보</Link>
+            </>
+          ) : null}
           {staff && !me.mustChangePassword ? (
             <>
               <Link to="/staff/classrooms">학급</Link>

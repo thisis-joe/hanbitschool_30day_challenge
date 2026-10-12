@@ -8,6 +8,11 @@ import { StudentLoginPage } from '../features/auth/StudentLoginPage';
 import { StaffLoginPage } from '../features/auth/StaffLoginPage';
 import { StudentAccountPage } from '../features/auth/StudentAccountPage';
 import { AccountPasswordPage } from '../features/auth/AccountPasswordPage';
+import { LearningDashboardPage } from '../features/learning/LearningDashboardPage';
+import { PersonalQuestionsPage } from '../features/learning/PersonalQuestionsPage';
+import { LearningSessionPage } from '../features/learning/LearningSessionPage';
+import { LearningResultPage } from '../features/learning/LearningResultPage';
+import '../features/learning/learning.css';
 export function AppRoutes() {
   return (
     <Routes>
@@ -23,6 +28,13 @@ export function AppRoutes() {
       <Route path="/staff/login" element={<StaffLoginPage />} />
       <Route element={<RequireRole allowed={['STUDENT']} />}>
         <Route path="/student/account" element={<StudentAccountPage />} />
+        <Route path="/student/learning" element={<LearningDashboardPage />} />
+        <Route path="/student/questions" element={<PersonalQuestionsPage />} />
+        <Route path="/student/learning/sessions/:sessionId" element={<LearningSessionPage />} />
+        <Route
+          path="/student/learning/sessions/:sessionId/result"
+          element={<LearningResultPage />}
+        />
       </Route>
       <Route
         element={<RequireRole allowed={['STUDENT', 'TEACHER', 'ADMIN']} allowPasswordChange />}

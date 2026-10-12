@@ -11,12 +11,15 @@ import {
   answerResult,
   deferred,
   learningStatus,
+  personalQuestion,
   requestId,
   sessionId,
 } from '../../test/learningFixtures';
 import { meKey } from '../auth/queries';
 import { LearningSessionPage } from './LearningSessionPage';
 import { LearningResultPage } from './LearningResultPage';
+import { App } from '../../app/App';
+import { renderPage } from '../../test/render';
 import {
   clearAllPendingCommands,
   readPendingCommand,
@@ -65,6 +68,85 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   clearAllPendingCommands();
+});
+
+it('feedbackOffersConsentBeforeAdvanceAndDoesNotClearUserQueue', async () => {
+  let queueAdds = 0;
+  let queueDeletes = 0;
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () =>
+      json({
+        ...answeredSession,
+        lastAnswer: { ...answerResult, reviewPromptEligible: true, outcome: 'WRONG' },
+      }),
+    ),
+    http.get('*/api/student/learning/questions', () => HttpResponse.json([])),
+    http.put('*/api/student/learning/review-queue/1', () => {
+      queueAdds++;
+      return new HttpResponse(null, { status: 204 });
+    }),
+    http.delete('*/api/student/learning/review-queue/1', () => {
+      queueDeletes++;
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  setup();
+  expect(await screen.findByText('다시 볼 문제로 추가할까요?')).toBeVisible();
+  await waitFor(() => expect(screen.getByRole('button', { name: '추가하기' })).toBeEnabled());
+  expect(
+    screen
+      .getByRole('button', { name: '추가하기' })
+      .compareDocumentPosition(screen.getByRole('button', { name: '다음 문제' })) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(queueAdds).toBe(0);
+  await userEvent.click(screen.getByRole('button', { name: '추가하기' }));
+  await waitFor(() => expect(screen.queryByText('다시 볼 문제로 추가할까요?')).toBeNull());
+  expect(queueAdds).toBe(1);
+  expect(queueDeletes).toBe(0);
+});
+
+it('userQueuedCorrectAnswerRemainsExplicitlyRemovable', async () => {
+  let view = activeSession;
+  let queuedQuestion = personalQuestion;
+  let deletes = 0;
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () => json(view)),
+    http.get('*/api/student/learning/questions', ({ request }) => {
+      const filter = new URL(request.url).searchParams.get('filter');
+      return HttpResponse.json(
+        filter === 'BOOKMARKED' || (filter === 'MASTERED' && !queuedQuestion.mastered)
+          ? []
+          : [queuedQuestion],
+      );
+    }),
+    http.post('*/api/student/learning/sessions/:id/answers', () => {
+      view = answeredSession;
+      queuedQuestion = {
+        ...personalQuestion,
+        inReviewQueue: true,
+        mastered: true,
+        lastOutcome: 'CORRECT',
+      };
+      return HttpResponse.json(answerResult);
+    }),
+    http.delete('*/api/student/learning/review-queue/1', () => {
+      deletes++;
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  const { client } = renderPage(<App />, `/student/learning/sessions/${sessionId}`);
+  await userEvent.click(await screen.findByRole('button', { name: 'O · 사실' }));
+  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
+  await waitFor(() => expect(screen.getByRole('button', { name: '별표' })).toBeEnabled());
+  expect(client.getQueryData(learningKeys.questions('student-a', 'REVIEW_QUEUE'))).toEqual([
+    queuedQuestion,
+  ]);
+  expect(deletes).toBe(0);
+  await userEvent.click(screen.getByRole('link', { name: '나의 문제' }));
+  expect(await screen.findByRole('button', { name: '다시 볼 목록에서 제거' })).toBeEnabled();
+  expect(screen.getByText('복습 완료 · 다시 볼 목록에 있어요')).toBeVisible();
+  expect(deletes).toBe(0);
 });
 
 // Rendering lastAnswer in QUESTION_ACTIVE would reveal a previous question's result.

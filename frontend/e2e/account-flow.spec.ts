@@ -17,6 +17,8 @@ test('admin teacher classroom student and real roster', async ({ page, browser }
   await signOut(page);
   await signup(page, c);
   await studentLogin(page, '한빛학교', c.gradeLabel, c.classNumber, 1, 'Student!2026');
+  await expect(page.getByRole('heading', { name: '나의 학습', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: '내 정보', exact: true }).click();
   await expect(page.getByText('숲친구', { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText('숲친구', { exact: true })).toBeVisible();
