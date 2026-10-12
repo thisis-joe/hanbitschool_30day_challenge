@@ -35,7 +35,7 @@ create table learning_sessions (
     constraint learning_sessions_mode_check check (mode in ('FIRST', 'REVIEW', 'REPLAY')),
     constraint learning_sessions_day_mode_check check (
         (mode = 'REVIEW' and day is null)
-        or (mode in ('FIRST', 'REPLAY') and day between 1 and 30)
+        or (mode in ('FIRST', 'REPLAY') and day is not null and day between 1 and 30)
     ),
     constraint learning_sessions_state_check check (state in ('QUESTION_ACTIVE', 'AWAITING_ADVANCE', 'COMPLETED')),
     constraint learning_sessions_position_range check (current_position between 1 and 150)

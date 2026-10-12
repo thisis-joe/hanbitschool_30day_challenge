@@ -20,6 +20,8 @@ import kr.hanbit.school.support.PostgresTestConfiguration;
 import kr.hanbit.school.support.TestFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -312,6 +314,29 @@ class LearningPersistenceContractIT {
                 Integer.class,
                 student))
         .isEqualTo(2);
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = LearningMode.class, names = {"FIRST", "REPLAY"})
+  void dayLearningSessionsRequireANonNullDay(LearningMode mode) {
+    var student = student(1);
+
+    assertThatThrownBy(
+            () ->
+                sessions.saveAndFlush(
+                    new LearningSession(
+                        UUID.randomUUID(),
+                        student,
+                        VERSION,
+                        mode,
+                        null,
+                        LearningSessionState.QUESTION_ACTIVE,
+                        1,
+                        LearningTime.deadline(clock, 10),
+                        null,
+                        clock.instant(),
+                        clock.instant())))
+        .isInstanceOf(DataIntegrityViolationException.class);
   }
 
   @Test
