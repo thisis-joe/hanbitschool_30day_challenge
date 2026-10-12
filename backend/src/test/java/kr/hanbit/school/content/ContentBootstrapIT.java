@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
@@ -82,7 +83,36 @@ class ContentBootstrapIT {
   }
 
   @Test
-  void failedInstallLeavesNoVersionRows() throws Exception {
+  void inactiveCanonicalVersionFailsClosedWithoutRepair() {
+    jdbc.update("update content_versions set active=false where version=?", VERSION);
+
+    assertThatThrownBy(bootstrap::initialize).isInstanceOf(IllegalStateException.class);
+    assertThat(
+            jdbc.queryForObject(
+                "select active from content_versions where version=?", Boolean.class, VERSION))
+        .isFalse();
+  }
+
+  @Test
+  void conflictingActiveVersionPreventsCanonicalInstallWithoutWrites() {
+    jdbc.update("delete from content_versions");
+    jdbc.update(
+        "insert into content_versions(version,digest,active) values ('other-v1',?,true)",
+        "a".repeat(64));
+
+    assertThatThrownBy(bootstrap::initialize).isInstanceOf(IllegalStateException.class);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from content_versions where version=?", Integer.class, VERSION))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject(
+                "select active from content_versions where version='other-v1'", Boolean.class))
+        .isTrue();
+  }
+
+  @Test
+  void invalidDocumentIsRejectedBeforeCreatingVersionRows() throws Exception {
     String invalidVersion = "invalid-v1";
     var invalid =
         mapper.readValue(
@@ -102,6 +132,59 @@ class ContentBootstrapIT {
                 Integer.class,
                 invalidVersion))
         .isZero();
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void failedInstallLeavesNoVersionRows() {
+    String failedVersion = "rollback-v1";
+    jdbc.update("delete from content_versions");
+    try {
+      jdbc.execute(
+          """
+          create function reject_rollback_question() returns trigger language plpgsql as $$
+          begin
+            if new.version = 'rollback-v1' then
+              raise exception 'forced question insert failure';
+            end if;
+            return new;
+          end
+          $$
+          """);
+      jdbc.execute(
+          "create trigger reject_rollback_question before insert on questions"
+              + " for each row execute function reject_rollback_question()");
+
+      assertThatThrownBy(
+              () ->
+                  importer.install(
+                      failedVersion,
+                      DIGEST,
+                      new ClassPathResource("content/hanbit-v1.json")))
+          .isInstanceOf(RuntimeException.class)
+          .hasStackTraceContaining("forced question insert failure");
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from content_versions where version=?",
+                  Integer.class,
+                  failedVersion))
+          .isZero();
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from content_days where version=?",
+                  Integer.class,
+                  failedVersion))
+          .isZero();
+      assertThat(
+              jdbc.queryForObject(
+                  "select count(*) from questions where version=?", Integer.class, failedVersion))
+          .isZero();
+    } finally {
+      jdbc.execute("drop trigger if exists reject_rollback_question on questions");
+      jdbc.execute("drop function if exists reject_rollback_question()");
+      jdbc.update("delete from content_versions");
+      bootstrap.initialize();
+    }
   }
 
   @Test

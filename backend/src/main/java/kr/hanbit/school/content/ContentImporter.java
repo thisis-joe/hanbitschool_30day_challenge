@@ -44,12 +44,15 @@ public class ContentImporter {
     if (installed.isPresent()) {
       if (!installed.get().getDigest().equals(expectedDigest))
         throw new IllegalStateException("설치된 학습 콘텐츠 해시가 다릅니다.");
+      if (!installed.get().isActive())
+        throw new IllegalStateException("승인된 학습 콘텐츠가 활성 버전이 아닙니다.");
       requireExactRows(version, document);
       return;
     }
 
-    boolean active = versions.findByActiveTrue().isEmpty();
-    versions.save(new ContentVersion(version, expectedDigest, active));
+    if (versions.findByActiveTrue().isPresent())
+      throw new IllegalStateException("다른 학습 콘텐츠 버전이 활성화되어 있습니다.");
+    versions.save(new ContentVersion(version, expectedDigest, true));
     var dayRows = new ArrayList<ContentDay>(30);
     var questionRows = new ArrayList<LearningQuestion>(150);
     for (var day : document.days()) {
