@@ -115,7 +115,31 @@ pnpm --dir frontend test:e2e
 
 영상·trace·자동 실패 스크린샷을 끄고 실패 DOM 문맥을 포함한 테스트 산출물도 보존하지 않습니다. 초기 비밀번호를 일반 로그·조회 캐시·브라우저 저장소에 남기지 않습니다. 학습 화면의 360px/데스크톱 가로 넘침·48px 대상·키보드 focus는 스크린샷 없이 DOM으로 측정합니다.
 
-계정 데이터는 `school-data` 볼륨에 보관됩니다. `docker compose ... restart backend web` 뒤 다시 로그인하면 같은 계정·소속·명단이 유지됩니다. 서버 재시작으로 메모리 세션은 만료될 수 있습니다. 중지는 `stop`을 사용하며 DB 볼륨을 삭제하지 않습니다.
+계정 데이터는 `school-data` 볼륨에 보관됩니다. 재시작할 때는 backend가 실제로 healthy가 된 뒤 web을 재시작하고, HTTP 응답까지 확인합니다. 아래 예시는 위의 격리 E2E 환경에서 실행하는 순서입니다.
+
+```powershell
+docker compose -p hanbit-account-e2e --env-file .env.e2e.local -f infra/compose.local.yml restart backend
+if ($LASTEXITCODE -ne 0) { throw 'backend 재시작 실패' }
+$restartDeadline = (Get-Date).AddSeconds(90)
+do {
+    $backendHealth = docker inspect --format '{{.State.Health.Status}}' hanbit-account-e2e-backend-1
+    if ($backendHealth -eq 'healthy') { break }
+    if ((Get-Date) -ge $restartDeadline) { throw 'backend health 확인 시간 초과' }
+    Start-Sleep -Seconds 1
+} while ($true)
+docker compose -p hanbit-account-e2e --env-file .env.e2e.local -f infra/compose.local.yml restart web
+if ($LASTEXITCODE -ne 0) { throw 'web 재시작 실패' }
+$restartDeadline = (Get-Date).AddSeconds(90)
+do {
+    try { $httpStatus = (Invoke-WebRequest http://127.0.0.1:8088/api/auth/csrf -UseBasicParsing -TimeoutSec 5).StatusCode }
+    catch { $httpStatus = 0 }
+    if ($httpStatus -eq 200) { break }
+    if ((Get-Date) -ge $restartDeadline) { throw 'web HTTP 준비 확인 시간 초과' }
+    Start-Sleep -Seconds 1
+} while ($true)
+```
+
+다시 로그인하면 같은 계정·소속·명단이 유지됩니다. 서버 재시작으로 메모리 세션은 만료될 수 있습니다. 중지는 `stop`을 사용하며 DB 볼륨을 삭제하지 않습니다.
 
 ## 코드와 설계
 
