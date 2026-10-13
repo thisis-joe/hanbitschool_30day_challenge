@@ -211,19 +211,28 @@ it('zeroCountdownWaitsForTheServerAndNeverAdvances', async () => {
     }),
   );
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
-  setup();
+  const { client } = setup();
   expect(await screen.findByText('서버에서 답변을 확인하고 있어요')).toBeVisible();
   expect(screen.getByRole('button', { name: 'O · 사실' })).toBeDisabled();
+  const query = client
+    .getQueryCache()
+    .find({ queryKey: learningKeys.session('student-a', sessionId) });
+  // Fake intervals do not settle real MSW I/O. Finish the immediate expiry
+  // refetch before checking that the next tick starts another request.
+  await act(async () => {
+    await query?.promise;
+  });
   const startReads = reads;
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1000);
+    await query?.promise;
   });
   expect(reads).toBeGreaterThan(startReads);
   view = { ...answeredSession, lastAnswer: { ...answerResult, outcome: 'TIMED_OUT' } };
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1000);
   });
-  expect(screen.getByRole('heading', { name: '시간이 초과되었어요' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '시간이 초과되었어요' })).toBeVisible();
   const confirmedReads = reads;
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2000);
@@ -655,7 +664,7 @@ it('sessionConflictOffersTheCanonicalActiveSessionRecoveryLink', async () => {
     'href',
     `/student/learning/sessions/${other}`,
   );
-  expect(screen.getByRole('alert')).toHaveTextContent('연결을 확인하고 다시 시도해 주세요.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('연결을 확인하고 다시 시도해 주세요.');
   expect(readPendingCommand('student-a')?.kind).toBe('START');
 });
 
