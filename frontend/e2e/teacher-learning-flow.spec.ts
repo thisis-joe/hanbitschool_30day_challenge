@@ -66,6 +66,23 @@ async function teacher(page: Page, c: Fixture) {
   await staffLogin(page, c.staffLoginId, c.staffPassword);
   await page.goto(route(c));
   await expect(page.getByRole('region', { name: '학급 요약', exact: true })).toBeVisible();
+  await headingFocused(page);
+}
+async function headingFocused(page: Page) {
+  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName === 'H1')).toBe(true);
+}
+async function modalReleased(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          !document.querySelector('[role="dialog"]') &&
+          !document.querySelector('#root')?.hasAttribute('inert') &&
+          !document.querySelector('#root')?.hasAttribute('aria-hidden') &&
+          document.body.style.overflow !== 'hidden',
+      ),
+    )
+    .toBe(true);
 }
 async function firstFour(page: Page) {
   const first = await start(
@@ -144,7 +161,7 @@ async function teacherLayout(page: Page, surface: string) {
     const m = await page.evaluate(() => {
       const targets = Array.from(
         document.querySelectorAll<HTMLElement>(
-          '.teacher-stats button, .teacher-stats a, .teacher-stats input, .teacher-stats select, .stats-dialog button, .site-header a, .site-header button',
+          '.teacher-stats button, .teacher-stats a, .teacher-stats input, .teacher-stats select, .stats-dialog button, .stats-dialog a, .site-header a, .site-header button',
         ),
       )
         .filter((e) => e.getClientRects().length && !e.closest('[inert]'))
@@ -234,6 +251,26 @@ test('teacherClassShowsActualFirstAnswerAndReviewImprovement', async ({ page, br
       contains: true,
     });
     await teacherLayout(staff, 'overview');
+    // First wrong and correct respondents both link back into the same class.
+    await staff.getByRole('button', { name: '문항 분석', exact: true }).click();
+    const origin = new URL(staff.url()).pathname + new URL(staff.url()).search;
+    for (const question of [1, 2]) {
+      await staff.getByRole('button', { name: `${question}번 문항 상세`, exact: true }).click();
+      const dialog = staff.getByRole('dialog');
+      const link = dialog.getByRole('link');
+      protectedEqual(await link.getAttribute('href'), `${route(c)}/students/${c.studentIds[0]}`);
+      await link.click();
+      await modalReleased(staff);
+      await headingFocused(staff);
+      protectedEqual(
+        await staff
+          .getByRole('link', { name: '목록으로 돌아가기', exact: true })
+          .getAttribute('href'),
+        origin,
+      );
+      await staff.getByRole('link', { name: '목록으로 돌아가기', exact: true }).click();
+      await headingFocused(staff);
+    }
   } finally {
     await staff.close();
   }
@@ -287,22 +324,36 @@ test('filteredTeacherRosterDoesNotAlterSummaryOrHardQuestions', async ({ page })
   );
   protectedEqual(second.summary, whole.summary);
   await page.getByRole('link', { name: '21번 합성학생21 학생 상세', exact: true }).click();
+  await headingFocused(page);
   await protectedText(page.getByRole('navigation', { name: '학급 학생 이동' }), '21 / 25', {
     contains: true,
   });
   await page.getByRole('link', { name: '이전 학생', exact: true }).click();
   await expect(page.getByRole('heading', { name: '20번 합성학생20', exact: true })).toBeVisible();
+  await headingFocused(page);
   await page.getByRole('link', { name: '다음 학생', exact: true }).click();
   await expect(page.getByRole('heading', { name: '21번 합성학생21', exact: true })).toBeVisible();
+  await headingFocused(page);
   await page.getByRole('link', { name: '목록으로 돌아가기', exact: true }).click();
   await expect(page).toHaveURL(/\?page=1$/);
   await expect(
     page.getByRole('link', { name: '21번 합성학생21 학생 상세', exact: true }),
   ).toBeVisible();
+  await page.getByLabel('학생 상태', { exact: true }).focus();
+  expect(
+    await page
+      .getByLabel('학생 상태', { exact: true })
+      .evaluate((element) => element === document.activeElement),
+  ).toBe(true);
   await page.getByLabel('학생 상태', { exact: true }).selectOption('NEW');
   await protectedText(page.getByRole('table', { name: '학생 학습 현황' }), '검색 결과 22명', {
     contains: true,
   });
+  expect(
+    await page
+      .getByLabel('학생 상태', { exact: true })
+      .evaluate((element) => element === document.activeElement),
+  ).toBe(true);
   await page.getByLabel('이름·번호 검색').fill('21');
   await page.getByRole('button', { name: '검색', exact: true }).click();
   await protectedText(page.getByRole('table', { name: '학생 학습 현황' }), '검색 결과 1명', {
@@ -379,6 +430,17 @@ test('studentDetailCrossesPagesAndPreservesFirstWrongAfterReview', async ({ page
   await page.keyboard.press('Escape');
   await expect(firstDialog).toHaveCount(0);
   await expect(firstQuestion).toBeFocused();
+  // A respondent reached through student detail retains the filtered roster origin.
+  const rosterOrigin = await page
+    .getByRole('link', { name: '목록으로 돌아가기', exact: true })
+    .getAttribute('href');
+  await firstQuestion.click();
+  await firstDialog.getByRole('link').click();
+  await modalReleased(page);
+  protectedEqual(
+    await page.getByRole('link', { name: '목록으로 돌아가기', exact: true }).getAttribute('href'),
+    rosterOrigin,
+  );
   await page.getByLabel('답변 필터', { exact: true }).selectOption('ALL');
   await protectedText(page.getByRole('table', { name: '학생 첫 답변' }), '문항 10개', {
     contains: true,
@@ -394,6 +456,18 @@ test('studentDetailCrossesPagesAndPreservesFirstWrongAfterReview', async ({ page
     [9, 10],
   );
   expect(next.days.length).toBe(30);
+  // Self navigation must keep the paged answer trigger available for focus restoration.
+  const pagedOrigin = new URL(page.url()).pathname + new URL(page.url()).search;
+  const pagedQuestion = page.getByRole('button', { name: '9번 문항 상세', exact: true });
+  await pagedQuestion.focus();
+  await page.keyboard.press('Enter');
+  const selfRespondent = page.getByRole('dialog').getByRole('link');
+  protectedEqual(await selfRespondent.getAttribute('href'), pagedOrigin);
+  await selfRespondent.focus();
+  await page.keyboard.press('Enter');
+  await modalReleased(page);
+  protectedEqual(new URL(page.url()).pathname + new URL(page.url()).search, pagedOrigin);
+  expect(await pagedQuestion.evaluate((element) => element === document.activeElement)).toBe(true);
   await teacherLayout(page, 'student');
   await page.getByRole('link', { name: '다음 학생', exact: true }).click();
   await expect(page.getByRole('heading', { name: '2번 합성둘', exact: true })).toBeVisible();
@@ -455,14 +529,32 @@ test('teacherQuestionDialogShowsTimeoutSeparateFromUntouched', async ({ page }) 
   await protectedText(dialog.locator('.stats-explanation p'), data.explanation);
   const close = dialog.getByRole('button', { name: '닫기', exact: true });
   await visibleFocus(close);
+  const respondent = dialog.getByRole('link');
   await page.keyboard.press('Shift+Tab');
+  expect(await respondent.evaluate((element) => element === document.activeElement)).toBe(true);
+  await page.keyboard.press('Tab');
   await expect(close).toBeFocused();
   await page.keyboard.press('Tab');
+  expect(await respondent.evaluate((element) => element === document.activeElement)).toBe(true);
+  await page.keyboard.press('Shift+Tab');
   await expect(close).toBeFocused();
   await teacherLayout(page, 'dialog');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
+  const origin = new URL(page.url()).pathname + new URL(page.url()).search;
+  await trigger.click();
+  protectedEqual(await respondent.getAttribute('href'), `${route(c)}/students/${c.studentIds[0]}`);
+  await respondent.focus();
+  await page.keyboard.press('Enter');
+  await modalReleased(page);
+  await headingFocused(page);
+  protectedEqual(
+    await page.getByRole('link', { name: '목록으로 돌아가기', exact: true }).getAttribute('href'),
+    origin,
+  );
+  await page.getByRole('link', { name: '목록으로 돌아가기', exact: true }).click();
+  await headingFocused(page);
   await teacherLayout(page, 'questions');
   await page.getByLabel('문항 회차', { exact: true }).selectOption('2');
   await expect(page.getByRole('button', { name: '6번 문항 상세' })).toBeVisible();

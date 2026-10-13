@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Page, Response } from '@playwright/test';
+import type { ClassroomSummary } from '../src/features/staff/types';
 import { signOut, studentLogin } from './helpers';
 import {
   provisionLearner,
@@ -55,6 +56,7 @@ async function journey(page: Page): Promise<JourneyView> {
 }
 async function selectCharacter(page: Page, name = '보라') {
   await page.goto('/student/character');
+  await expect(page.getByRole('heading', { name: '캐릭터 선택', exact: true })).toBeFocused();
   const saved = page.waitForResponse(
     (r) =>
       new URL(r.url()).pathname === '/api/student/game/appearance' &&
@@ -63,6 +65,7 @@ async function selectCharacter(page: Page, name = '보라') {
   await page.getByRole('button', { name: `${name} 선택`, exact: true }).click();
   expect((await saved).status()).toBe(200);
   await expect(page.getByText(`지금 함께하는 친구: ${name}`, { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '캐릭터 선택', exact: true })).not.toBeFocused();
 }
 async function firstPass(page: Page) {
   await page.goto('/student/learning');
@@ -78,11 +81,149 @@ async function firstPass(page: Page) {
 
 // Catches unsaved clothing, appearance reset on relogin, and missing six-slot persistence.
 test('characterWardrobePersistsAcrossRelogin', async ({ page }) => {
-  const c = await provisionLearner(page);
+  // Failure-only observation: do not delay or alter the existing provisioning actions.
+  const observations: { method: string; status: number; parsed: boolean }[] = [];
+  let created: ClassroomSummary | undefined;
+  let requestedGrade: string | undefined;
+  let listed: ClassroomSummary[] | undefined;
+  let createdAt = -1;
+  let listedAt = -1;
+  let meIdentityPresent: boolean | undefined;
+  let pendingReads = 0;
+  let observationErrors = 0;
+  const observe = async (response: Response) => {
+    let path: string;
+    try {
+      path = new URL(response.url()).pathname;
+    } catch {
+      observationErrors++;
+      return;
+    }
+    const method = response.request().method();
+    if (!(
+      (path === '/api/staff/classrooms' && ['POST', 'GET'].includes(method)) ||
+      (path === '/api/auth/me' && method === 'GET')
+    ))
+      return;
+    const event = {
+      method: path === '/api/auth/me' ? 'ME' : method,
+      status: response.status(),
+      parsed: false,
+    };
+    observations.push(event);
+    const eventIndex = observations.length - 1;
+    pendingReads++;
+    try {
+      const body = await response.json();
+      event.parsed = true;
+      if (path === '/api/auth/me') meIdentityPresent = typeof body?.accountId === 'string';
+      else if (method === 'POST') {
+        createdAt = eventIndex;
+        const requestBody = response.request().postDataJSON();
+        requestedGrade =
+          typeof requestBody?.gradeLabel === 'string' ? requestBody.gradeLabel : undefined;
+        if (typeof body?.id === 'string' && typeof body?.gradeLabel === 'string') created = body;
+        else observationErrors++;
+      } else if (Array.isArray(body)) {
+        if (eventIndex > listedAt) {
+          listedAt = eventIndex;
+          listed = body;
+        }
+      } else observationErrors++;
+    } catch {
+      observationErrors++;
+    } finally {
+      pendingReads--;
+    }
+  };
+  page.on('response', observe);
+  const c = await (async () => {
+    try {
+      return await provisionLearner(page);
+    } catch (error) {
+      let dom: object = { known: false };
+      try {
+        dom = await page.evaluate(
+          ({ id, grade, classNumber }) => {
+            const input = id ? document.getElementById('code-' + id) : null;
+            const expected =
+              grade === undefined ? undefined : `${grade} ${classNumber}반 가입 코드`;
+            const labels = [...document.querySelectorAll('label')];
+            return {
+              known: true,
+              matchedCodeIdCount: id
+                ? document.querySelectorAll('#' + CSS.escape('code-' + id)).length
+                : null,
+              codeVisible: input
+                ? input.getClientRects().length > 0 &&
+                  getComputedStyle(input).visibility !== 'hidden'
+                : false,
+              expectedLabelPresent:
+                expected === undefined
+                  ? null
+                  : labels.some((label) => label.textContent?.trim() === expected),
+              codeLabelCorresponds:
+                input && expected !== undefined
+                  ? labels.some(
+                      (label) =>
+                        label.htmlFor === input.id && label.textContent?.trim() === expected,
+                    )
+                  : null,
+              routeIsClassrooms: location.pathname === '/staff/classrooms',
+            };
+          },
+          { id: created?.id, grade: requestedGrade, classNumber: created?.classNumber },
+        );
+      } catch {
+        observationErrors++;
+      }
+      const subsequentListKnown = createdAt >= 0 && listedAt > createdAt && !!listed;
+      const createdId = created?.id;
+      const match = createdId && subsequentListKnown && listed?.find((row) => row.id === createdId);
+      console.log(
+        'PROVISION_BOUNDARY ' +
+          JSON.stringify({
+            observations,
+            pendingReads,
+            observationErrors,
+            createdKnown: !!created,
+            createdManageable: typeof created?.canManage === 'boolean' ? created.canManage : null,
+            createdHasCode: created
+              ? typeof created.joinCode === 'string' && created.joinCode.length > 0
+              : null,
+            createdGradeMatchesRequest:
+              created && requestedGrade !== undefined
+                ? created.gradeLabel === requestedGrade
+                : null,
+            subsequentListKnown,
+            listCount: subsequentListKnown ? (listed?.length ?? null) : null,
+            listContainsCreated: created && subsequentListKnown ? !!match : null,
+            listedManageable:
+              match && typeof match.canManage === 'boolean' ? match.canManage : null,
+            listedHasCode: match
+              ? typeof match.joinCode === 'string' && match.joinCode.length > 0
+              : null,
+            meIdentityPresent: meIdentityPresent ?? null,
+            // ClassroomSummary has no creator field; a /me-to-creator comparison is unavailable.
+            creatorComparisonKnown: false,
+            errorClass:
+              error instanceof Error && error.name === 'TimeoutError'
+                ? 'TimeoutError'
+                : 'OtherError',
+            dom,
+          }),
+      );
+      throw error;
+    } finally {
+      page.off('response', observe);
+    }
+  })();
+  await expect(page.getByRole('heading', { name: '나의 학습', exact: true })).toBeFocused();
   await selectCharacter(page);
   await layoutAndTargets(page);
   await firstPass(page);
   await page.goto('/student/closet');
+  await expect(page.getByRole('heading', { name: '나의 옷장', exact: true })).toBeFocused();
   await page.getByRole('button', { name: '책벌레안경 미리보기', exact: true }).click();
   const saved = page.waitForResponse(
     (r) => r.request().method() === 'PUT' && r.url().endsWith('/game/appearance'),
@@ -172,6 +313,7 @@ test('lockedPreviewCannotBecomeSavedGear', async ({ page }) => {
 test('mapUsesFirstFactsAndServerLocks', async ({ page }) => {
   await provisionLearner(page);
   await page.goto('/student/map');
+  await expect(page.getByRole('heading', { name: '탐험 지도', exact: true })).toBeFocused();
   await layoutAndTargets(page);
   await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: '3회차 시작하기', exact: true })).toBeDisabled();
