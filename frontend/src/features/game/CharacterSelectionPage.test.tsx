@@ -7,7 +7,7 @@ import { gameView } from '../../test/gameFixtures';
 import { renderPage } from '../../test/render';
 import { App } from '../../app/App';
 import type { AppearanceCommand } from './types';
-import { activeSession, sessionId } from '../../test/learningFixtures';
+import { activeSession, learningStatus, sessionId } from '../../test/learningFixtures';
 
 // Dropped characters, lost gear, preview-only selection, and ignoring restored GET all break this journey.
 it('selectsAndRestoresAllNineCharacters', async () => {
@@ -114,6 +114,7 @@ it.each(['unselected', 'gameError'])(
         return HttpResponse.json(gameView);
       }),
       http.get('*/api/student/learning/sessions/:id', () => HttpResponse.json(activeSession)),
+      http.get('*/api/student/learning/status', () => HttpResponse.json(learningStatus)),
     );
     renderPage(<App />, `/student/learning/sessions/${sessionId}`);
     expect(await screen.findByText('테스트용 문항입니다.')).toBeVisible();

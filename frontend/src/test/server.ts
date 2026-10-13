@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { gameView, journeyView } from './gameFixtures';
 export const student = {
   accountId: 'student-a',
   role: 'STUDENT',
@@ -22,6 +23,8 @@ export const teacher = {
   mustChangePassword: false,
 };
 export const server = setupServer(
+  http.get('*/api/student/game', () => HttpResponse.json(gameView)),
+  http.get('*/api/student/learning/map', () => HttpResponse.json(journeyView)),
   http.get('*/api/student/learning/questions', () => HttpResponse.json([])),
   http.get('*/api/auth/csrf', () =>
     HttpResponse.json({ headerName: 'X-CSRF-TOKEN', token: 'test-token' }),

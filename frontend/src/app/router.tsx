@@ -14,6 +14,7 @@ import { LearningSessionPage } from '../features/learning/LearningSessionPage';
 import { LearningResultPage } from '../features/learning/LearningResultPage';
 import { CharacterSelectionPage } from '../features/game/CharacterSelectionPage';
 import { ClosetPage } from '../features/game/ClosetPage';
+import { JourneyMapPage } from '../features/game/JourneyMapPage';
 import '../features/learning/learning.css';
 export function AppRoutes() {
   return (
@@ -32,6 +33,7 @@ export function AppRoutes() {
         <Route path="/student/account" element={<StudentAccountPage />} />
         <Route path="/student/character" element={<CharacterSelectionPage />} />
         <Route path="/student/closet" element={<ClosetPage />} />
+        <Route path="/student/map" element={<JourneyMapPage />} />
         <Route path="/student/learning" element={<LearningDashboardPage />} />
         <Route path="/student/questions" element={<PersonalQuestionsPage />} />
         <Route path="/student/learning/sessions/:sessionId" element={<LearningSessionPage />} />

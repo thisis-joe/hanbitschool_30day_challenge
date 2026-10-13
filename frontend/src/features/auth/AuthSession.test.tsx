@@ -289,7 +289,7 @@ it('switchingStudentsDoesNotRenderPreviousLearningData', async () => {
   );
   expect(readPendingCommand('student-a')).toBeNull();
   expect(screen.queryByText('이전 학생 개인 문항')).toBeNull();
-  await userEvent.click(screen.getByRole('link', { name: '학습 홈' }));
+  await userEvent.click(screen.getByRole('link', { name: '오늘' }));
   expect(await screen.findByText('0 XP')).toBeVisible();
   expect(screen.queryByText('777 XP')).toBeNull();
 });

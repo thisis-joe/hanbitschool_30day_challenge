@@ -8,6 +8,11 @@ import { getPendingCommandEpoch, subscribePendingCommandCleanup } from './pendin
 import { useLearningStatus } from './queries';
 import { useLearningActions } from './useLearningActions';
 import type { LearningMode } from './types';
+import { useGame, useJourney } from '../game/queries';
+import { GameAvatar } from '../game/GameAvatar';
+import { JourneyMap } from '../game/JourneyMap';
+import { RewardCard } from '../game/RewardCard';
+import { REGIONS } from '../game/journeyGeometry';
 
 const messages = {
   WAIT_FOR_START_DATE: '학습 시작일을 기다리고 있어요.',
@@ -20,11 +25,13 @@ interface HomeCheck {
   epoch: number;
 }
 
-export function LearningDashboardPage() {
+export function LearningDashboardPage({ exploration = false }: { exploration?: boolean }) {
   const { data: account } = useCurrentAccount();
   const accountId = account?.role === 'STUDENT' ? account.accountId : undefined;
   const status = useLearningStatus();
   const actions = useLearningActions();
+  const game = useGame();
+  const journey = useJourney();
   const client = useQueryClient();
   const navigate = useNavigate();
   const mounted = useRef(false);
@@ -70,12 +77,24 @@ export function LearningDashboardPage() {
     activeCheck.current = check;
     setChecking(check);
     try {
-      const fresh = await status.refetch();
+      const [fresh, freshJourney] = await Promise.all([
+        status.refetch(),
+        exploration ? journey.refetch() : Promise.resolve(null),
+      ]);
       if (!ownsCheck(check) || fresh.error || !fresh.data) return;
       if (fresh.data.activeSession) {
         navigate(`/student/learning/sessions/${fresh.data.activeSession.sessionId}`);
         return;
       }
+      if (
+        exploration &&
+        (freshJourney?.error ||
+          !freshJourney?.data?.days.some(
+            (entry) =>
+              entry.dayNumber === day && ['AVAILABLE', 'PASSED'].includes(entry.availability),
+          ))
+      )
+        return;
       const passed = day <= fresh.data.passedDayCount;
       const available =
         day <= fresh.data.calendarCap && (passed || day === fresh.data.earliestUnpassedDay);
@@ -116,62 +135,142 @@ export function LearningDashboardPage() {
     day <= 30 &&
     day <= view.calendarCap &&
     ['START_FIRST', 'START_REPLAY'].includes(view.nextAction);
+  const map = journey.isError ? undefined : journey.data;
+  const appearance = game.isError ? undefined : game.data;
+  const regionIndex = map ? Math.min(5, Math.floor(map.journeyPosition / 25)) : null;
+  const reward = appearance?.items.find((item) => item.rewardDay === day);
+  const primary = view?.activeSession ? (
+    <Link className="button" to={`/student/learning/sessions/${view.activeSession.sessionId}`}>
+      이어풀기
+    </Link>
+  ) : canStart ? (
+    <button
+      disabled={blocked}
+      onClick={() => void startDay(day!, view!.nextAction === 'START_REPLAY' ? 'REPLAY' : 'FIRST')}
+    >
+      {view!.nextAction === 'START_REPLAY' ? '다시 도전하기' : '오늘 학습 시작'}
+    </button>
+  ) : null;
   return (
-    <section className="learning-page">
-      <div className="learning-card">
+    <section
+      className={`learning-page game-journey-page${exploration ? ' game-exploration-page' : ' game-home-page'}`}
+    >
+      <div className="game-home-intro">
         <p className="learning-eyebrow">
           {account?.role === 'STUDENT' ? `${account.nickname}의 배움` : '30회차 배움'}
         </p>
-        <h1>나의 학습</h1>
-        <p>문장을 읽고 O · 사실, X · 해석을 골라 보세요.</p>
-        {status.isPending ? <p role="status">학습을 불러오고 있어요</p> : null}
-        {view ? (
-          <>
-            <dl className="learning-result-stats learning-home-stats">
-              <div>
-                <dt>통과한 회차</dt>
-                <dd>{view.passedDayCount} / 30</dd>
-              </div>
-              <div>
-                <dt>첫 답변한 문항</dt>
-                <dd>{view.firstAnswerCount} / 150</dd>
-              </div>
-              <div>
-                <dt>누적 경험치</dt>
-                <dd>{view.totalXp} XP</dd>
-              </div>
-              <div>
-                <dt>현재 레벨</dt>
-                <dd>레벨 {view.level}</dd>
-              </div>
-            </dl>
-            {view.activeSession ? (
-              <Link
-                className="button"
-                to={`/student/learning/sessions/${view.activeSession.sessionId}`}
-              >
-                이어풀기
-              </Link>
-            ) : canStart ? (
-              <button
-                disabled={blocked}
-                onClick={() =>
-                  void startDay(day!, view.nextAction === 'START_REPLAY' ? 'REPLAY' : 'FIRST')
-                }
-              >
-                {view.nextAction === 'START_REPLAY' ? '다시 도전하기' : '오늘 학습 시작'}
-              </button>
-            ) : null}
-            {!view.activeSession && view.nextAction in messages ? (
-              <p>{messages[view.nextAction as keyof typeof messages]}</p>
-            ) : null}
-            {view.activeSession ? (
-              <p>진행 중인 학습을 마친 뒤 다른 회차를 시작할 수 있어요.</p>
-            ) : null}
-          </>
-        ) : null}
-        {isChecking || actions.busy ? <p role="status">최신 학습 상태를 확인하고 있어요</p> : null}
+        <h1>{exploration ? '탐험 지도' : '나의 학습'}</h1>
+        <p>하루 5문항, 숲에서 등대까지 이어지는 30회차 여행</p>
       </div>
+      {exploration ? (
+        <>
+          {journey.isPending ? <p role="status">탐험 지도를 불러오고 있어요.</p> : null}
+          {journey.isError ? (
+            <div className="learning-error">
+              <p role="alert">{errorMessage(journey.error)}</p>
+              <button onClick={() => void journey.refetch()}>지도 다시 불러오기</button>
+            </div>
+          ) : null}
+          {map ? <JourneyMap journey={map} appearance={appearance} /> : null}
+        </>
+      ) : null}
+      <section
+        className={`learning-card ${exploration ? 'game-map-dock' : 'game-camp'}`}
+        aria-label="오늘의 탐험"
+      >
+        <div className="game-camp-copy">
+          <p className="game-tag">
+            {regionIndex === null ? '여행 준비' : REGIONS[regionIndex]}
+            {day ? ` · ${day}회차` : ''}
+          </p>
+          <h2>{exploration ? '다음 배움' : '오늘의 탐험'}</h2>
+          <p>문장을 읽고 O · 사실, X · 해석을 골라 보세요.</p>
+          {status.isPending ? <p role="status">학습을 불러오고 있어요</p> : null}
+          {view ? (
+            <>
+              {primary}
+              {!view.activeSession && view.nextAction in messages ? (
+                <p>{messages[view.nextAction as keyof typeof messages]}</p>
+              ) : null}
+              {view.activeSession ? (
+                <p>진행 중인 학습을 마친 뒤 다른 회차를 시작할 수 있어요.</p>
+              ) : null}
+            </>
+          ) : null}
+          {isChecking || actions.busy ? (
+            <p role="status">최신 학습 상태를 확인하고 있어요</p>
+          ) : null}
+        </div>
+        {!exploration ? (
+          <div
+            className={`game-camp-scene game-scene-${regionIndex !== null && regionIndex >= 4 ? 'beach' : regionIndex !== null && regionIndex >= 2 ? 'village' : 'forest'}`}
+          >
+            {appearance ? (
+              <GameAvatar
+                characterId={appearance.characterId}
+                equippedBySlot={appearance.equippedBySlot}
+                className="game-avatar-idle"
+              />
+            ) : (
+              <p>여행 친구를 불러오고 있어요.</p>
+            )}
+            <Link className="button game-signpost" to="/student/map">
+              탐험 지도
+            </Link>
+          </div>
+        ) : null}
+      </section>
+      {view ? (
+        <dl className="learning-result-stats learning-home-stats game-home-stats">
+          <div>
+            <dt>통과한 회차</dt>
+            <dd>{view.passedDayCount} / 30</dd>
+          </div>
+          <div>
+            <dt>첫 답변한 문항</dt>
+            <dd>{view.firstAnswerCount} / 150</dd>
+          </div>
+          <div>
+            <dt>누적 경험치</dt>
+            <dd>{view.totalXp} XP</dd>
+          </div>
+          <div>
+            <dt>현재 레벨</dt>
+            <dd>레벨 {view.level}</dd>
+          </div>
+        </dl>
+      ) : null}
+      {!exploration ? (
+        <div className="game-home-under">
+          {reward ? (
+            <RewardCard
+              item={reward}
+              owned={appearance!.inventory.some(
+                (item) => item.itemId === reward.itemId && item.owned,
+              )}
+            />
+          ) : (
+            <section className="game-reward-card">
+              <p>회차를 처음 통과하면 여행 선물을 받아요.</p>
+              <Link to="/student/closet">옷장 둘러보기</Link>
+            </section>
+          )}
+          <nav className="game-regions" aria-label="여행 지역">
+            {REGIONS.map((name, index) => (
+              <Link
+                key={name}
+                className={
+                  regionIndex !== null && index <= regionIndex ? 'game-region-reached' : ''
+                }
+                to="/student/map"
+              >
+                <span>{index + 1}</span>
+                {name}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      ) : null}
       {error ? (
         <div className="learning-error">
           <p role="alert">{error}</p>
@@ -196,16 +295,28 @@ export function LearningDashboardPage() {
           </button>
         </div>
       ) : null}
-      {view ? (
+      {view && (!exploration || map) ? (
         <ol className="learning-day-grid" aria-label="회차별 학습">
-          {days.map((number) => {
-            const passed = number <= view.passedDayCount;
-            const dateLocked = number > view.calendarCap;
-            const sequenceLocked = !passed && number !== view.earliestUnpassedDay;
+          {(exploration ? map!.days.map((entry) => entry.dayNumber) : days).map((number) => {
+            const mapped = exploration
+              ? map!.days.find((entry) => entry.dayNumber === number)
+              : undefined;
+            const passed = mapped ? mapped.state === 'PASSED' : number <= view.passedDayCount;
+            const dateLocked = mapped
+              ? mapped.availability === 'LOCKED_DATE'
+              : number > view.calendarCap;
+            const sequenceLocked = mapped
+              ? !['PASSED', 'AVAILABLE', 'LOCKED_DATE'].includes(mapped.availability)
+              : !passed && number !== view.earliestUnpassedDay;
             const actionLocked =
               !passed && !['START_FIRST', 'START_REPLAY'].includes(view.nextAction);
             return (
-              <li className="learning-day-card" key={number}>
+              <li
+                className="learning-day-card"
+                key={number}
+                id={`journey-day-${number}`}
+                tabIndex={-1}
+              >
                 <h2>{number}회차</h2>
                 <p>
                   {passed

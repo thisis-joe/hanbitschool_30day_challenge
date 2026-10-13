@@ -31,6 +31,20 @@ function renderHome() {
   );
 }
 
+// The camp must expose canonical learning action and six real regions, not local demo progress.
+it('homeUsesAReferenceWithCanonicalNextAction', async () => {
+  server.use(http.get('*/api/student/learning/status', () => HttpResponse.json(ready)));
+  renderHome();
+  const camp = await screen.findByRole('region', { name: '오늘의 탐험' });
+  expect(await within(camp).findByRole('button', { name: '오늘 학습 시작' })).toBeEnabled();
+  expect(within(camp).getByRole('link', { name: '탐험 지도' })).toHaveAttribute(
+    'href',
+    '/student/map',
+  );
+  expect(screen.getByRole('navigation', { name: '여행 지역' })).toHaveTextContent('숲 입구');
+  expect(screen.getByRole('navigation', { name: '여행 지역' })).toHaveTextContent('작은 섬');
+});
+
 // A wrong nextAction branch would hide the required action or allow a locked start.
 it.each([
   ['WAIT_FOR_START_DATE', '학습 시작일을 기다리고 있어요.'],
