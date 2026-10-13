@@ -6,6 +6,8 @@ import { useLearningSession, useLearningStatus } from './queries';
 import { useLearningActions } from './useLearningActions';
 import { useDeadlineCountdown } from './useDeadlineCountdown';
 import { QuestionFeedbackActions } from './QuestionFeedbackActions';
+import { useGame, useJourney } from '../game/queries';
+import { LearningGameScene } from '../game/LearningGameScene';
 
 const outcomes = {
   CORRECT: '정답이에요',
@@ -19,7 +21,9 @@ export function LearningSessionPage() {
   const account = useCurrentAccount();
   const session = useLearningSession(sessionId);
   const status = useLearningStatus();
-  const actions = useLearningActions();
+  const actions = useLearningActions(session.data);
+  const game = useGame();
+  const journey = useJourney();
   const heading = useRef<HTMLHeadingElement>(null);
   const accountId = account.data?.role === 'STUDENT' ? account.data.accountId : undefined;
   const view = session.data;
@@ -116,7 +120,7 @@ export function LearningSessionPage() {
   const activeSession = status.data?.activeSession;
 
   return (
-    <section className="learning-page">
+    <section className="learning-page game-learning-page">
       {error ? (
         <div className="learning-error">
           <p role="alert">{error}</p>
@@ -155,6 +159,12 @@ export function LearningSessionPage() {
             aria-label="문항 진행"
             value={view.answeredCount}
             max={view.questionCount}
+          />
+          <LearningGameScene
+            key={accountId}
+            appearance={game.data}
+            journey={journey.data}
+            outcome={feedback?.outcome}
           />
           {active && question ? (
             <>

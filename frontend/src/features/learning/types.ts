@@ -57,6 +57,7 @@ export interface AnswerResult {
   dayState: DayProgressState | null;
   nextDayAvailable: boolean;
   reviewPromptEligible: boolean;
+  rewardGranted?: { itemId: string; dayNumber: number; acquiredAt: string } | null;
 }
 export interface PersonalQuestionView {
   questionId: number;

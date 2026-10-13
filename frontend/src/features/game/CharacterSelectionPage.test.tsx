@@ -8,6 +8,7 @@ import { renderPage } from '../../test/render';
 import { App } from '../../app/App';
 import type { AppearanceCommand } from './types';
 import { activeSession, learningStatus, sessionId } from '../../test/learningFixtures';
+import { gameKeys } from './queries';
 
 // Dropped characters, lost gear, preview-only selection, and ignoring restored GET all break this journey.
 it('selectsAndRestoresAllNineCharacters', async () => {
@@ -113,13 +114,28 @@ it.each(['unselected', 'gameError'])(
         puts++;
         return HttpResponse.json(gameView);
       }),
-      http.get('*/api/student/learning/sessions/:id', () => HttpResponse.json(activeSession)),
+      http.get('*/api/student/learning/sessions/:id', () =>
+        HttpResponse.json(activeSession, {
+          headers: { Date: 'Tue, 13 Oct 2026 00:00:00 GMT' },
+        }),
+      ),
       http.get('*/api/student/learning/status', () => HttpResponse.json(learningStatus)),
     );
-    renderPage(<App />, `/student/learning/sessions/${sessionId}`);
+    const { client } = renderPage(<App />, `/student/learning/sessions/${sessionId}`);
+    await waitFor(() =>
+      expect(client.getQueryState(gameKeys.view('student-a'))?.fetchStatus).toBe('idle'),
+    );
+    if (state === 'gameError')
+      expect(client.getQueryState(gameKeys.view('student-a'))?.status).toBe('error');
     expect(await screen.findByText('테스트용 문항입니다.')).toBeVisible();
     expect(screen.queryByRole('heading', { name: '캐릭터 선택' })).toBeNull();
-    expect(gameReads).toBe(0);
+    expect(gameReads).toBe(1);
+    expect(screen.getByRole('button', { name: 'O · 사실' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'X · 해석' })).toBeEnabled();
+    expect(document.querySelector('time')).toHaveAttribute(
+      'dateTime',
+      activeSession.question!.deadlineAt,
+    );
     expect(puts).toBe(0);
   },
 );

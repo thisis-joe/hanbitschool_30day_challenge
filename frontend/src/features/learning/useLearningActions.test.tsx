@@ -29,6 +29,27 @@ import {
   readPendingCommand,
   writePendingCommand,
 } from './pendingCommands';
+import { gameKeys } from '../game/queries';
+import { gameView, journeyView } from '../../test/gameFixtures';
+
+it('queryInvalidationRefreshesGameAndMapForSameOwnerOnly', async () => {
+  serveReads(answeredSession);
+  server.use(
+    http.post('*/api/student/learning/sessions/:id/answers', () => HttpResponse.json(answerResult)),
+  );
+  const { result, client } = setup();
+  for (const owner of ['student-a', 'student-b']) {
+    client.setQueryData(gameKeys.view(owner), gameView);
+    client.setQueryData(gameKeys.journey(owner), journeyView);
+  }
+  await act(async () => {
+    await result.current.actions.answer(sessionId, 1, 'O');
+  });
+  expect(client.getQueryState(gameKeys.view('student-a'))!.isInvalidated).toBe(true);
+  expect(client.getQueryState(gameKeys.journey('student-a'))!.isInvalidated).toBe(true);
+  expect(client.getQueryState(gameKeys.view('student-b'))!.isInvalidated).toBe(false);
+  expect(client.getQueryState(gameKeys.journey('student-b'))!.isInvalidated).toBe(false);
+});
 
 afterEach(() => {
   vi.restoreAllMocks();

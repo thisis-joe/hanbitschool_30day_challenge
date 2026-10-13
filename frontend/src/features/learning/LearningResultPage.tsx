@@ -8,6 +8,10 @@ import { useLearningSession, useLearningStatus } from './queries';
 import { useLearningActions } from './useLearningActions';
 import { getPendingCommandEpoch, subscribePendingCommandCleanup } from './pendingCommands';
 import type { LearningStatus } from './types';
+import { useGame, useJourney } from '../game/queries';
+import { useAppearance } from '../game/useAppearance';
+import { RewardCard } from '../game/RewardCard';
+import { LearningGameScene } from '../game/LearningGameScene';
 
 function availableDay(status: LearningStatus): number | null {
   const day = status.earliestUnpassedDay;
@@ -33,7 +37,10 @@ export function LearningResultPage() {
   const account = useCurrentAccount();
   const session = useLearningSession(sessionId);
   const status = useLearningStatus();
-  const actions = useLearningActions();
+  const actions = useLearningActions(session.data);
+  const game = useGame();
+  const journey = useJourney();
+  const appearance = useAppearance();
   const heading = useRef<HTMLHeadingElement>(null);
   const mounted = useRef(false);
   const activeCheck = useRef<ResultCheck | null>(null);
@@ -41,6 +48,11 @@ export function LearningResultPage() {
   const accountId = account.data?.role === 'STUDENT' ? account.data.accountId : undefined;
   const view = session.data;
   const result = view?.lastAnswer;
+  const gift = result?.rewardGranted;
+  const giftItem = gift ? game.data?.items.find((item) => item.itemId === gift.itemId) : undefined;
+  const giftOwned = giftItem
+    ? game.data?.inventory.some((item) => item.itemId === giftItem.itemId && item.owned) === true
+    : false;
   const isChecking =
     checking !== null &&
     checking.owner === accountId &&
@@ -170,7 +182,7 @@ export function LearningResultPage() {
         : '같은 학습 시작 다시 확인';
 
   return (
-    <section className="learning-page">
+    <section className="learning-page game-learning-page game-learning-result">
       {error ? (
         <div className="learning-error">
           <p role="alert">{error}</p>
@@ -199,6 +211,12 @@ export function LearningResultPage() {
           <h1 ref={heading} tabIndex={-1}>
             {title}
           </h1>
+          <LearningGameScene
+            key={accountId}
+            appearance={game.data}
+            journey={journey.data}
+            outcome={result.outcome}
+          />
           {view.mode === 'REVIEW' ? (
             <p>문항별 복습 상태는 나의 문제에서 확인해 주세요.</p>
           ) : replayKeepsPass ? (
@@ -224,6 +242,37 @@ export function LearningResultPage() {
               <dd>레벨 {result.level}</dd>
             </div>
           </dl>
+          {gift ? (
+            <div className="learning-saved-gift">
+              <p className="learning-eyebrow">새 선물</p>
+              {giftItem ? (
+                <RewardCard
+                  item={giftItem}
+                  owned={giftOwned}
+                  wearLabel="지금 착용하기"
+                  wearDisabled={
+                    appearance.busy || actions.busy || !!actions.pendingCommand || game.isError
+                  }
+                  onWear={
+                    giftOwned
+                      ? () => {
+                          const saved = game.data;
+                          if (saved)
+                            void appearance.save(saved.characterId, {
+                              ...saved.equippedBySlot,
+                              [giftItem.slot]: giftItem.itemId,
+                            });
+                        }
+                      : undefined
+                  }
+                />
+              ) : (
+                <p>저장된 선물 정보를 불러오고 있어요.</p>
+              )}
+              {appearance.busy ? <p role="status">외형을 저장하고 있어요</p> : null}
+              {appearance.error ? <p role="alert">{appearance.error}</p> : null}
+            </div>
+          ) : null}
           <div className="learning-next">
             {status.isPending ? <p role="status">다음 학습을 확인하고 있어요</p> : null}
             {next && next.nextAction in statusMessages && !canContinue ? (

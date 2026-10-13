@@ -5,6 +5,50 @@
   margin-inline: auto;
   overflow-wrap: anywhere;
 }
+.game-learning-page,
+.game-personal-page {
+  --cream: #fffdf3;
+  --paper: #fffef9;
+  --butter: #f4d66e;
+  --ink: #263d35;
+  --line: #e2dec9;
+  color: var(--ink);
+}
+.game-learning-page .learning-card,
+.game-personal-page .learning-card {
+  border-radius: 13px;
+}
+.game-learning-page .learning-choices button {
+  background: #edf3e3;
+  border: 2px solid #ccd9b8;
+  color: #34584b;
+}
+.game-learning-page .learning-choices button.secondary {
+  background: #fbf0d8;
+  border-color: #ead8ac;
+  color: #937c54;
+}
+.game-learning-page .learning-feedback {
+  border-radius: 11px;
+  padding: 18px;
+  background: #edf3e3;
+  border: 1px solid #ccd9b8;
+}
+.game-learning-page .learning-feedback[data-outcome='WRONG'],
+.game-learning-page .learning-feedback[data-outcome='TIMED_OUT'] {
+  background: #fbf0d8;
+  border-color: #ead8ac;
+}
+.learning-saved-gift {
+  margin-bottom: 24px;
+}
+.game-learning-result .game-reward-card {
+  background: #fbefc8;
+  border-color: #ecd791;
+}
+.game-personal-page .learning-filters .button {
+  border-radius: 10px;
+}
 .learning-card {
   border: 1px solid var(--line);
   border-radius: 24px;

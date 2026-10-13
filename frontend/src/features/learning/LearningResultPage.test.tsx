@@ -25,6 +25,87 @@ import {
 } from './pendingCommands';
 import { learningKeys } from './queries';
 import type { LearningSessionView, LearningStatus } from './types';
+import { gameView } from '../../test/gameFixtures';
+
+const reward = { itemId: 'face-1', dayNumber: 1, acquiredAt: '2026-10-13T00:00:00Z' };
+
+it('fifthFeedbackLeavesWithoutFinishAndRestoresGift', async () => {
+  const writes: string[] = [];
+  const saved = { ...completed, lastAnswer: { ...completed.lastAnswer!, rewardGranted: reward } };
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () => json(saved)),
+    http.post('*/api/student/learning/*', ({ request }) => {
+      writes.push(request.url);
+      return new HttpResponse(null, { status: 500 });
+    }),
+  );
+  const first = setup(`/student/learning/sessions/${sessionId}`);
+  await userEvent.click(await screen.findByRole('link', { name: '학습 홈으로' }));
+  first.unmount();
+  setup();
+  expect(await screen.findByText('새 선물')).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '동그란 안경' })).toBeVisible();
+  expect(screen.getByRole('img', { name: '동그란 안경' })).toBeVisible();
+  expect(screen.getByText('301 XP')).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
+it.each([
+  { name: 'wearSavedRewardUsesOwnedAppearanceMutationOnly', characterId: 'haru' as const },
+  { name: 'wearRewardKeepsUnselectedCharacterNull', characterId: null },
+])('$name', async ({ characterId }) => {
+  const bodies: unknown[] = [];
+  const writes: string[] = [];
+  const appearance = {
+    ...gameView,
+    characterId,
+    equippedBySlot: { ...gameView.equippedBySlot, face: null, hat: 'hat-1' },
+  };
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () =>
+      json({ ...completed, lastAnswer: { ...completed.lastAnswer!, rewardGranted: reward } }),
+    ),
+    http.get('*/api/student/game', () => HttpResponse.json(appearance)),
+    http.put('*/api/student/game/appearance', async ({ request }) => {
+      bodies.push(await request.json());
+      return HttpResponse.json({
+        ...appearance,
+        revision: 8,
+        equippedBySlot: { ...appearance.equippedBySlot, face: 'face-1' },
+      });
+    }),
+    http.post('*/api/student/learning/*', ({ request }) => {
+      writes.push(request.url);
+      return new HttpResponse(null, { status: 500 });
+    }),
+  );
+  setup();
+  const wear = await screen.findByRole('button', { name: '지금 착용하기' });
+  await userEvent.dblClick(wear);
+  await waitFor(() => expect(bodies).toHaveLength(1));
+  expect(bodies[0]).toEqual({
+    characterId,
+    expectedRevision: 7,
+    equippedBySlot: {
+      face: 'face-1',
+      hat: 'hat-1',
+      top: null,
+      bottom: null,
+      shoes: null,
+      hand: null,
+    },
+  });
+  expect(screen.getByText('301 XP')).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
+it('legacySavedResultWithoutRewardStillRestores', async () => {
+  setup();
+  expect(await screen.findByRole('heading', { name: '회차 통과' })).toBeVisible();
+  expect(screen.queryByText('새 선물')).toBeNull();
+  expect(screen.queryByRole('button', { name: '지금 착용하기' })).toBeNull();
+  expect(screen.getByText('301 XP')).toBeVisible();
+});
 
 const completed: LearningSessionView = {
   ...activeSession,

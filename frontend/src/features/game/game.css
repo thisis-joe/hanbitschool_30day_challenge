@@ -9,6 +9,60 @@
   image-rendering: pixelated;
   filter: drop-shadow(0 6px 0 #334a3420);
 }
+
+.game-learning-scene {
+  position: relative;
+  min-width: 0;
+  height: 226px;
+  margin: 20px 0 14px;
+  border: 1px solid #c6d2ad;
+  border-radius: 12px;
+  overflow: hidden;
+  background: url('/game/scenes/forest.webp') center 64% / cover;
+  image-rendering: pixelated;
+}
+.game-learning-road {
+  position: absolute;
+  bottom: 0;
+  left: 15%;
+  right: 15%;
+  height: 34px;
+  background: #e4d3a970;
+  border-top: 3px solid #f2e1b470;
+}
+.game-learning-traveler {
+  position: absolute;
+  left: calc(50% - 44px);
+  bottom: 12px;
+}
+.game-learning-travel {
+  animation: game-hop 0.25s ease;
+}
+.game-learning-traveler .game-avatar {
+  width: 88px;
+}
+.game-learning-location,
+.game-scene-fallback {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  border-radius: 7px;
+  padding: 6px 10px;
+  background: #fffde8de;
+  color: #263d35;
+  font-size: 0.8rem;
+}
+.game-learning-scene[data-outcome] {
+  height: 160px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-learning-travel {
+    animation: none;
+  }
+}
 .game-equipment-icon {
   display: block;
   width: 96px;
