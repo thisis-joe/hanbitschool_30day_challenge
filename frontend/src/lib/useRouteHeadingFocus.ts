@@ -12,10 +12,15 @@ export function useRouteHeadingFocus(owner: string | undefined, ready: boolean, 
     if (!entry.current || entry.current.owner !== owner || entry.current.pathname !== pathname) {
       entry.current = { owner, pathname, handled: false };
     }
-    if (!owner || !ready || entry.current.handled) return;
-    // The dialog owns focus on direct modal entry; closing restores its trigger.
+    if (!owner || entry.current.handled) return;
+    // A dialog owns this entry even before page data is ready; preserve its return focus.
+    if (modalOpen) {
+      entry.current.handled = true;
+      return;
+    }
+    if (!ready) return;
     entry.current.handled = true;
-    if (!modalOpen) heading.current?.focus();
+    heading.current?.focus();
   }, [owner, pathname, ready, modalOpen]);
   return heading;
 }

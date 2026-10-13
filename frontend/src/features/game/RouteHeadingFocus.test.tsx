@@ -8,12 +8,76 @@ import { renderPage } from '../../test/render';
 import { server, student } from '../../test/server';
 import { gameView } from '../../test/gameFixtures';
 import { learningStatus } from '../../test/learningFixtures';
-import { deferred, teacherLearningHandlers } from '../../test/teacherLearningFixtures';
+import {
+  classroom,
+  deferred,
+  question,
+  teacherLearningHandlers,
+} from '../../test/teacherLearningFixtures';
 import { replaceAccountCache } from '../auth/queries';
 import { gameKeys } from './queries';
 vi.mock('./avatarRenderer', () => ({ renderAvatar: async () => undefined }));
 const waitFor = (check: () => void) =>
   rtlWaitFor(check, { onTimeout: () => new Error('Route heading focus assertion did not settle') });
+
+it('retains the restored modal trigger when pending classroom metadata becomes ready', async () => {
+  const held = deferred<(typeof classroom)[]>();
+  let metadataHeld = false;
+  teacherLearningHandlers();
+  server.use(
+    http.get('*/api/staff/classrooms', async () => {
+      metadataHeld = true;
+      return HttpResponse.json(await held.promise);
+    }),
+  );
+  const { client } = renderPage(<AppRoutes />, '/staff/classrooms/class-a/learning');
+  const user = userEvent.setup();
+  try {
+    await waitFor(() => expect(metadataHeld).toBe(true));
+    await waitFor(() =>
+      expect(
+        screen.queryAllByRole('button', { name: question.questionId + '번 문항 상세' }).length,
+      ).toBe(1),
+    );
+    const trigger = screen.queryAllByRole('button', {
+      name: question.questionId + '번 문항 상세',
+    })[0];
+    for (let i = 0; i < 12 && document.activeElement !== trigger; i++) await user.tab();
+    expect(document.activeElement === trigger && trigger.isConnected).toBe(true);
+    await user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(
+        screen.queryAllByRole('dialog')[0]?.querySelectorAll('.stats-respondents').length,
+      ).toBe(2),
+    );
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryAllByRole('dialog').length).toBe(0));
+    expect(document.activeElement === trigger && trigger.isConnected).toBe(true);
+    await act(async () => held.resolve([classroom]));
+    await waitFor(() =>
+      expect(
+        client
+          .getQueryCache()
+          .getAll()
+          .some(
+            (q) =>
+              q.queryKey[0] === 'teacher-learning' &&
+              q.queryKey[3] === 'classroom' &&
+              q.state.status === 'success',
+          ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(screen.queryAllByRole('heading', { name: '1학년 2반 학습 통계' }).length).toBe(1),
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(document.activeElement === trigger && trigger.isConnected).toBe(true);
+  } finally {
+    held.resolve([classroom]);
+  }
+});
 
 // Missing route-entry focus or refocusing on a refreshed snapshot breaks these contracts.
 it.each([
