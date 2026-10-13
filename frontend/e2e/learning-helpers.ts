@@ -1,4 +1,9 @@
 import { appendFileSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { e2eBaseURL, e2eComposeProject } from '../playwright.config';
 import { evidenceOutput } from './evidence-output';
 import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
@@ -32,6 +37,205 @@ export const session = (page: Page, id: string) =>
   readApi<LearningSessionView>(page, `/sessions/${id}`);
 export const personal = (page: Page, filter: PersonalQuestionFilter) =>
   readApi<PersonalQuestionView[]>(page, `/questions?filter=${filter}`);
+
+/** Reusable normal-flow fixture: fresh changed-password teacher and numbered UI registrations. */
+export async function provisionLearningClass(page: Page, count: number) {
+  if (!Number.isInteger(count) || count < 1 || count > 25)
+    throw new Error('Invalid synthetic roster size');
+  page.on('dialog', (dialog) => void dialog.accept());
+  const response = await page.request.get('/api/auth/csrf');
+  expect(response.status()).toBe(200);
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(response.headers().date));
+  const startDate = new Date(Date.parse(`${today}T00:00:00Z`) - 86400000)
+    .toISOString()
+    .slice(0, 10);
+  const c = await provisionClass(page, adminId, adminPassword, startDate);
+  const classes = (await (await page.request.get('/api/staff/classrooms?scope=MINE')).json()) as {
+    id: string;
+    gradeLabel: string;
+  }[];
+  const classroomId = classes.find((row) => row.gradeLabel === c.gradeLabel)?.id;
+  if (!classroomId) throw new Error('Fresh synthetic class was not created');
+  await signOut(page);
+  const studentIds: string[] = [];
+  for (let number = 1; number <= count; number++) {
+    await page.goto('/signup');
+    await page.getByLabel('학교', { exact: true }).selectOption({ label: '한빛학교' });
+    await page.getByLabel('학년', { exact: true }).selectOption({ label: c.gradeLabel });
+    await page.getByLabel('반', { exact: true }).selectOption('1');
+    await page.getByLabel('번호', { exact: true }).fill(String(number));
+    await page
+      .getByLabel('이름', { exact: true })
+      .fill(number === 1 ? '김민수' : number === 2 ? '합성둘' : `합성학생${number}`);
+    await page.getByLabel('별명', { exact: true }).fill('합성친구');
+    try {
+      await page.getByLabel('비밀번호', { exact: true }).fill('Student!2026');
+      await page.getByLabel('학급 가입 코드').fill(c.joinCode);
+    } catch {
+      throw new Error('Synthetic registration secret input unavailable');
+    }
+    await page.getByRole('button', { name: '가입하기', exact: true }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    await studentLogin(page, '한빛학교', c.gradeLabel, 1, number, 'Student!2026');
+    const me = (await (await page.request.get('/api/auth/me')).json()) as { accountId: string };
+    studentIds.push(me.accountId);
+    if (number < count) await signOut(page);
+  }
+  if (count > 1) {
+    await signOut(page);
+    await studentLogin(page, '한빛학교', c.gradeLabel, 1, 1, 'Student!2026');
+  }
+  expect((await status(page)).calendarCap).toBe(2);
+  return { ...c, classroomId, studentIds };
+}
+
+export async function learningCommand<T>(page: Page, path: string, data: unknown): Promise<T> {
+  const csrf = (await (await page.request.get('/api/auth/csrf')).json()) as {
+    headerName: string;
+    token: string;
+  };
+  const response = await page.request.post(root + path, {
+    headers: { [csrf.headerName]: csrf.token },
+    data,
+  });
+  expect(response.status()).toBe(200);
+  return response.json() as Promise<T>;
+}
+export async function answerApi(page: Page, view: LearningSessionView, correct: boolean) {
+  const q = view.question;
+  const right = q && canonical.get(q.questionId);
+  if (!q || !right) throw new Error('Canonical synthetic active question required');
+  const result = await learningCommand<AnswerResult>(page, `/sessions/${view.sessionId}/answers`, {
+    questionId: q.questionId,
+    choice: correct ? right : right === 'O' ? 'X' : 'O',
+    requestId: randomUUID(),
+  });
+  expect(result.outcome).toBe(correct ? 'CORRECT' : 'WRONG');
+  return result;
+}
+
+const checkout = fileURLToPath(new URL('../../', import.meta.url));
+function docker(args: string[], input?: string) {
+  try {
+    return execFileSync('docker', args, {
+      cwd: checkout,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 120000,
+      input,
+    }).toString();
+  } catch {
+    throw new Error('Owned isolated Docker operation failed');
+  }
+}
+/** Validate the actual services, config, volume and binding before every mutation. No env output. */
+export function assertOwnedLearningTarget() {
+  const project = e2eComposeProject();
+  if (project !== 'hanbit-game-e2e' || e2eBaseURL() !== 'http://127.0.0.1:8090')
+    throw new Error('Teacher verification requires its owned loopback target');
+  for (const service of ['db', 'backend', 'web']) {
+    const inspect = JSON.parse(
+      docker(['inspect', '--format', '{{json .Config.Labels}}', `${project}-${service}-1`]),
+    ) as Record<string, string>;
+    if (
+      inspect['com.docker.compose.project'] !== project ||
+      inspect['com.docker.compose.service'] !== service ||
+      resolve(inspect['com.docker.compose.project.working_dir'] ?? '') !==
+        resolve(checkout, 'infra') ||
+      inspect['com.docker.compose.project.config_files'] !==
+        resolve(checkout, 'infra/compose.local.yml')
+    )
+      throw new Error('Docker service ownership mismatch');
+  }
+  const mounts = JSON.parse(
+    docker(['inspect', '--format', '{{json .Mounts}}', `${project}-db-1`]),
+  ) as { Type: string; Name: string; Destination: string }[];
+  if (
+    !mounts.some(
+      (m) =>
+        m.Type === 'volume' &&
+        m.Name === project + '_school-data' &&
+        m.Destination === '/var/lib/postgresql/data',
+    )
+  )
+    throw new Error('Docker database volume mismatch');
+  const volume = JSON.parse(
+    docker(['volume', 'inspect', '--format', '{{json .Labels}}', project + '_school-data']),
+  ) as Record<string, string>;
+  if (
+    volume['com.docker.compose.project'] !== project ||
+    volume['com.docker.compose.volume'] !== 'school-data'
+  )
+    throw new Error('Docker volume ownership mismatch');
+  const ports = JSON.parse(
+    docker(['inspect', '--format', '{{json .HostConfig.PortBindings}}', `${project}-web-1`]),
+  ) as Record<string, { HostIp: string; HostPort: string }[]>;
+  if (
+    ports['80/tcp']?.length !== 1 ||
+    ports['80/tcp'][0].HostIp !== '127.0.0.1' ||
+    ports['80/tcp'][0].HostPort !== '8090'
+  )
+    throw new Error('Docker loopback binding mismatch');
+}
+
+/** Test-only SQL, no credentials in argv/output; callers seed only their fresh synthetic IDs. */
+export function isolatedSql(sql: string) {
+  assertOwnedLearningTarget();
+  return docker(
+    [
+      'exec',
+      '-i',
+      'hanbit-game-e2e-db-1',
+      'sh',
+      '-c',
+      'exec psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"',
+    ],
+    sql,
+  );
+}
+export async function restartOwnedBackend(page: Page) {
+  assertOwnedLearningTarget();
+  const args = [
+    'compose',
+    '-p',
+    e2eComposeProject(),
+    '--env-file',
+    '.env.e2e-no-bootstrap.local',
+    '-f',
+    'infra/compose.local.yml',
+  ];
+  docker([...args, 'restart', 'backend']);
+  await expect
+    .poll(
+      () =>
+        docker([
+          'inspect',
+          '--format',
+          '{{.State.Health.Status}}',
+          'hanbit-game-e2e-backend-1',
+        ]).trim(),
+      { timeout: 90000, intervals: [1000] },
+    )
+    .toBe('healthy');
+  assertOwnedLearningTarget();
+  docker([...args, 'restart', 'web']);
+  await expect
+    .poll(
+      async () => {
+        try {
+          return (await page.request.get('/api/auth/csrf')).status();
+        } catch {
+          return 503;
+        }
+      },
+      { timeout: 90000, intervals: [250, 500, 1000] },
+    )
+    .toBe(200);
+}
 
 export async function provisionLearner(page: Page) {
   page.on('dialog', (dialog) => void dialog.accept());

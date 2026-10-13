@@ -1,5 +1,7 @@
 # Student game experience verification — 2026-10-13
 
+Final combined teacher/game build (Task 4, product CSS fix `98fa2f2`): actual emitted JS `index-BAkZ6X2e.js`, SHA-256 `528ea334d5ee687ea427009c71858d4f04524073006ca28acb3aabbb86f3b576`; canonical **150 questions / 300 raw and JSON-escaped text/explanation strings / 0 matches**. Fresh combined gates: **600 backend / 37 suites / 0 failures-errors-skips; 255 frontend / 32 files; build/lint/strict E2E TypeScript; Node2; entire Chromium34**. New combined restart proves saved avatar, six-slot gear, gift, map, learning session/history/XP and teacher statistics. Full provenance, earlier failed runs/known unit intermittency and pending final reviews are in [teacher verification](2026-10-13-teacher-learning-statistics.md); historical student-phase entries below remain historical.
+
 This is the student/game phase, on `feat/student-game-ui` in the isolated `student-game-ui-design` worktree. The teacher plan and final whole-branch review remain required; this record does not close the overall goal.
 
 Task 7 began at `ee4b86919f947158c9d1a6d88d7d910f43065085`. During actual-browser verification, the shared-theme owner separately fixed the proven G13 width gap in `00390115db16532885508416e095d8a26eb39f5f`; scoped review marked it addressed. Task 7 changes are harness, fixture, local target configuration and evidence only. No learning/game production behavior was changed by Task 7.
