@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { meKey, useCurrentAccount } from '../auth/queries';
 import type { AccountMe } from '../auth/types';
 import { errorMessage } from '../../lib/http';
-import { getPendingCommandEpoch } from './pendingCommands';
+import { getPendingCommandEpoch, subscribePendingCommandCleanup } from './pendingCommands';
 import { useLearningStatus } from './queries';
 import { useLearningActions } from './useLearningActions';
 import type { LearningMode } from './types';
@@ -15,6 +15,10 @@ const messages = {
   COURSE_COMPLETE: '30회차 학습을 모두 마쳤어요.',
 };
 const days = Array.from({ length: 30 }, (_, index) => index + 1);
+interface HomeCheck {
+  owner: string;
+  epoch: number;
+}
 
 export function LearningDashboardPage() {
   const { data: account } = useCurrentAccount();
@@ -24,16 +28,27 @@ export function LearningDashboardPage() {
   const client = useQueryClient();
   const navigate = useNavigate();
   const mounted = useRef(false);
-  const checking = useRef(false);
-  const [checkingOwner, setCheckingOwner] = useState<string>();
+  const activeCheck = useRef<HomeCheck | null>(null);
+  const [checking, setChecking] = useState<HomeCheck | null>(null);
   useEffect(() => {
     mounted.current = true;
+    const reset = () => {
+      activeCheck.current = null;
+      setChecking(null);
+    };
+    reset();
+    const unsubscribe = subscribePendingCommandCleanup(reset);
     return () => {
       mounted.current = false;
+      activeCheck.current = null;
+      unsubscribe();
     };
-  }, []);
+  }, [accountId]);
   const view = status.data;
-  const isChecking = !!accountId && checkingOwner === accountId;
+  const isChecking =
+    checking !== null &&
+    checking.owner === accountId &&
+    checking.epoch === getPendingCommandEpoch();
   const blocked =
     status.isPending || status.isError || actions.busy || !!actions.pendingCommand || isChecking;
 
@@ -46,14 +61,17 @@ export function LearningDashboardPage() {
       current.accountId === accountId
     );
   }
+  function ownsCheck(check: HomeCheck) {
+    return activeCheck.current === check && check.owner === accountId && ownsPage(check.epoch);
+  }
   async function startDay(day: number, mode: LearningMode) {
-    if (!accountId || checking.current || blocked || view?.activeSession) return;
-    const epoch = getPendingCommandEpoch();
-    checking.current = true;
-    setCheckingOwner(accountId);
+    if (!accountId || activeCheck.current || blocked || view?.activeSession) return;
+    const check: HomeCheck = { owner: accountId, epoch: getPendingCommandEpoch() };
+    activeCheck.current = check;
+    setChecking(check);
     try {
       const fresh = await status.refetch();
-      if (!ownsPage(epoch) || fresh.error || !fresh.data) return;
+      if (!ownsCheck(check) || fresh.error || !fresh.data) return;
       if (fresh.data.activeSession) {
         navigate(`/student/learning/sessions/${fresh.data.activeSession.sessionId}`);
         return;
@@ -71,10 +89,12 @@ export function LearningDashboardPage() {
         dayNumber: day,
         questionIds: null,
       });
-      if (started && ownsPage(epoch)) navigate(`/student/learning/sessions/${started.sessionId}`);
+      if (started && ownsCheck(check)) navigate(`/student/learning/sessions/${started.sessionId}`);
     } finally {
-      checking.current = false;
-      if (ownsPage(epoch)) setCheckingOwner(undefined);
+      if (activeCheck.current === check) {
+        activeCheck.current = null;
+        setChecking((current) => (current === check ? null : current));
+      }
     }
   }
   async function retryPending() {
@@ -107,10 +127,14 @@ export function LearningDashboardPage() {
         {status.isPending ? <p role="status">학습을 불러오고 있어요</p> : null}
         {view ? (
           <>
-            <dl className="learning-result-stats">
+            <dl className="learning-result-stats learning-home-stats">
               <div>
                 <dt>통과한 회차</dt>
                 <dd>{view.passedDayCount} / 30</dd>
+              </div>
+              <div>
+                <dt>첫 답변한 문항</dt>
+                <dd>{view.firstAnswerCount} / 150</dd>
               </div>
               <div>
                 <dt>누적 경험치</dt>

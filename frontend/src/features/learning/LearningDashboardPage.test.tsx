@@ -1,11 +1,19 @@
-import { afterEach, beforeEach, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { renderPage } from '../../test/render';
 import { server, student } from '../../test/server';
-import { activeSession, learningStatus, requestId, sessionId } from '../../test/learningFixtures';
+import {
+  activeSession,
+  deferred,
+  learningStatus,
+  requestId,
+  sessionId,
+} from '../../test/learningFixtures';
+import { useAcceptAccount } from '../auth/queries';
+import * as learningApi from './api';
 import { clearAllPendingCommands, writePendingCommand } from './pendingCommands';
 import type { LearningStatus } from './types';
 import { LearningDashboardPage } from './LearningDashboardPage';
@@ -153,3 +161,138 @@ it('homeShowsLoadingAndRetryableReadError', async () => {
   await userEvent.click(screen.getByRole('button', { name: '최신 상태 다시 불러오기' }));
   expect(await screen.findByRole('button', { name: '오늘 학습 시작' })).toBeEnabled();
 });
+
+// Using passed-day progress or a local answer counter would display a different value than 47.
+it('homeShowsServerFirstAnswerProgressWithoutDerivingFromPassedDays', async () => {
+  server.use(
+    http.get('*/api/student/learning/status', () =>
+      HttpResponse.json({
+        ...ready,
+        calendarCap: 10,
+        earliestUnpassedDay: 9,
+        passedDayCount: 8,
+        firstAnswerCount: 47,
+        totalXp: 286,
+        level: 3,
+      }),
+    ),
+  );
+  renderHome();
+  const metric = (await screen.findByText('첫 답변한 문항')).parentElement!;
+  expect(within(metric).getByText('47 / 150')).toBeVisible();
+  expect(screen.getByText('8 / 30')).toBeVisible();
+});
+
+// An A-owned checking flag that survives cleanup blocks the returning A's start/retry controls.
+it.each(['start', 'retry'] as const)(
+  'returningStudentRecovers%sAfterDelayedStatusAccountCleanup',
+  async (action) => {
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    const handlerFinished = deferred<void>();
+    const statusReads = vi.spyOn(learningApi, 'getLearningStatus');
+    const studentB = {
+      ...student,
+      role: 'STUDENT' as const,
+      accountId: 'student-b',
+      nickname: '새친구',
+    };
+    const nextStatus: LearningStatus = {
+      ...ready,
+      calendarCap: 2,
+      earliestUnpassedDay: 2,
+      passedDayCount: 1,
+      firstAnswerCount: 5,
+    };
+    const resumedSession = {
+      ...activeSession,
+      dayNumber: 2,
+      question: { ...activeSession.question!, questionId: 6, dayNumber: 2 },
+    };
+    const retryCommand = { mode: 'FIRST' as const, dayNumber: 2, questionIds: null, requestId };
+    let current = student;
+    let switched = false;
+    let aReads = 0;
+    const commands: unknown[] = [];
+    server.use(
+      http.get('*/api/auth/me', () => HttpResponse.json(current)),
+      http.get('*/api/student/learning/status', async () => {
+        if (current.accountId === 'student-a' && ++aReads === 2 && !switched) {
+          entered.resolve();
+          await release.promise;
+          handlerFinished.resolve();
+          return HttpResponse.json(ready);
+        }
+        return HttpResponse.json(switched ? nextStatus : ready);
+      }),
+      http.post('*/api/student/learning/sessions', async ({ request }) => {
+        commands.push(await request.json());
+        return HttpResponse.json(resumedSession);
+      }),
+      http.get('*/api/student/learning/sessions/:id', () => HttpResponse.json(resumedSession)),
+    );
+    function AccountSwitch() {
+      const accept = useAcceptAccount();
+      return (
+        <>
+          <button
+            onClick={() => {
+              switched = true;
+              current = studentB;
+              void accept(studentB);
+            }}
+          >
+            학생 B로 전환
+          </button>
+          <button
+            onClick={() => {
+              current = student;
+              void accept({ ...student, role: 'STUDENT' }).then(() => {
+                if (action === 'retry')
+                  writePendingCommand(student.accountId, { kind: 'START', command: retryCommand });
+              });
+            }}
+          >
+            학생 A로 복귀
+          </button>
+        </>
+      );
+    }
+    renderPage(
+      <>
+        <AccountSwitch />
+        <Routes>
+          <Route path="/student/learning" element={<LearningDashboardPage />} />
+          <Route path="/student/learning/sessions/:sessionId" element={<p>실제 세션 화면</p>} />
+        </Routes>
+      </>,
+      '/student/learning',
+    );
+    await userEvent.click(await screen.findByRole('button', { name: '오늘 학습 시작' }));
+    await entered.promise;
+    const oldRequest = statusReads.mock.results.at(-1)!.value as Promise<unknown>;
+    expect(screen.getByRole('button', { name: '오늘 학습 시작' })).toBeDisabled();
+    try {
+      await userEvent.click(screen.getByRole('button', { name: '학생 B로 전환' }));
+      expect(await screen.findByText('새친구의 배움')).toBeVisible();
+      await userEvent.click(screen.getByRole('button', { name: '학생 A로 복귀' }));
+      expect(await screen.findByText('숲친구의 배움')).toBeVisible();
+      const control = await screen.findByRole('button', {
+        name: action === 'retry' ? '같은 요청 다시 확인' : '오늘 학습 시작',
+      });
+      await waitFor(() => expect(control).toBeEnabled());
+      release.resolve();
+      await handlerFinished.promise;
+      await Promise.allSettled([oldRequest]);
+      expect(commands).toEqual([]);
+      expect(control).toBeEnabled();
+      await userEvent.click(control);
+      expect(await screen.findByText('실제 세션 화면')).toBeVisible();
+      expect(commands).toEqual([
+        { ...retryCommand, requestId: action === 'retry' ? requestId : expect.any(String) },
+      ]);
+    } finally {
+      release.resolve();
+    }
+  },
+);
