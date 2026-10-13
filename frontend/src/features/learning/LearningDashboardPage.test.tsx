@@ -17,6 +17,7 @@ import * as learningApi from './api';
 import { clearAllPendingCommands, writePendingCommand } from './pendingCommands';
 import type { LearningStatus } from './types';
 import { LearningDashboardPage } from './LearningDashboardPage';
+import { gameView, journeyView } from '../../test/gameFixtures';
 
 const ready: LearningStatus = { ...learningStatus, activeSession: null, nextAction: 'START_FIRST' };
 beforeEach(() => server.use(http.get('*/api/auth/me', () => HttpResponse.json(student))));
@@ -43,6 +44,121 @@ it('homeUsesAReferenceWithCanonicalNextAction', async () => {
   );
   expect(screen.getByRole('navigation', { name: '여행 지역' })).toHaveTextContent('숲 입구');
   expect(screen.getByRole('navigation', { name: '여행 지역' })).toHaveTextContent('작은 섬');
+});
+
+// A fallback portrait must not imply a saved choice or gate a real start.
+it.each([null, 'bora'] as const)(
+  'homeGuidesOnlyUnselectedCharacter%sWithoutSaving',
+  async (characterId) => {
+    let puts = 0;
+    server.use(
+      http.get('*/api/student/learning/status', () => HttpResponse.json(ready)),
+      http.get('*/api/student/game', () => HttpResponse.json({ ...gameView, characterId })),
+      http.put('*/api/student/game/appearance', () => {
+        puts++;
+        return HttpResponse.json(gameView);
+      }),
+    );
+    renderHome();
+    expect(
+      await screen.findByRole('img', { name: characterId ? '보라' : /캐릭터 미선택/ }),
+    ).toBeVisible();
+    if (characterId === null) {
+      expect(screen.getByText('아직 여행 친구를 선택하지 않았어요.')).toBeVisible();
+      expect(screen.getByRole('link', { name: '캐릭터 선택하기' })).toHaveAttribute(
+        'href',
+        '/student/character',
+      );
+    } else {
+      expect(screen.queryByRole('link', { name: '캐릭터 선택하기' })).toBeNull();
+    }
+    expect(screen.getByRole('button', { name: '오늘 학습 시작' })).toBeEnabled();
+    expect(puts).toBe(0);
+  },
+);
+
+// Cosmetic failures have GET-only recovery and never lock canonical learning actions.
+it.each(['game', 'journey'] as const)(
+  'homeRecoversFailed%sReadWhileStartRemainsUsable',
+  async (read) => {
+    let reads = 0;
+    let puts = 0;
+    server.use(
+      http.get('*/api/student/learning/status', () => HttpResponse.json(ready)),
+      http.get(read === 'game' ? '*/api/student/game' : '*/api/student/learning/map', () => {
+        reads++;
+        return reads === 1
+          ? HttpResponse.error()
+          : HttpResponse.json(read === 'game' ? gameView : journeyView);
+      }),
+      http.put('*/api/student/game/appearance', () => {
+        puts++;
+        return HttpResponse.json(gameView);
+      }),
+      http.post('*/api/student/learning/sessions', () => HttpResponse.json(activeSession)),
+      http.get('*/api/student/learning/sessions/:id', () => HttpResponse.json(activeSession)),
+    );
+    renderHome();
+    const retry = await screen.findByRole('button', {
+      name: read === 'game' ? '여행 친구 다시 불러오기' : '지도 다시 불러오기',
+    });
+    expect(screen.getByRole('button', { name: '오늘 학습 시작' })).toBeEnabled();
+    if (read === 'game') expect(screen.queryByText('여행 친구를 불러오고 있어요.')).toBeNull();
+    await userEvent.click(retry);
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: retry.textContent! })).toBeNull(),
+    );
+    expect(reads).toBe(2);
+    expect(puts).toBe(0);
+    await userEvent.click(screen.getByRole('button', { name: '오늘 학습 시작' }));
+    expect(await screen.findByText('실제 세션 화면')).toBeVisible();
+  },
+);
+
+it.each(['FIRST', 'REVIEW'] as const)(
+  'homeKeeps%sContinueWhenBothCosmeticReadsFail',
+  async (mode) => {
+    server.use(
+      http.get('*/api/student/learning/status', () =>
+        HttpResponse.json({
+          ...learningStatus,
+          activeSession: { ...learningStatus.activeSession!, mode },
+        }),
+      ),
+      http.get('*/api/student/game', () => HttpResponse.error()),
+      http.get('*/api/student/learning/map', () => HttpResponse.error()),
+    );
+    renderHome();
+    await screen.findByRole('button', { name: '여행 친구 다시 불러오기' });
+    expect(screen.getByRole('link', { name: '이어풀기' })).toHaveAttribute(
+      'href',
+      `/student/learning/sessions/${sessionId}`,
+    );
+  },
+);
+
+it('homeStartsWhileBothCosmeticReadsRemainPending', async () => {
+  const release = deferred<void>();
+  server.use(
+    http.get('*/api/student/learning/status', () => HttpResponse.json(ready)),
+    http.get('*/api/student/game', async () => {
+      await release.promise;
+      return HttpResponse.json(gameView);
+    }),
+    http.get('*/api/student/learning/map', async () => {
+      await release.promise;
+      return HttpResponse.json(journeyView);
+    }),
+    http.post('*/api/student/learning/sessions', () => HttpResponse.json(activeSession)),
+    http.get('*/api/student/learning/sessions/:id', () => HttpResponse.json(activeSession)),
+  );
+  renderHome();
+  try {
+    await userEvent.click(await screen.findByRole('button', { name: '오늘 학습 시작' }));
+    expect(await screen.findByText('실제 세션 화면')).toBeVisible();
+  } finally {
+    release.resolve();
+  }
 });
 
 // A wrong nextAction branch would hide the required action or allow a locked start.

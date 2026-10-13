@@ -200,6 +200,14 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
           {isChecking || actions.busy ? (
             <p role="status">최신 학습 상태를 확인하고 있어요</p>
           ) : null}
+          {!exploration && appearance?.characterId === null ? (
+            <div className="game-character-guide">
+              <p>아직 여행 친구를 선택하지 않았어요.</p>
+              <Link className="button secondary" to="/student/character">
+                캐릭터 선택하기
+              </Link>
+            </div>
+          ) : null}
         </div>
         {!exploration ? (
           <div
@@ -211,6 +219,13 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
                 equippedBySlot={appearance.equippedBySlot}
                 className="game-avatar-idle"
               />
+            ) : game.isError ? (
+              <div className="game-scene-fallback">
+                <p role="alert">여행 친구를 불러오지 못했어요. {errorMessage(game.error)}</p>
+                <button disabled={game.isFetching} onClick={() => void game.refetch()}>
+                  여행 친구 다시 불러오기
+                </button>
+              </div>
             ) : (
               <p>여행 친구를 불러오고 있어요.</p>
             )}
@@ -220,6 +235,14 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
           </div>
         ) : null}
       </section>
+      {!exploration && journey.isError ? (
+        <div className="learning-error">
+          <p role="alert">여정 정보를 불러오지 못했어요. {errorMessage(journey.error)}</p>
+          <button disabled={journey.isFetching} onClick={() => void journey.refetch()}>
+            지도 다시 불러오기
+          </button>
+        </div>
+      ) : null}
       {view ? (
         <dl className="learning-result-stats learning-home-stats game-home-stats">
           <div>
