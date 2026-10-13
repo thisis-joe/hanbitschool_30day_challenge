@@ -1,6 +1,14 @@
 # 학생 학습 UI 실행 검증
 
-2026-10-13 KST, `feat/student-learning-ui`의 격리 작업트리에서 코드 검증을 완료했습니다. **학생 학습 UI의 운영 재배포는 아직 수행하지 않았습니다.** 최종 독립 리뷰와 기존 HTTPS 링크의 배포 후 확인은 별도 gate입니다.
+2026-10-13 KST, 이 문서의 본문은 학생 학습 UI 소스 `218d874`에 대한 Task 4 당시 실행 기록입니다. 그 당시 프런트엔드 전체는 146 tests, backend는 559 tests를 통과했고 전체 Chromium 17개 사례도 통과했습니다. 이후 HEAD `1725395`에 대한 수정·재검토에서 원래 네 finding은 모두 해결됐지만, 초기 anonymous `/me` 401이 진행 중인 성공 로그인 응답을 폐기할 수 있는 새 Important/P2 문제가 확인되어 fix round는 열려 있습니다. 따라서 과거의 매핑별 통과 결과는 해당 사례와 당시 코드에 한정된 역사적 근거이며, 현재 shippable 또는 운영상 성공 상태를 뜻하지 않습니다. 학생 학습 UI의 운영 재배포는 수행하지 않았습니다.
+
+## 최신 수정·재검토 gate
+
+이후 product HEAD `17253958042acf3509f82f79bb6ec26a463025da`에 수정 커밋 `8e91211`, `2742014`, `1725395`가 추가됐습니다. 세 커밋의 focused frontend 회귀는 64 tests 통과, 전체 frontend는 18 files / 158 tests 통과, build와 lint도 exit 0이었습니다. 실제 Chromium은 17개 사례가 50.4초에 통과했습니다. 세부 실행 결과는 `final-fix-report.md`에 기록되어 있습니다. backend 29 suites / 559 tests 결과는 변경되지 않아 Task 4 실행 결과를 재사용했으며 이번 fix wave에서는 재실행하지 않았습니다.
+
+이 gate에서 Task 4의 원래 네 finding은 모두 ADDRESSED로 판정됐습니다. 하지만 재검토는 새로운 Important/P2 문제를 확인했습니다. 초기 익명 상태의 `/me` 요청이 로그인 POST와 겹칠 때 그 `/me`의 401이 계정 epoch를 바꾸고, 이어 도착한 성공 로그인 200을 AbortError로 폐기할 수 있습니다. 관찰된 화면은 연결 오류를 표시하고 로그인 재시도는 성공합니다. 넓은 frontend/browser suite는 이 지연된 초기화 경합을 다루지 않으므로 통과 결과가 출시 준비를 증명하지 않습니다. 관련 근거는 `final-rereview-report.md`에 있습니다.
+
+가장 작은 수정 경계는 초기 또는 이미 익명인 `/me` 결과를 실제 인증된 owner의 이탈과 분리하는 것입니다. 익명 상태를 게시하고 필요한 저장소 정리를 하되, 그 익명 수명에서 시작된 로그인 시도를 무효화하지 않도록 해야 합니다. 실제 owner 이탈에 대한 epoch 증가·비공개 상태 정리와 오래된 owner 응답 방어는 유지해야 합니다. SDD의 단일 최종 수정 wave 한도에 도달했고 예외 승인은 아직 없으므로 추가 제품 수정과 배포는 사람의 프로세스 지시를 기다립니다. 현재 운영 UI는 재배포되지 않았습니다.
 
 ## 검증 대상과 범위
 
@@ -82,7 +90,7 @@ env -u NO_COLOR npx --yes --package=node@24 --package=pnpm@11.25.0 -c 'pnpm --di
 
 | ID | 근거 |
 | --- | --- |
-| U01 | 로그인 학습 홈·계정·로그아웃 E2E, `studentPasswordChangeLandsOnLearningHome`, account/role-switch E2E, `studentEndpointsRequireAStudentLoginAndCsrf` |
+| U01 | 당시 로그인 학습 홈·계정·로그아웃 E2E 및 `studentPasswordChangeLandsOnLearningHome`, `studentEndpointsRequireAStudentLoginAndCsrf`; 이후 지연된 초기 anonymous `/me` 401과 로그인 200의 경합은 이 매핑으로 검증되지 않았으며 최신 재검토에서 미해결 P2로 확인됨 |
 | U02 | FIRST/replay E2E의 서버 status·XP·firstAnswerCount, dashboard `homeHandles%sWithoutStarting`, `homeStartsCanonical%sTarget`, `homeContinueUsesActualSessionId`, `homeShowsServerFirstAnswerProgressWithoutDerivingFromPassedDays` |
 | U03 | 실제 2회차 순서/3회차 날짜 잠금·과거 REPLAY, `thirtyDayCardsDistinguishPassedSequenceAndDateLocks`, `activeSessionBlocksStartingAnotherTarget`, `freshActiveSessionPreventsStaleHomeStart` |
 | U04 | 실제 O/X 문제, `activeQuestionDoesNotRevealAnswerOrExplanation`, 150 원문·해설 bundle 대조 0건; 정본 답은 Node E2E fixture에서만 사용 |
@@ -97,9 +105,9 @@ env -u NO_COLOR npx --yes --package=node@24 --package=pnpm@11.25.0 -c 'pnpm --di
 | U13 | 서버 cap 내 다음 FIRST, 전체 5문항 REPLAY·서버 지급, `nextActionUsesFreshStatusAndForbidsDateCapBypass`, `nextActionRecoversANewActiveSessionInsteadOfStartingAnother` |
 | U14 | 실제 consent 거절/동의와 USER 유지·별표 독립, `reviewPromptOnlyAddsAfterConsent`, `newFeedbackOffersConsentWhileSameFeedbackKeepsDismissal` |
 | U15 | 실제 세 filter·선택 REVIEW·명시적 제거·latest outcome와 mastery/queue/star 분리, `serverLastOutcomeRemainsIndependentFromPersonalStates: %s`, `reviewSelectionIncludesOnlyActiveQueuedQuestionsInVisibleOrder`, 빈 목록/활성 세션 회귀 |
-| U16 | `accountSwitchClearsCache`, `switchingStudentsDoesNotRenderPreviousLearningData`, `latePreviousAccount401DoesNotClearTheNewStudentsPendingCommand`, `accountChangeAbortsReadsAndIgnoresLateMutationCompletion`, logout/401 정리와 역할 전환 E2E |
+| U16 | 당시 `accountSwitchClearsCache`, `switchingStudentsDoesNotRenderPreviousLearningData`, `latePreviousAccount401DoesNotClearTheNewStudentsPendingCommand`, `accountChangeAbortsReadsAndIgnoresLateMutationCompletion`, logout/401 정리와 역할 전환 E2E는 해당 사례에서 통과. 이후 확인된 초기 익명 `/me`와 진행 중 로그인 경합을 다루지는 않으며, 과거 매핑 통과는 현재 인증 수명 경계의 전면 검증이나 출시 준비를 뜻하지 않음 |
 | U17 | 360/1280px 대표 home/question/feedback/result/private-list DOM overflow ≤0, 모든 측정 header/학습 버튼·링크·checkbox label ≥48px; Tab/Enter 제출·보이는 outline·새 문항/해설/result heading focus. Countdown live attribute 없음 확인, reduced-motion CSS 검토 |
-| U18 | 실제 PostgreSQL/Chromium 학습과 기존 계정·교직원 포함 17 E2E, 559 backend·146 frontend·build/lint 통과. **최종 전체 리뷰와 HTTPS 재배포 gate 대기** |
+| U18 | Task 4 당시 실제 PostgreSQL/Chromium 학습과 기존 계정·교직원 포함 17 E2E, backend 559·frontend 146·build/lint 통과. 이후 product HEAD `1725395`에서도 frontend 158·build/lint 및 Chromium 17 통과, backend 559는 재실행하지 않고 재사용했으나, 최신 재검토에서 초기 anonymous `/me` 로그인 경합 P2가 열려 있음. **현재 shippable/operational success가 아니며 추가 수정에 대한 사람의 프로세스 지시와 운영 재배포가 대기 중** |
 
 ## 실행 중 수정과 근거
 
