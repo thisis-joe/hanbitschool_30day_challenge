@@ -95,8 +95,7 @@ export function clearPendingCommand(accountId: string): void {
   }
 }
 
-export function clearAllPendingCommands(): void {
-  accountEpoch++;
+export function clearPendingCommandStorage(): void {
   fallback.clear();
   try {
     const storage = window.sessionStorage;
@@ -108,6 +107,11 @@ export function clearAllPendingCommands(): void {
   } catch {
     ignoreStoredCommands = true;
   }
+}
+
+export function clearAllPendingCommands(): void {
+  accountEpoch++;
+  clearPendingCommandStorage();
   for (const listener of cleanupListeners) listener();
 }
 

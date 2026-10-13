@@ -2,7 +2,11 @@ import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-quer
 import { getMe } from './api';
 import { HttpError, refreshCsrf } from '../../lib/http';
 import type { AccountMe } from './types';
-import { clearAllPendingCommands, getPendingCommandEpoch } from '../learning/pendingCommands';
+import {
+  clearAllPendingCommands,
+  clearPendingCommandStorage,
+  getPendingCommandEpoch,
+} from '../learning/pendingCommands';
 export const meKey = ['auth', 'me'] as const;
 export function replaceAccountCache(client: QueryClient, account: AccountMe | null) {
   // Keep /me observers attached so mounted guards receive the accepted account immediately.
@@ -28,10 +32,9 @@ export function useCurrentAccount() {
       if (epoch !== getPendingCommandEpoch())
         return client.getQueryData<AccountMe | null>(meKey) ?? null;
       const previous = client.getQueryData<AccountMe | null>(meKey);
-      if (
-        account === null ||
-        (previous !== undefined && previous?.accountId !== account.accountId)
-      ) {
+      // Anonymous discovery discards stale storage without expiring a concurrent login.
+      if (account === null && !previous) clearPendingCommandStorage();
+      else if (previous !== undefined && previous?.accountId !== account?.accountId) {
         clearAllPendingCommands();
         replaceAccountCache(client, account);
       }

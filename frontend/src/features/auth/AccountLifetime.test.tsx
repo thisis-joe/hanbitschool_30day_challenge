@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { act, renderHook, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -22,6 +23,7 @@ import { useLearningActions } from '../learning/useLearningActions';
 import { learningKeys } from '../learning/queries';
 import {
   clearAllPendingCommands,
+  getPendingCommandEpoch,
   readPendingCommand,
   writePendingCommand,
 } from '../learning/pendingCommands';
@@ -51,6 +53,124 @@ afterEach(() => {
   clearAllPendingCommands();
   sessionStorage.clear();
 });
+
+// Anonymous /me discovery must not expire the first successful login in that same lifetime.
+it.each(['initial', 'alreadyAnonymous'])(
+  '%sMe401DuringLoginAcceptsTheFirstSuccessfulAccount',
+  async (anonymousState) => {
+    const meEntered = deferred<void>();
+    const releaseMe = deferred<void>();
+    const loginEntered = deferred<void>();
+    const releaseLogin = deferred<void>();
+    let meReads = 0;
+    let loginPosts = 0;
+    let authenticated = false;
+    server.use(
+      http.get('*/api/auth/me', async () => {
+        if (authenticated) return HttpResponse.json(studentA);
+        if (++meReads > 1 || anonymousState === 'initial') {
+          meEntered.resolve();
+          await releaseMe.promise;
+        }
+        return HttpResponse.json(
+          { code: 'UNAUTHENTICATED', message: '로그인이 필요합니다.', fieldErrors: {} },
+          { status: 401 },
+        );
+      }),
+      http.post('*/api/auth/students/login', async ({ request }) => {
+        expect(request.headers.get('X-CSRF-TOKEN')).toBe('test-token');
+        expect(await request.json()).toEqual({
+          schoolId: 'school-a',
+          gradeLabel: '1학년',
+          classNumber: 1,
+          studentNumber: 1,
+          password: 'Hanbit!2026',
+        });
+        loginPosts++;
+        loginEntered.resolve();
+        await releaseLogin.promise;
+        authenticated = true;
+        return HttpResponse.json(studentA);
+      }),
+      http.get('*/api/student/learning/status', () =>
+        HttpResponse.json({ ...learningStatus, activeSession: null, nextAction: 'START_FIRST' }),
+      ),
+    );
+    const { client } = renderPage(<App />, '/login');
+    let anonymousRefetch: Promise<void> | undefined;
+    try {
+      if (anonymousState === 'alreadyAnonymous')
+        await waitFor(() => expect(client.getQueryData(meKey)).toBeNull());
+      const user = userEvent.setup();
+      await screen.findByRole('option', { name: '한빛학교' });
+      await user.selectOptions(screen.getByLabelText('학교'), 'school-a');
+      await screen.findByRole('option', { name: '1학년' });
+      await user.selectOptions(screen.getByLabelText('학년'), '1학년');
+      await user.selectOptions(screen.getByLabelText('반'), '1');
+      await user.type(screen.getByLabelText('번호'), '1');
+      await user.type(screen.getByLabelText('비밀번호'), 'Hanbit!2026');
+      if (anonymousState === 'alreadyAnonymous') {
+        act(() => {
+          anonymousRefetch = client.refetchQueries({ queryKey: meKey, exact: true });
+        });
+      }
+      await meEntered.promise;
+      sessionStorage.setItem('hanbit.learning.pending.v1:student-a', JSON.stringify(pending));
+      writePendingCommand(studentB.accountId, pending);
+      sessionStorage.setItem('unrelated', 'keep');
+      const epochAtLogin = getPendingCommandEpoch();
+      await user.click(screen.getByRole('button', { name: '로그인' }));
+      await loginEntered.promise;
+      expect(screen.getByRole('button', { name: '로그인 중…' })).toBeDisabled();
+      await act(async () => {
+        releaseMe.resolve();
+        await anonymousRefetch;
+      });
+      await waitFor(() => expect(client.getQueryState(meKey)?.fetchStatus).toBe('idle'));
+      expect(client.getQueryData(meKey)).toBeNull();
+      expect(sessionStorage.getItem('hanbit.learning.pending.v1:student-a')).toBeNull();
+      expect(readPendingCommand(studentB.accountId)).toBeNull();
+      expect(sessionStorage.getItem('unrelated')).toBe('keep');
+      const epochAfterAnonymous = getPendingCommandEpoch();
+      await act(async () => releaseLogin.resolve());
+      expect(await screen.findByRole('heading', { name: '나의 학습' })).toBeVisible();
+      expect(client.getQueryData(meKey)).toMatchObject({ accountId: 'student-a' });
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(loginPosts).toBe(1);
+      expect(epochAfterAnonymous).toBe(epochAtLogin);
+      expect(getPendingCommandEpoch()).toBe(epochAtLogin + 1);
+    } finally {
+      releaseMe.resolve();
+      releaseLogin.resolve();
+      await anonymousRefetch;
+    }
+  },
+);
+
+// An inaccessible stored command must stay suppressed after anonymous discovery without a departure.
+it.each(['get', 'remove'])(
+  'anonymousMe401SuppressesBlockedPendingStorageWithoutExpiringTheAccount: %s',
+  async (blockedOperation) => {
+    sessionStorage.setItem('hanbit.learning.pending.v1:student-a', JSON.stringify(pending));
+    writePendingCommand(studentB.accountId, pending);
+    const blocked =
+      blockedOperation === 'get'
+        ? vi.spyOn(window, 'sessionStorage', 'get').mockImplementation(() => {
+            throw new DOMException('blocked', 'SecurityError');
+          })
+        : vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+            throw new DOMException('blocked', 'SecurityError');
+          });
+    const epoch = getPendingCommandEpoch();
+    const { result } = mountAccount();
+    await waitFor(() => expect(result.current.account.data).toBeNull());
+    blocked.mockRestore();
+    expect(sessionStorage.getItem('hanbit.learning.pending.v1:student-a')).not.toBeNull();
+    expect(readPendingCommand(studentA.accountId)).toBeNull();
+    expect(readPendingCommand(studentB.accountId)).toBeNull();
+    expect(getPendingCommandEpoch()).toBe(epoch);
+  },
+);
 
 // Aborting a real 401 body after /me accepts B must not turn cancellation into B's logout.
 it('abortedPreviousOwners401BodyCannotClearTheNewAccountOrPendingCommand', async () => {
