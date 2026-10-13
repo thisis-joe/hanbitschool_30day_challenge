@@ -5,6 +5,8 @@ import { http, HttpResponse } from 'msw';
 import { server, student } from '../../test/server';
 import { renderPage } from '../../test/render';
 import { StudentLoginPage } from './StudentLoginPage';
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { sessionId } from '../../test/learningFixtures';
 async function fill() {
   const u = userEvent.setup();
   await screen.findByRole('option', { name: '한빛학교' });
@@ -62,4 +64,33 @@ it('403ShowsServerError', async () => {
   const u = await fill();
   await u.click(screen.getByRole('button', { name: '로그인' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('다시 시도');
+});
+
+it.each([
+  [null, '/student/learning'],
+  [
+    `/student/learning/sessions/${sessionId}/result`,
+    `/student/learning/sessions/${sessionId}/result`,
+  ],
+  ['/student/questions?filter=BOOKMARKED', '/student/questions?filter=BOOKMARKED'],
+  ['https://example.com/', '/student/learning'],
+  ['//example.com/', '/student/learning'],
+  ['/staff/classrooms', '/student/learning'],
+  ['/student/learning/../../staff/classrooms', '/student/learning'],
+])('studentLoginLandsOnSafeInternalReturnTo%s', async (returnTo, expected) => {
+  function Landing() {
+    const location = useLocation();
+    return <p>{location.pathname + location.search}</p>;
+  }
+  server.use(http.post('*/api/auth/students/login', () => HttpResponse.json(student)));
+  renderPage(
+    <Routes>
+      <Route path="/login" element={<StudentLoginPage />} />
+      <Route path="/student/*" element={<Landing />} />
+    </Routes>,
+    returnTo ? `/login?returnTo=${encodeURIComponent(returnTo)}` : '/login',
+  );
+  const u = await fill();
+  await u.click(screen.getByRole('button', { name: '로그인' }));
+  expect(await screen.findByText(expected)).toBeVisible();
 });

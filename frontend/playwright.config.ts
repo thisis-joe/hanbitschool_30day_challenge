@@ -6,6 +6,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  // Failure DOM context can contain synthetic private results; retain no test artifacts.
+  preserveOutput: 'never',
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:8088',

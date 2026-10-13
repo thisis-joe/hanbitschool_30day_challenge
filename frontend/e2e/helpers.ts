@@ -41,7 +41,7 @@ export async function studentLogin(
   await page.getByLabel('번호', { exact: true }).fill(String(number));
   await secretFill(page.getByLabel('비밀번호', { exact: true }), password);
   await page.getByRole('button', { name: '로그인', exact: true }).click();
-  await expect(page).toHaveURL(/\/student\/account$/);
+  await expect(page).toHaveURL(/\/student\/learning$/);
 }
 export async function changeInitialPassword(page: Page, current: string, next: string) {
   await secretFill(page.getByLabel('현재 비밀번호'), current);
@@ -52,9 +52,14 @@ export async function changeInitialPassword(page: Page, current: string, next: s
 }
 export async function signOut(page: Page) {
   await page.getByRole('button', { name: '로그아웃', exact: true }).first().click();
-  await expect(page).toHaveURL(/\/(staff\/login|login)$/);
+  await expect(page).toHaveURL(/\/(staff\/login|login)(?:\?returnTo=[^#]*)?$/);
 }
-export async function provisionClass(page: Page, id: string, password: string) {
+export async function provisionClass(
+  page: Page,
+  id: string,
+  password: string,
+  startDate = '2026-10-12',
+) {
   const suffix = randomBytes(6).toString('hex');
   const staffLoginId = 'e2e.' + suffix;
   const staffPassword = 'Changed!' + suffix;
@@ -74,7 +79,7 @@ export async function provisionClass(page: Page, id: string, password: string) {
   await changeInitialPassword(page, initial, staffPassword);
   await page.getByLabel('학년 표시').fill(gradeLabel);
   await page.getByLabel('반 번호').fill('1');
-  await page.getByLabel('시작일').fill('2026-10-12');
+  await page.getByLabel('시작일').fill(startDate);
   await page.getByRole('button', { name: '학급 만들기', exact: true }).click();
   const joinCode = await page
     .getByLabel(gradeLabel + ' 1반 가입 코드', { exact: true })
