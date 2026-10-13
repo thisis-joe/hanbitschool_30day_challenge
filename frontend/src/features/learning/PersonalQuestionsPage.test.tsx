@@ -174,3 +174,45 @@ it('activeSessionBlocksPrivateReviewStart', async () => {
     expect(screen.getByRole('button', { name: '선택한 문제 복습하기' })).toBeDisabled(),
   );
 });
+
+// Deriving recent outcome from mastery/queue/star would mislabel the mastered WRONG or null rows.
+it.each([
+  ['CORRECT', '최근 결과: 정답', true, false, '복습 완료'],
+  ['WRONG', '최근 결과: 오답', true, true, '복습 완료 · 다시 볼 목록에 있어요'],
+  ['TIMED_OUT', '최근 결과: 시간 초과', false, true, '복습 미완료 · 다시 볼 목록에 있어요'],
+  [null, '최근 결과: 미답변', false, false, '복습 미완료'],
+] as const)(
+  'serverLastOutcomeRemainsIndependentFromPersonalStates: %s',
+  async (lastOutcome, label, mastered, inReviewQueue, masteryLabel) => {
+    const question = {
+      ...personalQuestion,
+      bookmarked: true,
+      mastered,
+      inReviewQueue,
+      lastOutcome,
+      lastAnsweredAt: lastOutcome === null ? null : personalQuestion.lastAnsweredAt,
+    };
+    server.use(
+      http.get('*/api/student/learning/questions', ({ request }) => {
+        const filter = new URL(request.url).searchParams.get('filter');
+        return HttpResponse.json(
+          filter === 'BOOKMARKED' ||
+            (filter === 'MASTERED' && mastered) ||
+            (filter === 'REVIEW_QUEUE' && inReviewQueue)
+            ? [question]
+            : [],
+        );
+      }),
+    );
+    renderQuestions('/student/questions?filter=BOOKMARKED');
+    const row = within((await screen.findByText(question.text)).closest('li')!);
+    expect(row.getByText(label)).toBeVisible();
+    expect(row.getByText(masteryLabel)).toBeVisible();
+    await waitFor(() =>
+      expect(row.getByRole('button', { name: '별표' })).toHaveAttribute('aria-pressed', 'true'),
+    );
+    expect(row.queryByRole('button', { name: '다시 볼 목록에서 제거' }) !== null).toBe(
+      inReviewQueue,
+    );
+  },
+);

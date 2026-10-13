@@ -9,12 +9,17 @@ import { getPendingCommandEpoch, subscribePendingCommandCleanup } from './pendin
 import { useLearningStatus, usePersonalQuestions } from './queries';
 import { useLearningActions } from './useLearningActions';
 import { QuestionFeedbackActions } from './QuestionFeedbackActions';
-import type { PersonalQuestionFilter } from './types';
+import type { AnswerOutcome, PersonalQuestionFilter } from './types';
 
 const filters: Record<PersonalQuestionFilter, string> = {
   REVIEW_QUEUE: '다시 볼 문제',
   MASTERED: '복습 완료',
   BOOKMARKED: '별표한 문제',
+};
+const lastOutcomeLabels: Record<AnswerOutcome, string> = {
+  CORRECT: '정답',
+  WRONG: '오답',
+  TIMED_OUT: '시간 초과',
 };
 export function PersonalQuestionsPage() {
   const [params] = useSearchParams();
@@ -223,6 +228,10 @@ function QuestionList({
                 ) : null}
               </div>
               <p className="learning-personal-text">{row.text}</p>
+              <p>
+                최근 결과:{' '}
+                {row.lastOutcome === null ? '미답변' : lastOutcomeLabels[row.lastOutcome]}
+              </p>
               <p>
                 {row.mastered ? '복습 완료' : '복습 미완료'}
                 {row.inReviewQueue ? ' · 다시 볼 목록에 있어요' : ''}
