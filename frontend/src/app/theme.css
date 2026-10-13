@@ -28,6 +28,11 @@
   min-width: 48px;
   min-height: 48px;
 }
+.site-header nav a,
+.site-header .nav-button {
+  min-width: 48px;
+  min-height: 48px;
+}
 @media (max-width: 720px) {
   .game-student-nav {
     padding: 8px 12px;

@@ -199,6 +199,7 @@
 .teacher-stats button,
 .stats-dialog button,
 .teacher-stats a {
+  min-width: 48px;
   min-height: 48px;
 }
 .teacher-stats a {
