@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FirstAnswerRepository extends JpaRepository<FirstAnswer, UUID> {
+  List<FirstAnswer> findByStudentAccountIdInAndVersion(List<UUID> studentAccountIds, String version);
+
   Optional<FirstAnswer> findByStudentAccountIdAndVersionAndQuestionId(
       UUID studentAccountId, String version, int questionId);
 
