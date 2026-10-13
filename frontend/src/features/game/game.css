@@ -1,0 +1,49 @@
+.game-avatar {
+  display: inline-block;
+  width: 128px;
+  height: auto;
+  aspect-ratio: 128 / 176;
+  max-width: 100%;
+  flex-shrink: 0;
+  vertical-align: bottom;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 0 #334a3420);
+}
+.game-equipment-icon {
+  display: block;
+  width: 96px;
+  height: auto;
+  max-width: 100%;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+.game-avatar.game-avatar-idle {
+  animation: game-breathe 3s steps(2, end) infinite;
+}
+.game-avatar.game-avatar-moving {
+  animation: game-hop 0.25s ease;
+}
+@keyframes game-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+@keyframes game-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-avatar.game-avatar-idle,
+  .game-avatar.game-avatar-moving {
+    animation: none;
+  }
+}
