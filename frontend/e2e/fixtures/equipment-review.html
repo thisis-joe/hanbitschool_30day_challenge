@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="utf-8" /><title>장비 원본 비교</title>
+  <style>
+    body {
+      margin: 24px;
+      background: #fffdf3;
+      color: #263d35;
+      font: 14px sans-serif;
+    }
+    section {
+      padding: 12px;
+      border-bottom: 2px solid #b6c3ad;
+    }
+    .outfits {
+      display: grid;
+      grid-template-columns: repeat(4, 272px);
+      gap: 12px;
+    }
+    figure {
+      margin: 0;
+    }
+    canvas {
+      width: 128px;
+      height: 176px;
+      image-rendering: pixelated;
+    }
+  </style>
+  <body>
+    <h1>제품 · 원본 아트 비교</h1>
+    <p>각 조합의 왼쪽은 제품, 오른쪽은 원본입니다. 기본 / 1~5번 세트 / 혼합 2종</p>
+    <main></main>
+    <script type="module">
+      import { renderAvatar } from '/src/features/game/avatarRenderer.ts';
+      import { CHARACTER_IDS, CHARACTER_NAMES, SLOTS } from '/src/features/game/types.ts';
+      const outfits = [0, 1, 2, 3, 4, 5].map((value) =>
+        Object.fromEntries(SLOTS.map((slot) => [slot, value])),
+      );
+      outfits.push({ face: 1, hat: 5, top: 3, bottom: 2, shoes: 4, hand: 5 });
+      outfits.push({ face: 5, hat: 2, top: 1, bottom: 4, shoes: 3, hand: 1 });
+      const draws = [];
+      CHARACTER_IDS.forEach((id, index) => {
+        const section = document.createElement('section');
+        const heading = document.createElement('h2');
+        heading.textContent = CHARACTER_NAMES[id];
+        section.append(heading);
+        const row = document.createElement('div');
+        row.className = 'outfits';
+        section.append(row);
+        document.querySelector('main').append(section);
+        outfits.forEach((gear, outfit) => {
+          const figure = document.createElement('figure');
+          const caption = document.createElement('figcaption');
+          caption.textContent =
+            outfit === 0 ? '기본' : outfit <= 5 ? `${outfit}번 세트` : `혼합 ${outfit - 5}`;
+          const canvas = document.createElement('canvas');
+          canvas.width = 128;
+          canvas.height = 176;
+          canvas.dataset.character = String(index);
+          canvas.dataset.outfit = String(outfit);
+          canvas.dataset.gear = JSON.stringify(gear);
+          figure.append(caption, canvas);
+          row.append(figure);
+          draws.push(
+            renderAvatar(
+              canvas,
+              id,
+              Object.fromEntries(
+                SLOTS.map((slot) => [slot, gear[slot] ? `${slot}-${gear[slot]}` : null]),
+              ),
+            ),
+          );
+        });
+      });
+      await Promise.all(draws);
+      document.documentElement.dataset.ready = 'true';
+    </script>
+  </body>
+</html>

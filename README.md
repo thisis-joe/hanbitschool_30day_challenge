@@ -100,38 +100,47 @@ npx --yes --package=node@24 --package=pnpm@11.25.0 -c 'node --version && pnpm --
 
 2026-10-13 검증 결과는 집중 12개·전체 백엔드 559개 모두 실패/오류/건너뜀 0, Node `v24.21.0`·pnpm `11.25.0`에서 프런트엔드 30개 테스트·build·lint 통과입니다. [학습 코어 검증 기록](docs/verification/2026-10-12-learning-core.md)에 요구사항별 테스트와 마이그레이션·커밋 근거를 기록했습니다. 이전 V2/V3를 이미 적용한 영구 DB는 변경된 체크섬 때문에 별도의 전진 마이그레이션 전략이 필요합니다. 이번 검증은 신규 컨테이너 DB를 사용했습니다.
 
-실제 브라우저 검증은 별도 Compose 프로젝트와 DB 볼륨을 사용합니다. `.env.example`을 `.env.e2e.local`로 복사해 **테스트 전용** DB·관리자 값을 입력합니다. 로컬 인스턴스와 E2E는 같은 8088 포트를 사용하므로 동시에 실행하지 않습니다.
+실제 브라우저 검증은 별도 Compose 프로젝트와 DB 볼륨을 사용합니다. 이 워크트리의 `.env.e2e.local`에 새 **테스트 전용** DB·관리자 값을 입력하고 파일 권한을 600으로 제한합니다. 기존 파일이 있으면 읽거나 재사용하지 말고 안전한 로컬 위치에 보관한 뒤 새로 만듭니다. `HANBIT_HTTP_PORT=8090`을 넣으면 기본 8088 인스턴스와 동시에 실행할 수 있습니다. 기본값은 기존 8088과 `hanbit-account-e2e`이며 게임 검증은 `hanbit-game-e2e`와 그 프로젝트의 별도 볼륨을 사용합니다.
 
 ```powershell
-docker compose -p hanbit-local --env-file .env.local -f infra/compose.local.yml stop
-Copy-Item .env.example .env.e2e.local
-notepad .env.e2e.local
+$env:HANBIT_E2E_BASE_URL = 'http://127.0.0.1:8090'
+$env:HANBIT_E2E_COMPOSE_PROJECT = 'hanbit-game-e2e'
+$env:HANBIT_GEAR_QA_URL = 'http://127.0.0.1:8091/e2e/fixtures/equipment-review.html'
+# .env.e2e.local: 새 테스트 자격 증명과 HANBIT_HTTP_PORT=8090, 권한 600
+# 모든 Docker 명령 전에 프로젝트 이름과 기존 컨테이너의 worktree 소유 라벨을 확인합니다.
+docker compose -p hanbit-game-e2e --env-file .env.e2e.local -f infra/compose.local.yml config --quiet
 pnpm --dir frontend exec playwright install chromium
-docker compose -p hanbit-account-e2e --env-file .env.e2e.local -f infra/compose.local.yml up --build -d --wait
+docker compose -p hanbit-game-e2e --env-file .env.e2e.local -f infra/compose.local.yml build backend web
+docker compose -p hanbit-game-e2e --env-file .env.e2e.local -f infra/compose.local.yml up -d --wait db backend
+docker compose -p hanbit-game-e2e --env-file .env.e2e.local -f infra/compose.local.yml up -d web
+# /api/auth/csrf HTTP 200을 확인합니다. 별도 터미널: pnpm --dir frontend dev --port 8091 --strictPort
 pnpm --dir frontend test:e2e
 ```
 
 각 테스트가 실제 화면에서 고유한 교사·학급을 생성해 다른 테스트의 데이터를 전제로 삼지 않습니다. 학습 검증의 시작일은 서버 HTTP Date의 서울 날짜에서 하루 전으로 지정해 두 회차를 사용할 수 있게 합니다. 학습만 확인하려면 `pnpm --dir frontend exec playwright test e2e/learning-flow.spec.ts`를 실행합니다. 정본 답은 Node 테스트 프로세스에서만 읽고 학생 코드에 포함하지 않습니다.
 
-영상·trace·자동 실패 스크린샷을 끄고 실패 DOM 문맥을 포함한 테스트 산출물도 보존하지 않습니다. 초기 비밀번호를 일반 로그·조회 캐시·브라우저 저장소에 남기지 않습니다. 학습 화면의 360px/데스크톱 가로 넘침·48px 대상·키보드 focus는 스크린샷 없이 DOM으로 측정합니다.
+영상·trace·자동 실패 스크린샷을 끄고 실패 DOM 문맥을 포함한 테스트 산출물도 보존하지 않습니다. 초기 비밀번호를 일반 로그·조회 캐시·브라우저 저장소에 남기지 않습니다. 화면의 360px/1280px 가로 넘침·48px 대상·키보드 focus를 DOM으로 측정합니다. 로그인 없는 아트 비교 화면은 9명 × 기본/5세트/2혼합의 원본과 제품 픽셀을 대조합니다. 무시되는 `.superpowers/` 폴더에는 아트 비교·익명화한 합성 결과 화면·집계 측정값만 보관합니다. 원본 파일 위치는 `HANBIT_GEAR_REFERENCE`로 지정할 수 있습니다. 이 검수 화면은 Vite 개발 서버 전용이며 배포 경로에 포함되지 않습니다. [학생 게임 검증 기록](docs/verification/2026-10-13-game-experience.md)에 실제 테스트 수와 요구사항별 근거·한계를 기록했습니다.
+
+`HANBIT_E2E_BASE_URL`은 루프백 HTTP origin만 허용하고, `HANBIT_E2E_COMPOSE_PROJECT`는 `^hanbit-[a-z0-9-]*e2e$` 형식과 비운영 이름만 허용합니다. 계정 테스트의 두 재시작 경로는 같은 검증된 프로젝트와 소유 라벨을 확인한 뒤 backend → Docker healthy → web → HTTP 200 순서로 실행합니다. 관찰이 늦다고 실행 중 프로세스를 다시 시작하지 않습니다.
 
 계정 데이터는 `school-data` 볼륨에 보관됩니다. 재시작할 때는 backend가 실제로 healthy가 된 뒤 web을 재시작하고, HTTP 응답까지 확인합니다. 아래 예시는 위의 격리 E2E 환경에서 실행하는 순서입니다.
 
 ```powershell
-docker compose -p hanbit-account-e2e --env-file .env.e2e.local -f infra/compose.local.yml restart backend
+if ($env:HANBIT_E2E_COMPOSE_PROJECT -cnotmatch '^hanbit-[a-z0-9-]*e2e$' -or $env:HANBIT_E2E_COMPOSE_PROJECT -match '(^|-)prod(-|$)') { throw 'E2E 프로젝트 확인 필요' }
+docker compose -p $env:HANBIT_E2E_COMPOSE_PROJECT --env-file .env.e2e.local -f infra/compose.local.yml restart backend
 if ($LASTEXITCODE -ne 0) { throw 'backend 재시작 실패' }
 $restartDeadline = (Get-Date).AddSeconds(90)
 do {
-    $backendHealth = docker inspect --format '{{.State.Health.Status}}' hanbit-account-e2e-backend-1
+    $backendHealth = docker inspect --format '{{.State.Health.Status}}' "$($env:HANBIT_E2E_COMPOSE_PROJECT)-backend-1"
     if ($backendHealth -eq 'healthy') { break }
     if ((Get-Date) -ge $restartDeadline) { throw 'backend health 확인 시간 초과' }
     Start-Sleep -Seconds 1
 } while ($true)
-docker compose -p hanbit-account-e2e --env-file .env.e2e.local -f infra/compose.local.yml restart web
+docker compose -p $env:HANBIT_E2E_COMPOSE_PROJECT --env-file .env.e2e.local -f infra/compose.local.yml restart web
 if ($LASTEXITCODE -ne 0) { throw 'web 재시작 실패' }
 $restartDeadline = (Get-Date).AddSeconds(90)
 do {
-    try { $httpStatus = (Invoke-WebRequest http://127.0.0.1:8088/api/auth/csrf -UseBasicParsing -TimeoutSec 5).StatusCode }
+    try { $httpStatus = (Invoke-WebRequest "$($env:HANBIT_E2E_BASE_URL)/api/auth/csrf" -UseBasicParsing -TimeoutSec 5).StatusCode }
     catch { $httpStatus = 0 }
     if ($httpStatus -eq 200) { break }
     if ((Get-Date) -ge $restartDeadline) { throw 'web HTTP 준비 확인 시간 초과' }
