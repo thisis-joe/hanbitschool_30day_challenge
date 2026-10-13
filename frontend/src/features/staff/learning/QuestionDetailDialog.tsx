@@ -37,6 +37,10 @@ function Respondents({
   classroomId: string;
   listContext: { listUrl: string; ownerId: string; classroomId: string };
 }) {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.delete('question');
+  const detailSearch = params.size ? `?${params}` : '';
   return (
     <section className="stats-respondents">
       <h3>
@@ -46,25 +50,28 @@ function Respondents({
         <p>해당 학생이 없습니다.</p>
       ) : (
         <ul>
-          {rows.map((row) => (
-            <li key={row.accountId}>
-              <Link
-                to={`/staff/classrooms/${encodeURIComponent(classroomId)}/learning/students/${encodeURIComponent(row.accountId)}`}
-                state={listContext}
-                aria-label={`${row.studentNumber}번 ${row.name} 학생 상세`}
-              >
-                {row.studentNumber}번 {row.name}
-              </Link>
-              <span>
-                첫 선택 {row.firstChoice ?? '—'} ·{' '}
-                {row.outcome === 'TIMED_OUT'
-                  ? '시간초과'
-                  : row.outcome === 'CORRECT'
-                    ? '정답'
-                    : '선택 오답'}
-              </span>
-            </li>
-          ))}
+          {rows.map((row) => {
+            const studentPath = `/staff/classrooms/${encodeURIComponent(classroomId)}/learning/students/${encodeURIComponent(row.accountId)}`;
+            return (
+              <li key={row.accountId}>
+                <Link
+                  to={studentPath + (location.pathname === studentPath ? detailSearch : '')}
+                  state={listContext}
+                  aria-label={`${row.studentNumber}번 ${row.name} 학생 상세`}
+                >
+                  {row.studentNumber}번 {row.name}
+                </Link>
+                <span>
+                  첫 선택 {row.firstChoice ?? '—'} ·{' '}
+                  {row.outcome === 'TIMED_OUT'
+                    ? '시간초과'
+                    : row.outcome === 'CORRECT'
+                      ? '정답'
+                      : '선택 오답'}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

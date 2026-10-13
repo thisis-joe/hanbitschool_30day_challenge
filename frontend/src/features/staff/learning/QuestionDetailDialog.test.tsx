@@ -90,6 +90,26 @@ it('respondent navigation from student detail retains its roster origin', async 
       origin,
   ).toBe(true);
 });
+it('same student respondent retains answer filters and page so modal restores its trigger', async () => {
+  teacherLearningHandlers();
+  const u = userEvent.setup();
+  const origin = '/staff/classrooms/class-a/learning/students/student-a?filter=ALL&day=2&page=1';
+  const view = renderPage(<AppRoutes />, origin);
+  await waitFor(() =>
+    expect(screen.queryAllByRole('button', { name: '7번 문항 상세' }).length).toBe(1),
+  );
+  const trigger = screen.queryAllByRole('button', { name: '7번 문항 상세' })[0];
+  await u.click(trigger);
+  await waitFor(() => expect(document.querySelectorAll('.stats-respondents a').length).toBe(3));
+  const self = document.querySelector<HTMLAnchorElement>('.stats-respondents a');
+  expect(self?.getAttribute('href') === origin).toBe(true);
+  self!.focus();
+  await u.keyboard('{Enter}');
+  await waitFor(() => expect(document.querySelector('[role="dialog"]') === null).toBe(true));
+  expect(document.activeElement === trigger).toBe(true);
+  expect(view.container.inert).toBeFalsy();
+  expect(document.body.style.overflow === 'hidden').toBe(false);
+});
 it('closedDialogDoesNotFetchAndLateClosedResponseDoesNotReopen', async () => {
   teacherLearningHandlers();
   const held = deferred<typeof questionDetail>();
