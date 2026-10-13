@@ -1,14 +1,16 @@
 # 학생 학습 UI 실행 검증
 
-2026-10-13 KST, 이 문서의 본문은 학생 학습 UI 소스 `218d874`에 대한 Task 4 당시 실행 기록입니다. 그 당시 프런트엔드 전체는 146 tests, backend는 559 tests를 통과했고 전체 Chromium 17개 사례도 통과했습니다. 이후 HEAD `1725395`에 대한 수정·재검토에서 원래 네 finding은 모두 해결됐지만, 초기 anonymous `/me` 401이 진행 중인 성공 로그인 응답을 폐기할 수 있는 새 Important/P2 문제가 확인되어 fix round는 열려 있습니다. 따라서 과거의 매핑별 통과 결과는 해당 사례와 당시 코드에 한정된 역사적 근거이며, 현재 shippable 또는 운영상 성공 상태를 뜻하지 않습니다. 학생 학습 UI의 운영 재배포는 수행하지 않았습니다.
+2026-10-13 KST, 이 문서는 Task 4의 학생 학습 UI 실행 기록과 이후 수정·재검토·운영 반영을 함께 기록합니다. Task 4 당시 검증 소스 `218d874`는 frontend 146 tests, backend 559 tests, 전체 Chromium 17개 사례를 통과했습니다. 이후 최종 수정과 재검토, 한정된 인증 경계 수정, scoped review를 거쳐 정확한 소스 `82c987cfb763245ab103704e0fc5759569675ee6`을 같은 운영 링크에 배포하고 실제 학생 흐름을 확인했습니다. 아래 각 단계의 수치와 판정은 해당 시점·범위의 근거이며, 과거 실패와 당시 열려 있던 finding도 그대로 구분해 보존합니다.
 
 ## 최신 수정·재검토 gate
 
-이후 product HEAD `17253958042acf3509f82f79bb6ec26a463025da`에 수정 커밋 `8e91211`, `2742014`, `1725395`가 추가됐습니다. 세 커밋의 focused frontend 회귀는 64 tests 통과, 전체 frontend는 18 files / 158 tests 통과, build와 lint도 exit 0이었습니다. 실제 Chromium은 17개 사례가 50.4초에 통과했습니다. 세부 실행 결과는 `final-fix-report.md`에 기록되어 있습니다. backend 29 suites / 559 tests 결과는 변경되지 않아 Task 4 실행 결과를 재사용했으며 이번 fix wave에서는 재실행하지 않았습니다.
+이후 product HEAD `17253958042acf3509f82f79bb6ec26a463025da`에 수정 커밋 `8e91211`, `2742014`, `1725395`가 추가됐습니다. 당시 focused frontend 회귀는 64 tests 통과, 전체 frontend는 18 files / 158 tests 통과, build와 lint도 exit 0이었습니다. 실제 Chromium은 17개 사례가 50.4초에 통과했습니다. backend 29 suites / 559 tests 결과는 변경되지 않아 Task 4 실행 결과를 재사용했고 이 fix wave에서는 재실행하지 않았습니다. 이 수치와 다음 단락의 open finding은 당시 상태를 설명하며, 이후 경계 수정·리뷰·배포로 해결됐습니다. 세부 실행 결과는 `final-fix-report.md`에 기록되어 있습니다.
 
-이 gate에서 Task 4의 원래 네 finding은 모두 ADDRESSED로 판정됐습니다. 하지만 재검토는 새로운 Important/P2 문제를 확인했습니다. 초기 익명 상태의 `/me` 요청이 로그인 POST와 겹칠 때 그 `/me`의 401이 계정 epoch를 바꾸고, 이어 도착한 성공 로그인 200을 AbortError로 폐기할 수 있습니다. 관찰된 화면은 연결 오류를 표시하고 로그인 재시도는 성공합니다. 넓은 frontend/browser suite는 이 지연된 초기화 경합을 다루지 않으므로 통과 결과가 출시 준비를 증명하지 않습니다. 관련 근거는 `final-rereview-report.md`에 있습니다.
+당시 scoped re-review는 Task 4의 원래 네 finding을 모두 ADDRESSED로 판정했지만 새 Important/P2 문제도 확인했습니다. 초기 익명 상태의 `/me` 요청이 로그인 POST와 겹치면 그 `/me`의 401이 계정 epoch를 바꿔 성공 로그인 200을 AbortError로 폐기할 수 있었습니다. 관찰된 화면은 연결 오류를 표시했고 두 번째 로그인이 성공했습니다. 당시 넓은 frontend/browser suite는 이 경합을 다루지 않았으므로 그 통과 결과만으로 출시 준비를 주장하지 않았습니다. 이 발견은 당시 기준 `final-rereview-report.md`에 보존되어 있습니다.
 
-가장 작은 수정 경계는 초기 또는 이미 익명인 `/me` 결과를 실제 인증된 owner의 이탈과 분리하는 것입니다. 익명 상태를 게시하고 필요한 저장소 정리를 하되, 그 익명 수명에서 시작된 로그인 시도를 무효화하지 않도록 해야 합니다. 실제 owner 이탈에 대한 epoch 증가·비공개 상태 정리와 오래된 owner 응답 방어는 유지해야 합니다. SDD의 단일 최종 수정 wave 한도에 도달했고 예외 승인은 아직 없으므로 추가 제품 수정과 배포는 사람의 프로세스 지시를 기다립니다. 현재 운영 UI는 재배포되지 않았습니다.
+이후 사람의 프로세스 판정으로 SDD 최종 수정 wave 한도의 한정된 예외가 기록됐습니다. 이는 승인된 제품 범위를 넓힌 것이 아니라 이미 허가된 학생 로그인 목표를 완료하기 위한 경계 수정·리뷰 절차 예외였습니다. 초기 또는 이미 익명인 `/me`의 저장소 정리를 실제 인증된 owner 이탈의 epoch 전환과 분리했고, 실제 owner 이탈·오래된 owner 응답 방어는 유지했습니다. 세부 수정은 다음 단락에 기록합니다.
+
+경계 수정 커밋 `82c987c`는 초기·이미 익명인 `/me`의 401에서 pending-command 저장소를 정리하되 익명 epoch와 진행 중 로그인 요청을 유지합니다. 실제 accepted-owner 이탈과 명시적 계정 수락은 기존 epoch·cache cleanup을 계속 사용합니다. 네 회귀 사례에서 RED 4 failed / 5 passed였고, covering frontend 5 files / 49 passed였습니다. 이후 전체 frontend는 18 files / 162 passed, build와 lint exit 0, isolated Chromium 17개가 57.6초에 통과했습니다. backend 559 결과는 그대로 재사용하고 재실행하지 않았습니다. Fresh scoped review는 P2를 ADDRESSED로 판정했고 추가 Critical/Important breakage 없이 spec PASS / quality APPROVED였습니다. 근거는 `anonymous-boundary-report.md`와 `anonymous-boundary-review.md`입니다. 검증된 product HEAD는 `82c987cfb763245ab103704e0fc5759569675ee6`입니다.
 
 ## 검증 대상과 범위
 
@@ -90,7 +92,7 @@ env -u NO_COLOR npx --yes --package=node@24 --package=pnpm@11.25.0 -c 'pnpm --di
 
 | ID | 근거 |
 | --- | --- |
-| U01 | 당시 로그인 학습 홈·계정·로그아웃 E2E 및 `studentPasswordChangeLandsOnLearningHome`, `studentEndpointsRequireAStudentLoginAndCsrf`; 이후 지연된 초기 anonymous `/me` 401과 로그인 200의 경합은 이 매핑으로 검증되지 않았으며 최신 재검토에서 미해결 P2로 확인됨 |
+| U01 | Task 4 당시 로그인 학습 홈·계정·로그아웃 및 account/role-switch E2E, `studentPasswordChangeLandsOnLearningHome`, `studentEndpointsRequireAStudentLoginAndCsrf`. 지연된 초기 anonymous `/me` 401/로그인 200 경합은 당시 매핑이 검증하지 못해 P2로 열렸으나 실제 App/login 회귀와 scoped review에서 ADDRESSED. 배포 smoke에서 첫 로그인은 학습 홈에 도달했고 logout은 로그인으로 돌아감. |
 | U02 | FIRST/replay E2E의 서버 status·XP·firstAnswerCount, dashboard `homeHandles%sWithoutStarting`, `homeStartsCanonical%sTarget`, `homeContinueUsesActualSessionId`, `homeShowsServerFirstAnswerProgressWithoutDerivingFromPassedDays` |
 | U03 | 실제 2회차 순서/3회차 날짜 잠금·과거 REPLAY, `thirtyDayCardsDistinguishPassedSequenceAndDateLocks`, `activeSessionBlocksStartingAnotherTarget`, `freshActiveSessionPreventsStaleHomeStart` |
 | U04 | 실제 O/X 문제, `activeQuestionDoesNotRevealAnswerOrExplanation`, 150 원문·해설 bundle 대조 0건; 정본 답은 Node E2E fixture에서만 사용 |
@@ -105,9 +107,9 @@ env -u NO_COLOR npx --yes --package=node@24 --package=pnpm@11.25.0 -c 'pnpm --di
 | U13 | 서버 cap 내 다음 FIRST, 전체 5문항 REPLAY·서버 지급, `nextActionUsesFreshStatusAndForbidsDateCapBypass`, `nextActionRecoversANewActiveSessionInsteadOfStartingAnother` |
 | U14 | 실제 consent 거절/동의와 USER 유지·별표 독립, `reviewPromptOnlyAddsAfterConsent`, `newFeedbackOffersConsentWhileSameFeedbackKeepsDismissal` |
 | U15 | 실제 세 filter·선택 REVIEW·명시적 제거·latest outcome와 mastery/queue/star 분리, `serverLastOutcomeRemainsIndependentFromPersonalStates: %s`, `reviewSelectionIncludesOnlyActiveQueuedQuestionsInVisibleOrder`, 빈 목록/활성 세션 회귀 |
-| U16 | 당시 `accountSwitchClearsCache`, `switchingStudentsDoesNotRenderPreviousLearningData`, `latePreviousAccount401DoesNotClearTheNewStudentsPendingCommand`, `accountChangeAbortsReadsAndIgnoresLateMutationCompletion`, logout/401 정리와 역할 전환 E2E는 해당 사례에서 통과. 이후 확인된 초기 익명 `/me`와 진행 중 로그인 경합을 다루지는 않으며, 과거 매핑 통과는 현재 인증 수명 경계의 전면 검증이나 출시 준비를 뜻하지 않음 |
+| U16 | Task 4 당시 `accountSwitchClearsCache`, `switchingStudentsDoesNotRenderPreviousLearningData`, `latePreviousAccount401DoesNotClearTheNewStudentsPendingCommand`, `accountChangeAbortsReadsAndIgnoresLateMutationCompletion`, logout/401 정리와 역할 전환 E2E는 해당 사례에서 통과. 이후 초기 익명 `/me`·로그인 경합은 경계 수정의 실제 App RED/GREEN와 scoped review에서 해결됐고, 운영 smoke에서 logout 뒤 보호된 home/private heading이 보이지 않음을 확인함. |
 | U17 | 360/1280px 대표 home/question/feedback/result/private-list DOM overflow ≤0, 모든 측정 header/학습 버튼·링크·checkbox label ≥48px; Tab/Enter 제출·보이는 outline·새 문항/해설/result heading focus. Countdown live attribute 없음 확인, reduced-motion CSS 검토 |
-| U18 | Task 4 당시 실제 PostgreSQL/Chromium 학습과 기존 계정·교직원 포함 17 E2E, backend 559·frontend 146·build/lint 통과. 이후 product HEAD `1725395`에서도 frontend 158·build/lint 및 Chromium 17 통과, backend 559는 재실행하지 않고 재사용했으나, 최신 재검토에서 초기 anonymous `/me` 로그인 경합 P2가 열려 있음. **현재 shippable/operational success가 아니며 추가 수정에 대한 사람의 프로세스 지시와 운영 재배포가 대기 중** |
+| U18 | Task 4 당시 실제 PostgreSQL/Chromium 학습과 기존 계정·교직원 포함 17 E2E, backend 559·frontend 146·build/lint 통과. 이후 `1725395`의 158/17-browser 결과 당시에는 새 P2가 열렸으나 `82c987c`에서 해결·scoped review 승인. Ready source frontend 162/162·build/lint와 Chromium 17/17 (57.6s), backend 559 재사용 후, 정확한 SHA `82c987cfb763245ab103704e0fc5759569675ee6`를 10:03–10:08 KST에 같은 HTTPS 링크에 배포하고 API·asset·실제 학생 학습/저장·목록·logout을 확인함. 현재 상태는 이 문서의 운영 반영 결과 절에 기록. |
 
 ## 실행 중 수정과 근거
 
@@ -117,12 +119,40 @@ env -u NO_COLOR npx --yes --package=node@24 --package=pnpm@11.25.0 -c 'pnpm --di
 
 U15의 최신 outcome 미표시는 실제 제품 결함으로 controller에게 넘겨 별도 수정·리뷰 후 다시 검증했습니다. Task 4가 backend/UI 제품 코드를 임의로 수정하지 않았습니다.
 
-Trace·video·screenshot은 off이며 `preserveOutput: 'never'`로 실패 DOM context도 남기지 않습니다. `test-results/.last-run.json` 실행 marker만 남고 자격 증명/개인 결과 artifact는 없습니다. 실제 Chrome 측정은 DOM만 사용했습니다. 소스 diff·타입·lint와 assertion을 자체 점검했고, 미해결 코드 정확성 우려는 없습니다.
+격리 E2E trace·video·screenshot은 off이며 `preserveOutput: 'never'`로 실패 DOM context도 남기지 않습니다. 격리 실행에는 `test-results/.last-run.json` marker만 남았습니다. 운영 smoke에서는 합성 계정의 학습 홈 화면만 캡처했으며 자격 증명이나 개인 결과 화면은 캡처하지 않았습니다.
 
-## 운영 반영 대기와 인계
+## 운영 반영 결과
 
-이 기록은 코드 검증 완료를 뜻합니다. 운영 링크 [한빛학교 배움터](https://hanbit.thisis-joe.com)의 학생 학습 UI 배포 완료를 뜻하지 않습니다.
+학생 학습 UI는 승인된 동일 링크 [한빛학교 배움터](https://hanbit.thisis-joe.com)에 product HEAD `82c987cfb763245ab103704e0fc5759569675ee6`로 2026-10-13 10:03–10:08 KST에 배포했습니다. 검증 범위는 이 SHA의 backend/web 배포, 외부 HTTPS와 실제 합성 학생 흐름입니다.
 
-Controller는 모든 task의 독립 리뷰와 `027b4ec`부터 확정 HEAD의 가장 강한 전체 리뷰를 마친 뒤, 기존 `hanbit-prod` / `.env.prod.local` / `infra/compose.prod.yml` / DB volume / Cloudflare tunnel을 그대로 사용합니다. 확정 HEAD의 backend/web build와 기존 DB backup 후 `up --no-build -d --wait`로 교체하고 외부 HTTPS login/signup/staff/API/asset과 실제 학생 학습 화면을 확인합니다. Volume 삭제, migration repair, 기존 사용자 행 변경을 하지 않습니다.
+### 배포 절차와 보존 상태
 
-Controller가 실측 배포 결과를 전달하면 이 문서에 실행 SHA·명령·외부/브라우저 결과를 append하고 docs-only 작업 단위 commit·scoped review합니다. 코드 수정이 필요하면 해당 구현 task의 검증·리뷰 후 다시 배포합니다. 현재 작업트리와 feature branch는 tunnel bind 때문에 보존합니다. Task 4 검증 commit은 `test: verify student learning ui end to end`이며 정확한 SHA는 Git 이력과 Task 4 보고서에 기록합니다.
+운영 compose 설정은 `config --quiet` exit 0으로 확인했고 `.env.prod.local` 권한은 600이었습니다. 직전 custom `pg_dump` 백업은 `/Users/Joseph/.hanbit-prod-ui-backup.Hg22v5/hanbit-prod-before-ui.dump`에 저장됐으며 71,798 bytes, 파일 권한 600, 디렉터리 권한 700입니다. 원본 컨테이너 아카이브와 호스트 복사본 모두 `pg_restore --list` catalog validation에 성공했습니다. 이는 archive 목록 판독 확인이며 restore rehearsal은 아닙니다.
+
+실행한 backend/web 배포 명령은 다음과 같고 각각 exit 0입니다.
+
+```sh
+docker compose -p hanbit-prod --env-file /Users/Joseph/workspaces/hanbitschool_30day_challenge/.env.prod.local -f infra/compose.prod.yml config --quiet
+docker compose -p hanbit-prod --env-file /Users/Joseph/workspaces/hanbitschool_30day_challenge/.env.prod.local -f infra/compose.prod.yml build backend web
+docker compose -p hanbit-prod --env-file /Users/Joseph/workspaces/hanbitschool_30day_challenge/.env.prod.local -f infra/compose.prod.yml up --no-build --no-deps -d --wait --wait-timeout 120 backend web
+```
+
+배포 후 backend는 healthy, web은 running이며 두 서비스 restart count는 0입니다. 기존 DB container `076b39c8cebd98e3574128354eb371f560ba80a127f3bf6ccd56176b755cf993`, tunnel container `a5c23cf34de7517260e9ba37bdb4a1bbba8151e4284e1f735d94356a0339c5be`, DB volume `hanbit-prod_school-data`, tunnel의 기존 bind mounts는 보존됐습니다. DB/tunnel은 재생성하지 않았습니다. 시작 로그에서 Flyway 7개 migration을 검증했고 schema가 up-to-date라 추가 migration은 없었습니다. 실행 backend image `sha256:34540ed30dd97cc31919a83fb6b7996032ae4e224a15a4d847f07b07e8ff3f45`와 web image `sha256:1ccf5021e96d5bd75916d35f490a48c8f8a644d941b1cccc99f93741fa369c0a8`은 현재 `verified-student-ui-20261013` recovery tag에도 지정되어 있으며 tag와 실행 이미지 ID가 일치합니다. 실행 JAR SHA-256 `5dbbc9dddd7d4ce0211e7902762467bf08097d4488b8508340538cafe8a135c2`는 이전 learning-core 배포와 같습니다.
+
+이전 pre-UI backend/web image ID는 교체 후 더 이상 resolve되지 않아 해당 ID를 바로 재태그할 수 있다고 주장하지 않습니다. 기존 DB 백업은 유지되고 이전 source `027b4ec`는 Git에 남아 있으며, 현재 정상 동작이 확인된 이미지에는 위 recovery tag가 지정되어 있습니다. `down`, restore, volume 삭제, image prune, migration repair, 기존 사용자 행 변경은 하지 않았습니다. Tunnel bind 때문에 이 worktree와 feature branch를 보존합니다.
+
+### 외부 HTTPS와 번들 확인
+
+외부 확인 9건은 exit 0이었습니다: `/login`, `/signup`, `/staff/login`은 200, 공개 학교 목록은 200이며 학교 1개, CSRF는 200과 `no-store`; HTTPS session cookie의 Secure, HttpOnly, SameSite=Lax flags는 모두 true였습니다. 익명 학생 learning endpoint는 401을 반환했습니다.
+
+외부 HTML과 실행 중 container `index.html`의 asset 경로·바이트가 일치합니다. JS `index-CGnI7qzq.js` SHA-256은 `9a1a71c2e945fc6aed874e23b4311e376096ba645afb1fd867f90f4790c7e865`, CSS `index-Cf8g3lj4.css` SHA-256은 `3d0032272fc58b48f0211c5498dfcb26da3331e0a174212dbb6daac039d6b4c8`이며 외부에서 받은 파일과 container 파일이 각각 같은 hash였습니다. 최종 built bundle의 독립 검사는 canonical question 150개, JS bundle 1개, 원문·해설 일치 0건(`textMatches=0`, `explanationMatches=0`), exit 0을 반환했습니다. 검사한 asset은 외부 배포 asset과 바이트가 같습니다.
+
+### 실제 학생 학습 smoke
+
+HTTPS의 기존 authorized staff API 흐름으로 표시가 분명한 합성 학급과 학생을 한 번 생성했습니다. 기존 계정의 비밀번호를 재설정하지 않았고 명단을 SQL로 읽거나 쓰지 않았습니다. 지원되는 삭제 API가 없어 합성 fixture는 유지됩니다. 비밀값과 fixture 식별값은 이 문서에 기록하지 않습니다.
+
+실제 학생 로그인은 첫 시도에 학습 홈으로 이동했습니다. 학생은 O/X 다섯 문항에 모두 정답을 제출했고 각 답의 feedback에 서버 XP가 보였습니다. 첫 bookmark는 feedback reload 뒤에도 유지됐습니다. 다섯 번째 답 뒤 완료 링크가 표시됐지만 이를 누르지 않고 홈으로 나갔습니다. 홈은 1/30 passed, 5/150 first answers, 5075 XP, level 2를 보였고, 저장 결과 화면은 5/5 PASS였으며 직접 열고 reload해도 복원됐습니다. 다음 날짜의 day는 date-locked였습니다.
+
+개인 목록에서는 REVIEW_QUEUE 0개, MASTERED 0개, BOOKMARKED 1개가 나타났고, 북마크 문항은 최근 정답·복습 미완료·별표 상태가 각각 구분됐습니다. FIRST 정답으로 mastery가 만들어졌다고 추론하지 않았습니다. 로그아웃 후 로그인 화면으로 돌아왔고 보호된 학습 홈에서 private heading은 나타나지 않았습니다. browser console warning/error는 0건이었습니다. 360px viewport에서 콘텐츠 폭 345px(스크롤바 포함), 홈과 개인 목록의 가로 overflow 0, 측정 버튼 최소 48px였습니다. 임시 스타일 override는 복구했습니다.
+
+배포 직후 smoke fixture 생성 전 aggregate counts는 accounts 1 / schools 1 / classes 1 / students 0으로 배포 전과 같았습니다. smoke 후 counts는 accounts 2 / schools 1 / classes 2 / students 1 / sessions 1 / first answers 5 / bookmarks 1입니다. 이 수치는 aggregate만 기록하며 실제 사용자 행이나 비밀값은 조회·공개하지 않았습니다.
