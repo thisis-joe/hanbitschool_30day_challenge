@@ -28,3 +28,63 @@ export const SLOTS: readonly Slot[] = ['face', 'hat', 'top', 'bottom', 'shoes', 
 export function emptyEquipment(): Equipment {
   return { face: null, hat: null, top: null, bottom: null, shoes: null, hand: null };
 }
+
+export interface CharacterOption {
+  id: CharacterId;
+  name: string;
+  assetKey: string;
+}
+export interface GameItem {
+  itemId: string;
+  slot: Slot;
+  value: number;
+  rewardDay: number;
+  name: string;
+  assetKey: string;
+}
+export interface InventoryItem {
+  itemId: string;
+  owned: boolean;
+  acquiredAt: string | null;
+}
+export interface GameView {
+  catalogVersion: string;
+  contentVersion: string;
+  characters: CharacterOption[];
+  items: GameItem[];
+  characterId: CharacterId | null;
+  revision: number;
+  equippedBySlot: Equipment;
+  inventory: InventoryItem[];
+}
+export interface AppearanceCommand {
+  characterId: CharacterId | null;
+  equippedBySlot: Equipment;
+  expectedRevision: number;
+}
+export interface JourneyDay {
+  dayNumber: number;
+  state: import('../learning/types').DayProgressState;
+  availability: string;
+  firstAnsweredCount: number;
+  passedAt: string | null;
+  rewardItemId: string | null;
+  rewardOwned: boolean;
+}
+export interface JourneyQuestion {
+  questionId: number;
+  dayNumber: number;
+  position: number;
+  outcome: string;
+}
+export interface JourneyView {
+  contentVersion: string;
+  calendarCap: number;
+  nextAction: import('../learning/types').NextLearningAction;
+  activeSessionId: string | null;
+  firstAnswerCount: number;
+  journeyPosition: number;
+  courseCompleted: boolean;
+  days: JourneyDay[];
+  questions: JourneyQuestion[];
+}
