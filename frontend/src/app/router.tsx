@@ -1,5 +1,7 @@
 import { TeacherAccountsPage } from '../features/staff/TeacherAccountsPage';
 import { ClassroomsPage } from '../features/staff/ClassroomsPage';
+import { StatisticsPage } from '../features/staff/learning/StatisticsPage';
+import { StudentDetailPage } from '../features/staff/learning/StudentDetailPage';
 import { Routes, Route } from 'react-router-dom';
 import { HomeRedirect } from './HomeRedirect';
 import { RequireRole } from './RequireRole';
@@ -24,6 +26,11 @@ export function AppRoutes() {
       </Route>
       <Route element={<RequireRole allowed={['TEACHER', 'ADMIN']} />}>
         <Route path="/staff/classrooms" element={<ClassroomsPage />} />
+        <Route path="/staff/classrooms/:classroomId/learning" element={<StatisticsPage />} />
+        <Route
+          path="/staff/classrooms/:classroomId/learning/students/:studentId"
+          element={<StudentDetailPage />}
+        />
       </Route>
       <Route path="/" element={<HomeRedirect />} />
       <Route path="/signup" element={<StudentSignupPage />} />
