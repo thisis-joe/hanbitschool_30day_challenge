@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -17,19 +17,26 @@ it('detailNavigationPreservesListUrlButUsesWholeClassOrder', async () => {
   );
   await u.click(await screen.findByRole('link', { name: /학생 상세/ }));
   expect(await screen.findByText(/학급 전체 번호순/)).toBeVisible();
+  expect(document.activeElement === screen.queryAllByRole('heading', { level: 1 })[0]).toBe(true);
   expect(screen.getByRole('button', { name: '이전 학생' })).toBeDisabled();
   const back = screen.getByRole('link', { name: '목록으로 돌아가기' });
   expect(back).toHaveAttribute(
     'href',
     path + '?search=학생&status=IN_PROGRESS&sort=PENDING_WRONG_DESC&page=2',
   );
-  await u.selectOptions(screen.getByLabelText('답변 필터'), 'TIMEOUT');
+  back.focus();
+  fireEvent.change(screen.getByLabelText('답변 필터'), { target: { value: 'TIMEOUT' } });
+  await waitFor(() => expect(screen.queryByLabelText('답변 필터') !== null).toBe(true), {
+    onTimeout: () => new Error('Student filter assertion did not settle'),
+  });
+  expect(document.activeElement === back).toBe(true);
   expect(screen.getByRole('link', { name: '목록으로 돌아가기' })).toHaveAttribute(
     'href',
     path + '?search=학생&status=IN_PROGRESS&sort=PENDING_WRONG_DESC&page=2',
   );
   await u.click(screen.getByRole('link', { name: '다음 학생' }));
   expect(await screen.findByRole('heading', { name: /학급 전체 다음 학생/ })).toBeVisible();
+  expect(document.activeElement === screen.queryAllByRole('heading', { level: 1 })[0]).toBe(true);
   expect(screen.getByRole('button', { name: '다음 학생' })).toBeDisabled();
   expect(screen.getByRole('img', { name: /캐릭터 미선택/ })).toBeVisible();
   expect(screen.getByRole('link', { name: '목록으로 돌아가기' })).toHaveAttribute(

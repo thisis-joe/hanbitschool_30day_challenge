@@ -3,6 +3,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useCurrentAccount } from '../../auth/queries';
 import { GameAvatar } from '../../game/GameAvatar';
 import { errorMessage } from '../../../lib/http';
+import { useRouteHeadingFocus } from '../../../lib/useRouteHeadingFocus';
 import { useTeacherClassroom, useTeacherQuestions, useTeacherStudents } from './queries';
 import { ClassSummaryCharts, rate } from './StatisticsCharts';
 import { QuestionDetailDialog } from './QuestionDetailDialog';
@@ -85,13 +86,18 @@ function StatisticsWorkspace({
   }, [setParams]);
   const selectedList = tab === 'students' ? students : questions;
   const pagination = tab === 'students' ? students.data?.students : questions.data;
+  const heading = useRouteHeadingFocus(
+    accountId,
+    !!classroom.data && !!selectedList.data,
+    questionId !== null,
+  );
   return (
     <section className="workspace teacher-stats">
       <header className="stats-header">
         <div>
           <Link to="/staff/classrooms">학급 목록</Link>
           <p className="stats-eyebrow">TEACHER · LEARNING STATISTICS</p>
-          <h1>
+          <h1 ref={heading} tabIndex={-1}>
             {classroom.data
               ? `${classroom.data.gradeLabel} ${classroom.data.classNumber}반 학습 통계`
               : '학급 학습 통계'}

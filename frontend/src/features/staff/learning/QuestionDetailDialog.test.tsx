@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor as rtlWaitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -13,6 +13,8 @@ import {
   teacherLearningHandlers,
 } from '../../../test/teacherLearningFixtures';
 vi.mock('../../game/avatarRenderer', () => ({ renderAvatar: async () => undefined }));
+const waitFor = (check: () => void) =>
+  rtlWaitFor(check, { onTimeout: () => new Error('Question dialog assertion did not settle') });
 it('questionDialogTrapsFocusEscapeAndRestoresTrigger', async () => {
   teacherLearningHandlers();
   const u = userEvent.setup();
@@ -27,13 +29,66 @@ it('questionDialogTrapsFocusEscapeAndRestoresTrigger', async () => {
   expect(dialog.querySelector('img, script')).toBeNull();
   const close = within(dialog).getByRole('button', { name: '닫기' });
   expect(close).toHaveFocus();
+  const links = within(dialog).queryAllByRole('link');
+  expect(links.length).toBe(3);
   await u.tab();
+  expect(document.activeElement === links[0]).toBe(true);
+  await u.tab({ shift: true });
   expect(close).toHaveFocus();
   await u.tab({ shift: true });
+  expect(document.activeElement === links[2]).toBe(true);
+  await u.tab();
   expect(close).toHaveFocus();
   await u.keyboard('{Escape}');
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(trigger).toHaveFocus();
+});
+it.each(['student-a', 'student-b', 'student-c'])(
+  'respondent %s opens class detail and releases modal with list context',
+  async (id) => {
+    teacherLearningHandlers();
+    const u = userEvent.setup();
+    const path = '/staff/classrooms/class-a/learning';
+    const origin = path + '?tab=questions&sort=TIMEOUT_DESC&page=2';
+    const view = renderPage(<AppRoutes />, origin + '&question=7');
+    await waitFor(() => expect(document.querySelectorAll('.stats-respondents a').length).toBe(3));
+    const link = document.querySelector<HTMLAnchorElement>(
+      `.stats-respondents a[href="${path}/students/${id}"]`,
+    );
+    expect(link !== null).toBe(true);
+    await u.click(link!);
+    await waitFor(() => expect(screen.queryByRole('dialog') === null).toBe(true));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('link', { name: '목록으로 돌아가기' })?.getAttribute('href') === origin,
+      ).toBe(true),
+    );
+    expect(view.container.inert).toBeFalsy();
+    expect(view.container.hasAttribute('aria-hidden')).toBe(false);
+    expect(document.body.style.overflow === 'hidden').toBe(false);
+    await waitFor(() =>
+      expect(document.activeElement === screen.queryByRole('heading', { level: 1 })).toBe(true),
+    );
+  },
+);
+it('respondent navigation from student detail retains its roster origin', async () => {
+  teacherLearningHandlers();
+  const u = userEvent.setup();
+  const origin = '/staff/classrooms/class-a/learning?search=student&status=IN_PROGRESS&page=2';
+  renderPage(<AppRoutes />, origin);
+  await waitFor(() => expect(screen.queryAllByRole('link', { name: /학생 상세/ }).length).toBe(1));
+  await u.click(screen.queryAllByRole('link', { name: /학생 상세/ })[0]);
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: '7번 문항 상세' }) !== null).toBe(true),
+  );
+  await u.click(screen.queryAllByRole('button', { name: '7번 문항 상세' })[0]);
+  await waitFor(() => expect(document.querySelectorAll('.stats-respondents a').length).toBe(3));
+  await u.click(document.querySelectorAll<HTMLAnchorElement>('.stats-respondents a')[1]);
+  await waitFor(() => expect(screen.queryByRole('dialog') === null).toBe(true));
+  expect(
+    screen.queryAllByRole('link', { name: '목록으로 돌아가기' })[0]?.getAttribute('href') ===
+      origin,
+  ).toBe(true);
 });
 it('closedDialogDoesNotFetchAndLateClosedResponseDoesNotReopen', async () => {
   teacherLearningHandlers();

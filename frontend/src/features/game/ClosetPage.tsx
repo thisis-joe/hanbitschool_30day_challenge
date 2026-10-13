@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useCurrentAccount } from '../auth/queries';
 import { getPendingCommandEpoch } from '../learning/pendingCommands';
 import { errorMessage } from '../../lib/http';
+import { useRouteHeadingFocus } from '../../lib/useRouteHeadingFocus';
 import { GameAvatar } from './GameAvatar';
 import { EquipmentIcon } from './EquipmentIcon';
 import { useGame } from './queries';
@@ -32,6 +33,7 @@ export function ClosetPage() {
   const location = useLocation();
   const [preview, setPreview] = useState<Preview | null>(null);
   const view = game.data;
+  const heading = useRouteHeadingFocus(owner, !!view);
   const currentPreview =
     preview &&
     preview.owner === owner &&
@@ -59,7 +61,9 @@ export function ClosetPage() {
   return (
     <section className="learning-page game-closet-page">
       <div className="learning-card game-closet-card">
-        <h1>나의 옷장</h1>
+        <h1 ref={heading} tabIndex={-1}>
+          나의 옷장
+        </h1>
         <p>회차를 처음 통과하면 장비를 모을 수 있어요. 미보유 장비도 미리 볼 수 있어요.</p>
         <nav className="game-page-nav" aria-label="꾸미기 메뉴">
           <Link to="/student/learning">학습 홈</Link> ·{' '}

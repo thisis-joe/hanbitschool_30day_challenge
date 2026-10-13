@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { errorMessage } from '../../lib/http';
+import { useRouteHeadingFocus } from '../../lib/useRouteHeadingFocus';
+import { useCurrentAccount } from '../auth/queries';
 import { GameAvatar } from './GameAvatar';
 import { useGame } from './queries';
 import { useAppearance } from './useAppearance';
@@ -9,10 +11,17 @@ export function CharacterSelectionPage() {
   const game = useGame();
   const appearance = useAppearance();
   const view = game.data;
+  const { data: account } = useCurrentAccount();
+  const heading = useRouteHeadingFocus(
+    account?.role === 'STUDENT' ? account.accountId : undefined,
+    !!view,
+  );
   return (
     <section className="learning-page game-character-page">
       <div className="learning-card game-character-card">
-        <h1>캐릭터 선택</h1>
+        <h1 ref={heading} tabIndex={-1}>
+          캐릭터 선택
+        </h1>
         <p>함께 배울 친구를 골라 주세요. 모은 장비는 그대로 입고 있어요.</p>
         <nav className="game-page-nav" aria-label="꾸미기 메뉴">
           <Link to="/student/learning">학습 홈</Link> · <Link to="/student/closet">옷장</Link>

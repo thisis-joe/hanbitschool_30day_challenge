@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useCurrentAccount } from '../../auth/queries';
 import { errorMessage } from '../../../lib/http';
 import { useTeacherQuestion } from './queries';
@@ -25,7 +26,17 @@ export function QuestionDetailDialog({ classroomId, questionId, onClose }: Props
     />
   );
 }
-function Respondents({ rows, label }: { rows: TeacherRespondent[]; label: string }) {
+function Respondents({
+  rows,
+  label,
+  classroomId,
+  listContext,
+}: {
+  rows: TeacherRespondent[];
+  label: string;
+  classroomId: string;
+  listContext: { listUrl: string; ownerId: string; classroomId: string };
+}) {
   return (
     <section className="stats-respondents">
       <h3>
@@ -37,9 +48,13 @@ function Respondents({ rows, label }: { rows: TeacherRespondent[]; label: string
         <ul>
           {rows.map((row) => (
             <li key={row.accountId}>
-              <span>
+              <Link
+                to={`/staff/classrooms/${encodeURIComponent(classroomId)}/learning/students/${encodeURIComponent(row.accountId)}`}
+                state={listContext}
+                aria-label={`${row.studentNumber}번 ${row.name} 학생 상세`}
+              >
                 {row.studentNumber}번 {row.name}
-              </span>
+              </Link>
               <span>
                 첫 선택 {row.firstChoice ?? '—'} ·{' '}
                 {row.outcome === 'TIMED_OUT'
@@ -56,6 +71,26 @@ function Respondents({ rows, label }: { rows: TeacherRespondent[]; label: string
   );
 }
 function OpenQuestionDialog({ classroomId, questionId, onClose }: Props & { questionId: number }) {
+  const { data: me } = useCurrentAccount();
+  const location = useLocation();
+  const basePath = `/staff/classrooms/${encodeURIComponent(classroomId)}/learning`;
+  const candidate = location.state as {
+    listUrl?: unknown;
+    ownerId?: unknown;
+    classroomId?: unknown;
+  } | null;
+  const params = new URLSearchParams(location.search);
+  params.delete('question');
+  const listUrl =
+    location.pathname === basePath
+      ? basePath + (params.size ? `?${params}` : '')
+      : candidate?.ownerId === me?.accountId &&
+          candidate?.classroomId === classroomId &&
+          typeof candidate.listUrl === 'string' &&
+          (candidate.listUrl === basePath || candidate.listUrl.startsWith(basePath + '?'))
+        ? candidate.listUrl
+        : basePath;
+  const listContext = { listUrl, ownerId: me!.accountId, classroomId };
   const detail = useTeacherQuestion(classroomId, questionId);
   const dialog = useRef<HTMLDivElement>(null);
   const close = useRef<HTMLButtonElement>(null);
@@ -162,8 +197,18 @@ function OpenQuestionDialog({ classroomId, questionId, onClose }: Props & { ques
               미응답 {data.unanswered}명 · 선택 오답 {data.question.choiceWrong}명 · 시간초과{' '}
               {data.question.timedOut}명
             </p>
-            <Respondents rows={data.correct} label="정답자" />
-            <Respondents rows={data.wrong} label="오답자 (시간초과 포함)" />
+            <Respondents
+              rows={data.correct}
+              label="정답자"
+              classroomId={classroomId}
+              listContext={listContext}
+            />
+            <Respondents
+              rows={data.wrong}
+              label="오답자 (시간초과 포함)"
+              classroomId={classroomId}
+              listContext={listContext}
+            />
           </>
         ) : null}
       </div>

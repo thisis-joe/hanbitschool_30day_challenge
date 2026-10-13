@@ -3,6 +3,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useCurrentAccount } from '../../auth/queries';
 import { GameAvatar } from '../../game/GameAvatar';
 import { errorMessage } from '../../../lib/http';
+import { useRouteHeadingFocus } from '../../../lib/useRouteHeadingFocus';
 import { useTeacherClassroom, useTeacherStudent } from './queries';
 import { numberParam, studentStatusLabel } from './StatisticsPage';
 import { StudentSummaryCharts } from './StatisticsCharts';
@@ -88,6 +89,7 @@ function StudentWorkspace({
     );
   }, [setParams, listUrl, accountId, classroomId]);
   const data = detail.data;
+  const heading = useRouteHeadingFocus(accountId, !!data, questionId !== null);
   return (
     <section className="workspace teacher-stats">
       <Link to={listUrl}>목록으로 돌아가기</Link>
@@ -104,7 +106,7 @@ function StudentWorkspace({
             <div className="stats-student-heading">
               <GameAvatar characterId={data.student.characterId} />
               <div>
-                <h1>
+                <h1 ref={heading} tabIndex={-1}>
                   {data.student.studentNumber}번 {data.student.name}
                 </h1>
                 <p>{studentStatusLabel[data.student.status]}</p>

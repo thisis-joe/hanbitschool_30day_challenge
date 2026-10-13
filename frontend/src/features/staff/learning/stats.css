@@ -317,6 +317,13 @@
   padding: 0;
   list-style: none;
 }
+.stats-respondents a {
+  display: inline-flex;
+  align-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  overflow-wrap: anywhere;
+}
 .stats-respondents li {
   display: flex;
   justify-content: space-between;

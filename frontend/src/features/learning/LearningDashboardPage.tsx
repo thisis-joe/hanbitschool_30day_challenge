@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { meKey, useCurrentAccount } from '../auth/queries';
 import type { AccountMe } from '../auth/types';
 import { errorMessage } from '../../lib/http';
+import { useRouteHeadingFocus } from '../../lib/useRouteHeadingFocus';
 import { getPendingCommandEpoch, subscribePendingCommandCleanup } from './pendingCommands';
 import { useLearningStatus } from './queries';
 import { useLearningActions } from './useLearningActions';
@@ -137,6 +138,7 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
     ['START_FIRST', 'START_REPLAY'].includes(view.nextAction);
   const map = journey.isError ? undefined : journey.data;
   const appearance = game.isError ? undefined : game.data;
+  const heading = useRouteHeadingFocus(accountId, !!view && (!exploration || !!map));
   const regionIndex = map ? Math.min(5, Math.floor(map.journeyPosition / 25)) : null;
   const reward = appearance?.items.find((item) => item.rewardDay === day);
   const primary = view?.activeSession ? (
@@ -159,7 +161,9 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
         <p className="learning-eyebrow">
           {account?.role === 'STUDENT' ? `${account.nickname}의 배움` : '30회차 배움'}
         </p>
-        <h1>{exploration ? '탐험 지도' : '나의 학습'}</h1>
+        <h1 ref={heading} tabIndex={-1}>
+          {exploration ? '탐험 지도' : '나의 학습'}
+        </h1>
         <p>하루 5문항, 숲에서 등대까지 이어지는 30회차 여행</p>
       </div>
       {exploration ? (
