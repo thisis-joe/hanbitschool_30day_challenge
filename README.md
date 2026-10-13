@@ -123,6 +123,17 @@ pnpm --dir frontend test:e2e
 
 `HANBIT_E2E_BASE_URL`은 루프백 HTTP origin만 허용하고, `HANBIT_E2E_COMPOSE_PROJECT`는 `^hanbit-[a-z0-9-]*e2e$` 형식과 비운영 이름만 허용합니다. 계정 테스트의 두 재시작 경로는 같은 검증된 프로젝트와 소유 라벨을 확인한 뒤 backend → Docker healthy → web → HTTP 200 순서로 실행합니다. 관찰이 늦다고 실행 중 프로세스를 다시 시작하지 않습니다.
 
+증거 저장은 기본적으로 꺼져 있습니다. 픽셀·게임·레이아웃 검증은 모두 수행하지만, 어떤 계획의 scratch 폴더도 읽거나 만들지 않습니다. 자료가 필요한 실행에서만 아래 두 값을 함께 지정합니다. 영문 소문자·숫자·하이픈 식별자만 허용하며 경로·`..`·심볼릭 링크는 거절합니다. 매 명령마다 새로운 실행 이름을 사용해야 하며 기존 실행 폴더는 덮어쓰거나 이어 쓰지 않습니다.
+
+```powershell
+# 교사 계획의 통합 검증 예시: 선행 학생 계획 폴더를 지정하지 않습니다.
+$env:HANBIT_E2E_EVIDENCE_PLAN = '2026-10-13-teacher-learning-statistics'
+$env:HANBIT_E2E_EVIDENCE_RUN = 'combined-review-001' # 다음 실행은 새 이름
+pnpm --dir frontend test:e2e
+```
+
+출력은 현재 체크아웃의 `.superpowers/sdd/<계획>/evidence/<실행>/`으로만 제한됩니다. 계정 자격 증명이나 정본 답을 읽지 않는 테스트 전용 도우미가 경로를 검증합니다. 저장되는 자료는 아트 비교 PNG, 익명화한 합성 결과 PNG, 세션 ID를 제거한 레이아웃 JSONL뿐입니다. `HANBIT_E2E_EVIDENCE_PLAN`과 `HANBIT_E2E_EVIDENCE_RUN`을 모두 해제하면 다시 무출력 검증이 됩니다. 라우팅 회귀 검증은 Node 24에서 `node --test scripts/evidence-output.test.ts`로 실행합니다.
+
 계정 데이터는 `school-data` 볼륨에 보관됩니다. 재시작할 때는 backend가 실제로 healthy가 된 뒤 web을 재시작하고, HTTP 응답까지 확인합니다. 아래 예시는 위의 격리 E2E 환경에서 실행하는 순서입니다.
 
 ```powershell

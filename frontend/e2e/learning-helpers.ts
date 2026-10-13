@@ -1,5 +1,5 @@
-import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { appendFileSync, readFileSync } from 'node:fs';
+import { evidenceOutput } from './evidence-output';
 import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 import { adminId, adminPassword, provisionClass, signOut, signup, studentLogin } from './helpers';
@@ -186,15 +186,10 @@ export async function layoutAndTargets(page: Page) {
       measured.targets.filter((target) => target.width < 48 || target.height < 48),
       `touch targets at ${width}px on ${new URL(page.url()).pathname}`,
     ).toEqual([]);
-    const directory = fileURLToPath(
-      new URL(
-        '../../.superpowers/sdd/2026-10-13-student-game-experience/browser-evidence/',
-        import.meta.url,
-      ),
-    );
-    mkdirSync(directory, { recursive: true });
+    const output = evidenceOutput();
+    if (!output) continue; // Keep all layout/target assertions; default execution writes nothing.
     appendFileSync(
-      directory + 'layout.jsonl',
+      output.file('layout.jsonl'),
       JSON.stringify({
         surface: new URL(page.url()).pathname.replace(/\/sessions\/[^/]+/, '/sessions/SYNTHETIC'),
         width,
@@ -210,17 +205,12 @@ export async function layoutAndTargets(page: Page) {
 // Retain only synthetic result proof: never capture auth, question or personal-list pages.
 export async function captureSanitizedResultProof(page: Page) {
   await expect(page).toHaveURL(/\/student\/learning\/sessions\/[^/]+\/result$/);
-  const directory = fileURLToPath(
-    new URL(
-      '../../.superpowers/sdd/2026-10-13-student-game-experience/browser-evidence/',
-      import.meta.url,
-    ),
-  );
-  mkdirSync(directory, { recursive: true });
+  const output = evidenceOutput();
+  if (!output) return;
   for (const width of [360, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.locator('.learning-page').screenshot({
-      path: `${directory}result-${width}.png`,
+      path: output.file(`result-${width}.png`),
       animations: 'disabled',
       style:
         '.student-header, .game-student-nav, .learning-eyebrow, .learning-source, .learning-explanation, .learning-correct-choice, .learning-personal-text { visibility: hidden !important; }',

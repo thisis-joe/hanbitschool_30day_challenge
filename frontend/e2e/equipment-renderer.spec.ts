@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync, mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { evidenceOutput } from './evidence-output';
 
 // Independent reference: ONLY the audited fixed graphics/coordinates from the supplied file.
 // No prototype questions, state, learning rules, or teacher sample rows are evaluated.
@@ -74,17 +74,12 @@ test('allNineMatchingAndMixedOutfitsRenderSourcePixels', async ({ page }) => {
     expect(entry.opaque, JSON.stringify(entry)).toBeGreaterThan(1000);
     expect(entry.differences, JSON.stringify(entry)).toBe(0);
   }
-  const output = fileURLToPath(
-    new URL(
-      '../../.superpowers/sdd/2026-10-13-student-game-experience/art-evidence/',
-      import.meta.url,
-    ),
-  );
-  mkdirSync(output, { recursive: true });
+  const output = evidenceOutput();
+  if (!output) return; // All pixel and shape assertions above still ran.
   await page.setViewportSize({ width: 1280, height: 1000 });
   for (let row = 0; row < 9; row++)
     await page
       .locator('section')
       .nth(row)
-      .screenshot({ path: `${output}character-${row}-actual-reference.png` });
+      .screenshot({ path: output.file(`character-${row}-actual-reference.png`) });
 });
