@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { e2eBaseURL, e2eComposeProject } from '../playwright.config';
 import { evidenceOutput } from './evidence-output';
 import { expect } from '@playwright/test';
@@ -38,8 +39,46 @@ export const session = (page: Page, id: string) =>
 export const personal = (page: Page, filter: PersonalQuestionFilter) =>
   readApi<PersonalQuestionView[]>(page, `/questions?filter=${filter}`);
 
+// Protected JSON DTOs are compared in full; matchers receive only the boolean result.
+export function protectedEqual(actual: unknown, expected: unknown) {
+  expect(isDeepStrictEqual(actual, expected), 'Protected JSON equality').toBe(true);
+}
+export async function protectedText(
+  locator: Locator,
+  expected: string,
+  options: { contains?: boolean; value?: boolean; timeout?: number } = {},
+) {
+  // Same whitespace rules as Playwright's string text matchers; input values stay raw.
+  const normalize = (text: string) =>
+    text
+      .replace(/[\u200b\u00ad]/g, '')
+      .trim()
+      .replace(/\s+/g, ' ');
+  await expect
+    .poll(
+      async () => {
+        try {
+          const value = options.value ? await locator.inputValue() : await locator.textContent();
+          if (value === null) return false;
+          const received = options.value ? value : normalize(value);
+          const wanted = options.value ? expected : normalize(expected);
+          return options.contains ? received.includes(wanted) : received === wanted;
+        } catch {
+          return false;
+        }
+      },
+      { timeout: options.timeout ?? 15000, message: 'Protected text comparison' },
+    )
+    .toBe(true);
+}
+
 /** Reusable normal-flow fixture: fresh changed-password teacher and numbered UI registrations. */
-export async function provisionLearningClass(page: Page, count: number) {
+export async function provisionLearningClass(
+  page: Page,
+  count: number,
+  inspectDocker: (args: string[]) => string = docker,
+) {
+  assertOwnedLearningTarget(inspectDocker);
   if (!Number.isInteger(count) || count < 1 || count > 25)
     throw new Error('Invalid synthetic roster size');
   page.on('dialog', (dialog) => void dialog.accept());
@@ -133,13 +172,13 @@ function docker(args: string[], input?: string) {
   }
 }
 /** Validate the actual services, config, volume and binding before every mutation. No env output. */
-export function assertOwnedLearningTarget() {
+export function assertOwnedLearningTarget(inspectDocker: (args: string[]) => string = docker) {
   const project = e2eComposeProject();
   if (project !== 'hanbit-game-e2e' || e2eBaseURL() !== 'http://127.0.0.1:8090')
     throw new Error('Teacher verification requires its owned loopback target');
   for (const service of ['db', 'backend', 'web']) {
     const inspect = JSON.parse(
-      docker(['inspect', '--format', '{{json .Config.Labels}}', `${project}-${service}-1`]),
+      inspectDocker(['inspect', '--format', '{{json .Config.Labels}}', `${project}-${service}-1`]),
     ) as Record<string, string>;
     if (
       inspect['com.docker.compose.project'] !== project ||
@@ -152,7 +191,7 @@ export function assertOwnedLearningTarget() {
       throw new Error('Docker service ownership mismatch');
   }
   const mounts = JSON.parse(
-    docker(['inspect', '--format', '{{json .Mounts}}', `${project}-db-1`]),
+    inspectDocker(['inspect', '--format', '{{json .Mounts}}', `${project}-db-1`]),
   ) as { Type: string; Name: string; Destination: string }[];
   if (
     !mounts.some(
@@ -164,7 +203,7 @@ export function assertOwnedLearningTarget() {
   )
     throw new Error('Docker database volume mismatch');
   const volume = JSON.parse(
-    docker(['volume', 'inspect', '--format', '{{json .Labels}}', project + '_school-data']),
+    inspectDocker(['volume', 'inspect', '--format', '{{json .Labels}}', project + '_school-data']),
   ) as Record<string, string>;
   if (
     volume['com.docker.compose.project'] !== project ||
@@ -172,7 +211,7 @@ export function assertOwnedLearningTarget() {
   )
     throw new Error('Docker volume ownership mismatch');
   const ports = JSON.parse(
-    docker(['inspect', '--format', '{{json .HostConfig.PortBindings}}', `${project}-web-1`]),
+    inspectDocker(['inspect', '--format', '{{json .HostConfig.PortBindings}}', `${project}-web-1`]),
   ) as Record<string, { HostIp: string; HostPort: string }[]>;
   if (
     ports['80/tcp']?.length !== 1 ||
@@ -318,7 +357,7 @@ export async function answer(
   await expect(
     page.getByRole('heading', { name: correct ? '정답이에요' : '오답이에요', exact: true }),
   ).toBeVisible();
-  await expect(page.locator('.learning-explanation')).toHaveText(result.explanation);
+  await protectedText(page.locator('.learning-explanation'), result.explanation);
   await expect(
     page.getByText(`이번 답변으로 받은 경험치: ${result.xpAwarded} XP`, { exact: true }),
   ).toBeVisible();

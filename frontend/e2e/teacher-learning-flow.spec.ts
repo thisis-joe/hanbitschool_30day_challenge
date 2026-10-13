@@ -19,6 +19,8 @@ import {
   layoutAndTargets,
   visibleFocus,
   captureSanitizedResultProof,
+  protectedEqual,
+  protectedText,
 } from './learning-helpers';
 import { evidenceOutput } from './evidence-output';
 import type { ClassroomSummary } from '../src/features/staff/types';
@@ -121,17 +123,20 @@ async function improve(page: Page, first: LearningSessionView) {
 }
 function summaryIsFour(data: TeacherStudentsPage, improved = false) {
   const s = data.summary;
-  expect([
-    s.studentCount,
-    s.participatingCount,
-    s.answered,
-    s.correct,
-    s.wrong,
-    s.unanswered,
-    s.accuracy,
-    s.reviewedWrong,
-    s.pendingWrong,
-  ]).toEqual([2, 1, 5, 4, 1, 295, 0.8, improved ? 1 : 0, improved ? 0 : 1]);
+  protectedEqual(
+    [
+      s.studentCount,
+      s.participatingCount,
+      s.answered,
+      s.correct,
+      s.wrong,
+      s.unanswered,
+      s.accuracy,
+      s.reviewedWrong,
+      s.pendingWrong,
+    ],
+    [2, 1, 5, 4, 1, 295, 0.8, improved ? 1 : 0, improved ? 0 : 1],
+  );
 }
 async function teacherLayout(page: Page, surface: string) {
   for (const width of [360, 1280]) {
@@ -212,14 +217,22 @@ test('teacherClassShowsActualFirstAnswerAndReviewImprovement', async ({ page, br
   try {
     await teacher(staff, c);
     summaryIsFour(await overview(staff, c));
-    await expect(staff.getByRole('region', { name: '학급 요약' })).toContainText('미응답 295개');
-    await expect(staff.getByRole('region', { name: '학급 요약' })).toContainText('80%');
+    await protectedText(staff.getByRole('region', { name: '학급 요약' }), '미응답 295개', {
+      contains: true,
+    });
+    await protectedText(staff.getByRole('region', { name: '학급 요약' }), '80%', {
+      contains: true,
+    });
     await improve(page, first);
     await staff.reload();
     const data = await overview(staff, c);
     summaryIsFour(data, true);
-    await expect(staff.getByRole('region', { name: '학급 요약' })).toContainText('복습 개선 1개');
-    await expect(staff.getByRole('region', { name: '학급 요약' })).toContainText('80%');
+    await protectedText(staff.getByRole('region', { name: '학급 요약' }), '복습 개선 1개', {
+      contains: true,
+    });
+    await protectedText(staff.getByRole('region', { name: '학급 요약' }), '80%', {
+      contains: true,
+    });
     await teacherLayout(staff, 'overview');
   } finally {
     await staff.close();
@@ -248,25 +261,35 @@ test('filteredTeacherRosterDoesNotAlterSummaryOrHardQuestions', async ({ page })
   await signOut(page);
   await teacher(page, c);
   const whole = await overview(page, c);
-  expect([
-    whole.summary.studentCount,
-    whole.summary.answered,
-    whole.summary.correct,
-    whole.summary.unanswered,
-  ]).toEqual([25, 7, 4, 3743]);
-  expect(
+  protectedEqual(
+    [
+      whole.summary.studentCount,
+      whole.summary.answered,
+      whole.summary.correct,
+      whole.summary.unanswered,
+    ],
+    [25, 7, 4, 3743],
+  );
+  protectedEqual(
     whole.summary.hardQuestions.map((q) => [q.questionId, q.answered, q.wrong, q.wrongRate]),
-  ).toEqual([[1, 3, 3, 1]]);
-  expect(whole.students.items.map((s) => s.studentNumber)).toEqual(
+    [[1, 3, 3, 1]],
+  );
+  protectedEqual(
+    whole.students.items.map((s) => s.studentNumber),
     Array.from({ length: 20 }, (_, i) => i + 1),
   );
   await page.getByRole('button', { name: '다음 페이지', exact: true }).click();
   await expect(page.getByRole('link', { name: '21번 합성학생21 학생 상세' })).toBeVisible();
   const second = await overview(page, c, '?page=1');
-  expect(second.students.items.map((s) => s.studentNumber)).toEqual([21, 22, 23, 24, 25]);
-  expect(second.summary).toEqual(whole.summary);
+  protectedEqual(
+    second.students.items.map((s) => s.studentNumber),
+    [21, 22, 23, 24, 25],
+  );
+  protectedEqual(second.summary, whole.summary);
   await page.getByRole('link', { name: '21번 합성학생21 학생 상세', exact: true }).click();
-  await expect(page.getByRole('navigation', { name: '학급 학생 이동' })).toContainText('21 / 25');
+  await protectedText(page.getByRole('navigation', { name: '학급 학생 이동' }), '21 / 25', {
+    contains: true,
+  });
   await page.getByRole('link', { name: '이전 학생', exact: true }).click();
   await expect(page.getByRole('heading', { name: '20번 합성학생20', exact: true })).toBeVisible();
   await page.getByRole('link', { name: '다음 학생', exact: true }).click();
@@ -277,20 +300,30 @@ test('filteredTeacherRosterDoesNotAlterSummaryOrHardQuestions', async ({ page })
     page.getByRole('link', { name: '21번 합성학생21 학생 상세', exact: true }),
   ).toBeVisible();
   await page.getByLabel('학생 상태', { exact: true }).selectOption('NEW');
-  await expect(page.getByRole('table', { name: '학생 학습 현황' })).toContainText('검색 결과 22명');
+  await protectedText(page.getByRole('table', { name: '학생 학습 현황' }), '검색 결과 22명', {
+    contains: true,
+  });
   await page.getByLabel('이름·번호 검색').fill('21');
   await page.getByRole('button', { name: '검색', exact: true }).click();
-  await expect(page.getByRole('table', { name: '학생 학습 현황' })).toContainText('검색 결과 1명');
+  await protectedText(page.getByRole('table', { name: '학생 학습 현황' }), '검색 결과 1명', {
+    contains: true,
+  });
   const filtered = await overview(page, c, '?search=21&status=NEW');
-  expect(filtered.students.items.map((s) => s.studentNumber)).toEqual([21]);
-  expect(filtered.summary).toEqual(whole.summary);
-  await expect(page.getByRole('region', { name: '어려운 문항 TOP 3' })).toContainText(
-    '오답률 100%',
+  protectedEqual(
+    filtered.students.items.map((s) => s.studentNumber),
+    [21],
   );
+  protectedEqual(filtered.summary, whole.summary);
+  await protectedText(page.getByRole('region', { name: '어려운 문항 TOP 3' }), '오답률 100%', {
+    contains: true,
+  });
   const progress = await overview(page, c, '?sort=PROGRESS_ASC');
   expect(progress.students.items[0].studentNumber).toBe(2);
   const pending = await overview(page, c, '?sort=PENDING_WRONG_DESC');
-  expect(pending.students.items.slice(0, 3).map((s) => s.studentNumber)).toEqual([1, 3, 4]);
+  protectedEqual(
+    pending.students.items.slice(0, 3).map((s) => s.studentNumber),
+    [1, 3, 4],
+  );
   await teacherLayout(page, 'filtered');
 });
 
@@ -313,46 +346,59 @@ test('studentDetailCrossesPagesAndPreservesFirstWrongAfterReview', async ({ page
   await page.getByLabel('이름·번호 검색').fill('김민수');
   await page.getByRole('button', { name: '검색', exact: true }).click();
   await page.getByRole('link', { name: '1번 김민수 학생 상세' }).click();
-  await expect(page.getByRole('table', { name: '학생 첫 답변' })).toContainText('선택 오답');
-  await expect(page.getByRole('table', { name: '학생 첫 답변' })).toContainText('개선됨');
+  await protectedText(page.getByRole('table', { name: '학생 첫 답변' }), '선택 오답', {
+    contains: true,
+  });
+  await protectedText(page.getByRole('table', { name: '학생 첫 답변' }), '개선됨', {
+    contains: true,
+  });
   const detail = await get<TeacherStudentDetail>(
     page,
     base(c) + `/students/${c.studentIds[0]}?filter=WRONG`,
   );
-  expect(detail.answers.items.map((a) => [a.questionId, a.outcome, a.reviewedWrong])).toEqual([
-    [1, 'WRONG', true],
-  ]);
-  expect([
-    detail.days.length,
-    detail.days[0].state,
-    detail.days[1].state,
-    detail.ordinal,
-    detail.totalStudents,
-    detail.nextStudentId,
-  ]).toEqual([30, 'PASSED', 'PASSED', 1, 25, c.studentIds[1]]);
+  protectedEqual(
+    detail.answers.items.map((a) => [a.questionId, a.outcome, a.reviewedWrong]),
+    [[1, 'WRONG', true]],
+  );
+  protectedEqual(
+    [
+      detail.days.length,
+      detail.days[0].state,
+      detail.days[1].state,
+      detail.ordinal,
+      detail.totalStudents,
+      detail.nextStudentId,
+    ],
+    [30, 'PASSED', 'PASSED', 1, 25, c.studentIds[1]],
+  );
   const firstQuestion = page.getByRole('button', { name: '1번 문항 상세', exact: true });
   await firstQuestion.click();
   const firstDialog = page.getByRole('dialog', { name: '1번 문항 상세', exact: true });
-  await expect(firstDialog).toContainText('첫 응답 1명');
-  await expect(firstDialog).toContainText('선택 오답 1명 · 시간초과 0명');
+  await protectedText(firstDialog, '첫 응답 1명', { contains: true });
+  await protectedText(firstDialog, '선택 오답 1명 · 시간초과 0명', { contains: true });
   await page.keyboard.press('Escape');
   await expect(firstDialog).toHaveCount(0);
   await expect(firstQuestion).toBeFocused();
   await page.getByLabel('답변 필터', { exact: true }).selectOption('ALL');
-  await expect(page.getByRole('table', { name: '학생 첫 답변' })).toContainText('문항 10개');
+  await protectedText(page.getByRole('table', { name: '학생 첫 답변' }), '문항 10개', {
+    contains: true,
+  });
   await page.getByRole('button', { name: '다음 페이지', exact: true }).click();
   await expect(page.getByRole('button', { name: '9번 문항 상세' })).toBeVisible();
   const next = await get<TeacherStudentDetail>(
     page,
     base(c) + `/students/${c.studentIds[0]}?filter=ALL&page=1`,
   );
-  expect(next.answers.items.map((a) => a.questionId)).toEqual([9, 10]);
+  protectedEqual(
+    next.answers.items.map((a) => a.questionId),
+    [9, 10],
+  );
   expect(next.days.length).toBe(30);
   await teacherLayout(page, 'student');
   await page.getByRole('link', { name: '다음 학생', exact: true }).click();
   await expect(page.getByRole('heading', { name: '2번 합성둘', exact: true })).toBeVisible();
   await page.getByRole('link', { name: '목록으로 돌아가기', exact: true }).click();
-  await expect(page.getByLabel('이름·번호 검색')).toHaveValue('김민수');
+  await protectedText(page.getByLabel('이름·번호 검색'), '김민수', { value: true });
 });
 
 // Catches server timeout shown as untouched, omitted wrong respondents and broken modal focus lifecycle.
@@ -377,30 +423,36 @@ test('teacherQuestionDialogShowsTimeoutSeparateFromUntouched', async ({ page }) 
     page,
     base(c) + '/questions?sort=TIMEOUT_DESC',
   );
-  expect([
-    questions.items[0].questionId,
-    questions.items[0].timedOut,
-    questions.items[0].unanswered,
-    questions.items[0].wrongRate,
-  ]).toEqual([1, 1, 1, 1]);
+  protectedEqual(
+    [
+      questions.items[0].questionId,
+      questions.items[0].timedOut,
+      questions.items[0].unanswered,
+      questions.items[0].wrongRate,
+    ],
+    [1, 1, 1, 1],
+  );
   const trigger = page.getByRole('button', { name: '1번 문항 상세', exact: true });
   await trigger.focus();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: '1번 문항 상세', exact: true });
   await expect(dialog).toBeVisible();
   const data = await get<TeacherQuestionDetail>(page, base(c) + '/questions/1');
-  expect([
-    data.correct.length,
-    data.wrong.length,
-    data.unanswered,
-    data.question.choiceWrong,
-    data.question.timedOut,
-    data.wrong[0].firstChoice,
-    data.wrong[0].outcome,
-  ]).toEqual([0, 1, 1, 0, 1, null, 'TIMED_OUT']);
-  await expect(dialog).toContainText('미응답 1명 · 선택 오답 0명 · 시간초과 1명');
-  await expect(dialog.locator('.stats-dialog-question')).toHaveText(data.question.text);
-  await expect(dialog.locator('.stats-explanation p')).toHaveText(data.explanation);
+  protectedEqual(
+    [
+      data.correct.length,
+      data.wrong.length,
+      data.unanswered,
+      data.question.choiceWrong,
+      data.question.timedOut,
+      data.wrong[0].firstChoice,
+      data.wrong[0].outcome,
+    ],
+    [0, 1, 1, 0, 1, null, 'TIMED_OUT'],
+  );
+  await protectedText(dialog, '미응답 1명 · 선택 오답 0명 · 시간초과 1명', { contains: true });
+  await protectedText(dialog.locator('.stats-dialog-question'), data.question.text);
+  await protectedText(dialog.locator('.stats-explanation p'), data.explanation);
   const close = dialog.getByRole('button', { name: '닫기', exact: true });
   await visibleFocus(close);
   await page.keyboard.press('Shift+Tab');
@@ -418,14 +470,20 @@ test('teacherQuestionDialogShowsTimeoutSeparateFromUntouched', async ({ page }) 
     page,
     base(c) + '/questions?day=2&sort=QUESTION_ASC',
   );
-  expect(day.items.map((q) => q.questionId)).toEqual([6, 7, 8, 9, 10]);
-  expect(day.items.map((q) => [q.answered, q.wrongRate, q.unanswered])).toEqual([
-    [0, null, 2],
-    [0, null, 2],
-    [0, null, 2],
-    [0, null, 2],
-    [0, null, 2],
-  ]);
+  protectedEqual(
+    day.items.map((q) => q.questionId),
+    [6, 7, 8, 9, 10],
+  );
+  protectedEqual(
+    day.items.map((q) => [q.answered, q.wrongRate, q.unanswered]),
+    [
+      [0, null, 2],
+      [0, null, 2],
+      [0, null, 2],
+      [0, null, 2],
+      [0, null, 2],
+    ],
+  );
   await expect(
     page.getByRole('table', { name: '문항 분석' }).getByRole('cell').filter({ hasText: /^—$/ }),
   ).toHaveCount(5);
@@ -433,7 +491,7 @@ test('teacherQuestionDialogShowsTimeoutSeparateFromUntouched', async ({ page }) 
     page,
     base(c) + `/students/${c.studentIds[1]}?filter=UNANSWERED`,
   );
-  expect([untouched.answers.total, untouched.days.length]).toEqual([150, 30]);
+  protectedEqual([untouched.answers.total, untouched.days.length], [150, 30]);
   expect(
     untouched.answers.items.every(
       (row) =>
@@ -442,7 +500,7 @@ test('teacherQuestionDialogShowsTimeoutSeparateFromUntouched', async ({ page }) 
   ).toBe(true);
   await page.getByRole('button', { name: '6번 문항 상세', exact: true }).click();
   const unanswered = page.getByRole('dialog', { name: '6번 문항 상세', exact: true });
-  await expect(unanswered).toContainText('미응답 2명 · 선택 오답 0명 · 시간초과 0명');
+  await protectedText(unanswered, '미응답 2명 · 선택 오답 0명 · 시간초과 0명', { contains: true });
   await page.keyboard.press('Escape');
 });
 
@@ -480,10 +538,11 @@ test('anotherSchoolAndStudentCannotReadLearningStats', async ({ page }) => {
   await signOut(page);
   await staffLogin(page, login, c.staffPassword);
   const me = await get<{ schoolId: string; mustChangePassword: boolean }>(page, '/api/auth/me');
-  expect([me.schoolId, me.mustChangePassword]).toEqual([school, false]);
-  expect(
+  protectedEqual([me.schoolId, me.mustChangePassword], [school, false]);
+  protectedEqual(
     (await get<ClassroomSummary[]>(page, '/api/staff/classrooms?scope=SCHOOL')).map((x) => x.id),
-  ).toEqual([classroom]);
+    [classroom],
+  );
   for (const path of ['/students', `/students/${c.studentIds[0]}`, '/questions', '/questions/1']) {
     const response = await page.request.get(base(c) + path);
     expect(response.status()).toBe(403);
@@ -524,16 +583,22 @@ test('logoutAndClassSwitchClearPreviousStats', async ({ page }) => {
       history.pushState({}, '', `/staff/classrooms/${id}/learning`);
       dispatchEvent(new PopStateEvent('popstate'));
     }, empty);
-    await expect(page.getByRole('region', { name: '학급 요약' })).toContainText('가입 학생0명');
+    await protectedText(page.getByRole('region', { name: '학급 요약' }), '가입 학생0명', {
+      contains: true,
+    });
     release();
     await page.unrouteAll({ behavior: 'wait' });
-    await expect(page.getByRole('region', { name: '학급 요약' })).toContainText('첫 응답0개');
+    await protectedText(page.getByRole('region', { name: '학급 요약' }), '첫 응답0개', {
+      contains: true,
+    });
   } finally {
     release();
     await page.unrouteAll({ behavior: 'wait' });
   }
   await page.goto(route(c));
-  await expect(page.getByRole('region', { name: '학급 요약' })).toContainText('첫 응답5개');
+  await protectedText(page.getByRole('region', { name: '학급 요약' }), '첫 응답5개', {
+    contains: true,
+  });
   let releaseLogout!: () => void;
   const logoutGate = new Promise<void>((resolve) => {
     releaseLogout = resolve;
@@ -578,20 +643,25 @@ test('combinedGameHistoryAndTeacherStatsSurviveBackendRestart', async ({ page, b
   await page.goto('/student/closet');
   await page.getByRole('button', { name: '책벌레안경 미리보기', exact: true }).click();
   await page.getByRole('button', { name: '착용하기', exact: true }).click();
-  await expect(page.getByRole('button', { name: '책벌레안경 미리보기' })).toContainText('착용 중');
+  await protectedText(page.getByRole('button', { name: '책벌레안경 미리보기' }), '착용 중', {
+    contains: true,
+  });
   const before = {
     game: await get<GameView>(page, '/api/student/game'),
     map: await get<JourneyView>(page, '/api/student/learning/map'),
     history: await session(page, first.sessionId),
     status: await status(page),
   };
-  expect([
-    before.game.characterId,
-    before.game.equippedBySlot.face,
-    before.game.inventory.filter((i) => i.owned).length,
-    before.map.firstAnswerCount,
-    before.map.days[0].state,
-  ]).toEqual(['bora', 'face-1', 1, 5, 'PASSED']);
+  protectedEqual(
+    [
+      before.game.characterId,
+      before.game.equippedBySlot.face,
+      before.game.inventory.filter((i) => i.owned).length,
+      before.map.firstAnswerCount,
+      before.map.days[0].state,
+    ],
+    ['bora', 'face-1', 1, 5, 'PASSED'],
+  );
   const staff = await browser.newPage();
   try {
     await teacher(staff, c);
@@ -599,12 +669,14 @@ test('combinedGameHistoryAndTeacherStatsSurviveBackendRestart', async ({ page, b
     summaryIsFour(stats);
     await restartOwnedBackend(page);
     await studentLogin(page, '한빛학교', c.gradeLabel, 1, 1, 'Student!2026');
-    expect(await get<GameView>(page, '/api/student/game')).toEqual(before.game);
-    expect(await get<JourneyView>(page, '/api/student/learning/map')).toEqual(before.map);
-    expect(await session(page, first.sessionId)).toEqual(before.history);
-    expect(await status(page)).toEqual(before.status);
+    protectedEqual(await get<GameView>(page, '/api/student/game'), before.game);
+    protectedEqual(await get<JourneyView>(page, '/api/student/learning/map'), before.map);
+    protectedEqual(await session(page, first.sessionId), before.history);
+    protectedEqual(await status(page), before.status);
     await page.goto(`/student/learning/sessions/${first.sessionId}/result`);
-    await expect(page.getByRole('region', { name: '여행 선물' })).toContainText('책벌레안경');
+    await protectedText(page.getByRole('region', { name: '여행 선물' }), '책벌레안경', {
+      contains: true,
+    });
     await layoutAndTargets(page);
     await page.goto('/student/map');
     await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toBeEnabled();
@@ -617,7 +689,7 @@ test('combinedGameHistoryAndTeacherStatsSurviveBackendRestart', async ({ page, b
     await expect(page.locator('.game-avatar-idle')).toHaveCSS('animation-name', 'none');
     await layoutAndTargets(page);
     await teacher(staff, c);
-    expect(await overview(staff, c)).toEqual(stats);
+    protectedEqual(await overview(staff, c), stats);
   } finally {
     await staff.close();
   }
