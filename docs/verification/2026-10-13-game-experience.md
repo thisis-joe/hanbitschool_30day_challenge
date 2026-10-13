@@ -91,7 +91,7 @@ Ruling: authorize one minimal test-only command-settlement wait in correctWrongA
 
 Ruling: permit a dedicated credential-free test-only QA evidence router with opt-in run/plan-specific output, and retain unchanged e2e/helpers.ts account logic — existing relative-URL account helpers already honor the validated Playwright target, so the plan's undifferentiated file list does not justify a meaningless auth-helper edit; shared student/teacher regression must not write a completed predecessor SDD workspace — cost if wrong: test evidence routing/setup/documentation would need adjustment, but product authentication and learning facts remain unchanged.
 
-These are all four lines containing `Ruling:` in the execution ledger at the time of this record. The ignored execution scratch is retained for review and has not been force-added or removed.
+These are all four lines containing `Ruling:` in the execution ledger. They remain the exhaustive decision record after the final student review. Its ignored process workspace is recoverably archived as described below; no ignored artifact is tracked.
 
 ## Review fix R1 — evidence lifecycle isolation
 
@@ -114,10 +114,10 @@ With both capture variables explicitly unset, the full actual Chromium suite pas
 ## Deferred findings for final-review triage
 
 - Task 2 runtime output: JVM CDS warning and Spring shutdown INFO. Record separately from test failures; do not claim literal pristine output.
-- Task 5 home game-read error recovery: resolved in the bounded final presentation fix below; its scoped re-review remains pending.
-- Task 5 Vitest jsdom environment performance hint remains informational output; final reviewer must triage.
+- Task 5 home game-read error recovery: resolved in the bounded final presentation fix below and independently re-reviewed as addressed.
+- Task 5 Vitest jsdom environment performance hint remains informational output; the final reviewer found no product fix necessary.
 - Browser runner emits `NO_COLOR`/`FORCE_COLOR` environment warning; no suppression or blanket pristine-output claim.
-- Teacher G08/G09 and teacher portions of G10/G12/G13/G14, final game/whole-branch review and combined regression are outstanding work in the parent plan. No push, PR, merge, deployment, integration menu or scratch removal has been performed.
+- Teacher G08/G09 and teacher portions of G10/G12/G13/G14, combined full regression and full game-state restart proof remain required. The student whole-branch review and its one bounded fix/re-review are now complete. No push, PR, merge, deployment or integration menu has been performed.
 
 ## Bounded final presentation fix — 2026-10-13
 
@@ -148,3 +148,13 @@ Before rebuilding, all three Compose service labels matched project `hanbit-game
 The new browser case checks GET-only home/result retries, real normally-earned face-1 preview pixels differing from the saved unequipped scene, no appearance PUT before the explicit click, unchanged saved nullable character/equipment/XP before that click, and one successful PUT with the complete six-slot outfit afterward. It measures home guide, home error, result preview and result error states at **360px and 1280px**: all **overflow 0**, every matched target at least **48 × 48px**. Counts by sampled state are **48 / 50 / 12 / 13**. Sanitized result images at both widths were visually inspected: portrait, preview explanation, actual gift art and save action remain contained and readable, with stacked mobile and side-by-side desktop preview. New evidence only: `.superpowers/sdd/2026-10-13-student-game-experience/evidence/final-fix-20261013-1950/{result-360.png,result-1280.png,layout.jsonl}`. No other plan's SDD path was read or written, and automatic screenshots/traces/video remain off.
 
 Self-review: changed pages preserve the existing hook order, accessible Korean guide/retry/preview labels, independent query enable/disable states, six-slot null preservation and explicit appearance writer. The gift outfit is a render-local object; GameAvatar tracks primitive slot values and aborts render on departure. Existing `useAppearance` ownership/revision/epoch checks and monotonic query publication are untouched. No old test assertion was removed or weakened. Scope ends with the three presentation fixes and their evidence; the root's one scoped re-review and teacher four-task implementation remain pending.
+
+## Student final gate and teacher handoff
+
+The most-capable whole-branch review examined the recorded branch baseline `cd7d8cef9cc4d7221276f682625781a8ff0ec2b0` through `c70b0b8`. Local `main` is stale; the recorded baseline equals `origin/main` and is an ancestor of this feature branch. The review found two Important presentation gaps and one Minor preview omission. One bounded fix wave (`f643d1a`, `d4f86e6`, `296dd3d`) addressed all three. Its independent scoped re-review confirmed every finding **ADDRESSED**, with no new breakage or residual findings. No second fix wave or parked finding was used. Runtime output disclosures were triaged as informational, and all four rulings were accepted.
+
+Current student product evidence: **236 frontend tests**, build/lint/E2E typecheck passed, **9 game Chromium cases** passed after the final presentation changes. The earlier whole Chromium gate was **26/26** before this one new browser case; the teacher combined gate must run the new complete suite rather than claim that historical count as a fresh result. Backend remains unchanged since the independently summed **576 tests / 33 suites / zero failures, errors or skips**. The root independently checked the final emitted `index-QdhdjeKi.js`: SHA-256 `992fbfc01accc268383d30496374f8285a14fc6eb378e789300f3fcc3331f02a`, **150 questions / 300 raw and JSON-escaped text/explanation strings / zero matches**. All four full ruling lines remain verbatim. Root also viewed both final sanitized result images and verified the saved scene versus clearly labeled local preview at both widths.
+
+Only this completed plan's ignored process directory is moved recoverably to `.superpowers/archive/2026-10-13-student-game-experience-296dd3d/`, preserving its reports, packages and authorized art/result evidence. Earlier `.superpowers/sdd/2026-10-13-student-game-experience/...` evidence paths above describe the original execution locations; their corresponding files are now beneath that archive. No sibling plan directory is changed. The reusable E2E router writes nothing by default; any teacher capture must use the teacher plan's own fresh run and must not read or write predecessor scratch.
+
+Continue the approved `docs/superpowers/plans/2026-10-13-teacher-learning-statistics.md` in the same branch/worktree, with its own ledger and four task gates. Outstanding combined proof includes actual school-scoped statistics/privacy and **avatar, gear, saved gift, map and learning history after supported backend restarts**. Current account/roster restart evidence does not substitute for that proof. The overall implementation goal is not complete at this student handoff, and no integration or production action is authorized by this record.
