@@ -6,6 +6,7 @@ import { meKey, useCurrentAccount } from '../auth/queries';
 import type { AccountMe } from '../auth/types';
 import { useLearningSession, useLearningStatus } from './queries';
 import { useLearningActions } from './useLearningActions';
+import { getPendingCommandEpoch, subscribePendingCommandCleanup } from './pendingCommands';
 import type { LearningStatus } from './types';
 
 function availableDay(status: LearningStatus): number | null {
@@ -20,6 +21,10 @@ const statusMessages = {
   WAIT_FOR_NEXT_DAY: '다음 회차는 다음 학습 날짜에 열려요.',
   COURSE_COMPLETE: '30회차 학습을 모두 마쳤어요.',
 };
+interface ResultCheck {
+  owner: string;
+  epoch: number;
+}
 
 export function LearningResultPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -30,42 +35,57 @@ export function LearningResultPage() {
   const status = useLearningStatus();
   const actions = useLearningActions();
   const heading = useRef<HTMLHeadingElement>(null);
-  const mountedOwner = useRef<string | undefined>(undefined);
-  const checking = useRef<string | null>(null);
-  const [checkOwner, setCheckOwner] = useState<string | null>(null);
+  const mounted = useRef(false);
+  const activeCheck = useRef<ResultCheck | null>(null);
+  const [checking, setChecking] = useState<ResultCheck | null>(null);
   const accountId = account.data?.role === 'STUDENT' ? account.data.accountId : undefined;
   const view = session.data;
   const result = view?.lastAnswer;
-  const isChecking = !!accountId && checkOwner === accountId;
+  const isChecking =
+    checking !== null &&
+    checking.owner === accountId &&
+    checking.epoch === getPendingCommandEpoch();
 
   useEffect(() => {
     heading.current?.focus();
   }, [accountId, view?.sessionId, view?.state, result?.attemptAnswerId]);
 
   useEffect(() => {
-    mountedOwner.current = accountId;
+    mounted.current = true;
+    const reset = () => {
+      activeCheck.current = null;
+      setChecking(null);
+    };
+    reset();
+    const unsubscribe = subscribePendingCommandCleanup(reset);
     return () => {
-      mountedOwner.current = undefined;
+      mounted.current = false;
+      activeCheck.current = null;
+      unsubscribe();
     };
   }, [accountId]);
 
-  function ownsPage() {
+  function ownsPage(epoch: number) {
     const current = client.getQueryData<AccountMe | null>(meKey);
     return (
-      mountedOwner.current === accountId &&
+      mounted.current &&
+      epoch === getPendingCommandEpoch() &&
       current?.role === 'STUDENT' &&
       current.accountId === accountId
     );
   }
+  function ownsCheck(check: ResultCheck) {
+    return activeCheck.current === check && check.owner === accountId && ownsPage(check.epoch);
+  }
 
   async function nextLearning() {
-    if (!accountId || checking.current === accountId || actions.busy || actions.pendingCommand)
-      return;
-    checking.current = accountId;
-    setCheckOwner(accountId);
+    if (!accountId || activeCheck.current || actions.busy || actions.pendingCommand) return;
+    const check: ResultCheck = { owner: accountId, epoch: getPendingCommandEpoch() };
+    activeCheck.current = check;
+    setChecking(check);
     try {
       const fresh = await status.refetch();
-      if (!ownsPage() || fresh.error || !fresh.data) return;
+      if (!ownsCheck(check) || fresh.error || !fresh.data) return;
       if (fresh.data.activeSession) {
         navigate(`/student/learning/sessions/${fresh.data.activeSession.sessionId}`);
         return;
@@ -77,18 +97,19 @@ export function LearningResultPage() {
         dayNumber: day,
         questionIds: null,
       });
-      if (started && ownsPage()) navigate(`/student/learning/sessions/${started.sessionId}`);
+      if (started && ownsCheck(check)) navigate(`/student/learning/sessions/${started.sessionId}`);
     } finally {
-      if (checking.current === accountId) {
-        checking.current = null;
-        if (ownsPage()) setCheckOwner(null);
+      if (activeCheck.current === check) {
+        activeCheck.current = null;
+        setChecking((current) => (current === check ? null : current));
       }
     }
   }
 
   async function retryPending() {
+    const epoch = getPendingCommandEpoch();
     const response = await actions.retryPending();
-    if (!response || !ownsPage()) return;
+    if (!response || !ownsPage(epoch)) return;
     navigate(
       `/student/learning/sessions/${response.kind === 'ANSWER' ? response.sessionId : response.view.sessionId}`,
     );

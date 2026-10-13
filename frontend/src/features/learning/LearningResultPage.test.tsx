@@ -2,7 +2,8 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import type { ReactNode } from 'react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server, student } from '../../test/server';
 import {
@@ -13,7 +14,8 @@ import {
   requestId,
   sessionId,
 } from '../../test/learningFixtures';
-import { meKey } from '../auth/queries';
+import { meKey, useAcceptAccount, useCurrentAccount } from '../auth/queries';
+import * as learningApi from './api';
 import { LearningSessionPage } from './LearningSessionPage';
 import { LearningResultPage } from './LearningResultPage';
 import {
@@ -56,6 +58,7 @@ const json = (view: LearningSessionView) =>
 function setup(
   path = `/student/learning/sessions/${sessionId}/result`,
   cachedStatus?: LearningStatus,
+  controls?: ReactNode,
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
@@ -67,6 +70,7 @@ function setup(
     ...render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[path]}>
+          {controls}
           <Routes>
             <Route path="/student/learning/sessions/:sessionId" element={<LearningSessionPage />} />
             <Route
@@ -89,7 +93,241 @@ beforeEach(() => {
     http.get('*/api/student/learning/sessions/:id', () => json(completed)),
   );
 });
-afterEach(() => clearAllPendingCommands());
+afterEach(() => {
+  vi.restoreAllMocks();
+  clearAllPendingCommands();
+});
+
+// Resetting only by account ID strands returning A's next/retry controls in the old check.
+it.each(['next', 'retry'] as const)(
+  'returningAccountCanUse%sAfterACanceledResultStatusRead',
+  async (action) => {
+    const oldEntered = deferred<void>();
+    const oldRelease = deferred<void>();
+    const newerEntered = deferred<void>();
+    const newerRelease = deferred<void>();
+    const statusReads = vi.spyOn(learningApi, 'getLearningStatus');
+    const nextStatus: LearningStatus = {
+      ...finishedStatus,
+      nextAction: 'START_FIRST',
+      calendarCap: 2,
+    };
+    const studentA = { ...student, role: 'STUDENT' as const };
+    const studentB = { ...studentA, accountId: 'student-b' };
+    const command = { requestId, mode: 'FIRST' as const, dayNumber: 2, questionIds: null };
+    const commands: unknown[] = [];
+    let current = studentA;
+    let aReads = 0;
+    let holdNewer = false;
+    let started = false;
+    server.use(
+      http.get('*/api/auth/me', () => HttpResponse.json(current)),
+      http.get('*/api/student/learning/status', async () => {
+        if (current.accountId === 'student-a') {
+          if (++aReads === 2) {
+            oldEntered.resolve();
+            await oldRelease.promise;
+          } else if (holdNewer) {
+            holdNewer = false;
+            newerEntered.resolve();
+            await newerRelease.promise;
+          }
+        }
+        return HttpResponse.json(nextStatus);
+      }),
+      http.get('*/api/student/learning/sessions/:id', () =>
+        json(started ? activeSession : completed),
+      ),
+      http.post('*/api/student/learning/sessions', async ({ request }) => {
+        commands.push(await request.json());
+        started = true;
+        return json(activeSession);
+      }),
+    );
+    function SwitchAccount() {
+      const accept = useAcceptAccount();
+      const account = useCurrentAccount();
+      return (
+        <>
+          <p>{account.data?.accountId}</p>
+          <button
+            onClick={() => {
+              current = studentB;
+              void accept(studentB);
+            }}
+          >
+            학생 B로 전환
+          </button>
+          <button
+            onClick={() => {
+              current = studentA;
+              void accept(studentA).then(() => {
+                if (action === 'retry')
+                  writePendingCommand(student.accountId, { kind: 'START', command });
+              });
+            }}
+          >
+            학생 A로 복귀
+          </button>
+        </>
+      );
+    }
+    setup(undefined, undefined, <SwitchAccount />);
+    await userEvent.click(await screen.findByRole('button', { name: '다음 회차 시작' }));
+    await oldEntered.promise;
+    const oldRead = statusReads.mock.results.at(-1)!.value as Promise<unknown>;
+    try {
+      await userEvent.click(screen.getByRole('button', { name: '학생 B로 전환' }));
+      await screen.findByText('student-b');
+      await userEvent.click(screen.getByRole('button', { name: '학생 A로 복귀' }));
+      await screen.findByText('student-a');
+      expect(commands).toEqual([]);
+      const control = await screen.findByRole('button', {
+        name: action === 'retry' ? '같은 학습 시작 다시 확인' : '다음 회차 시작',
+      });
+      await waitFor(() => expect(control).toBeEnabled());
+      if (action === 'next') {
+        holdNewer = true;
+        await userEvent.click(control);
+        await newerEntered.promise;
+      }
+      await act(async () => {
+        oldRelease.resolve();
+        await Promise.allSettled([oldRead]);
+      });
+      expect(commands).toEqual([]);
+      if (action === 'next') {
+        expect(control).toBeDisabled();
+        expect(screen.getByText('다음 학습을 확인하고 있어요')).toBeVisible();
+        newerRelease.resolve();
+      } else {
+        expect(control).toBeEnabled();
+        expect(screen.queryByText('다음 학습을 확인하고 있어요')).toBeNull();
+        await userEvent.click(control);
+      }
+      expect(await screen.findByRole('button', { name: 'O · 사실' })).toBeVisible();
+      expect(commands).toEqual([
+        { ...command, requestId: action === 'retry' ? requestId : expect.any(String) },
+      ]);
+    } finally {
+      oldRelease.resolve();
+      newerRelease.resolve();
+    }
+  },
+);
+
+// Even after returning to A, an old request's finalizer cannot unlock A's newer status check.
+it('oldResultOperationFinalizerCannotUnlockANewerCheckForTheReturningOwner', async () => {
+  const releaseOldBody = deferred<void>();
+  const newerEntered = deferred<void>();
+  const releaseNewer = deferred<void>();
+  const studentA = { ...student, role: 'STUDENT' as const };
+  const studentB = { ...studentA, accountId: 'student-b' };
+  const ready: LearningStatus = { ...finishedStatus, nextAction: 'START_FIRST', calendarCap: 2 };
+  let current = studentA;
+  let holdNewer = false;
+  let posts = 0;
+  let oldResponse: Response | undefined;
+  let oldSignal: AbortSignal | undefined;
+  const starts = vi.spyOn(learningApi, 'startLearningSession');
+  const upstream = globalThis.fetch;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    init?.signal?.throwIfAborted();
+    if (input === '/api/student/learning/sessions' && init?.method === 'POST') {
+      posts++;
+      if (posts === 1) {
+        oldSignal = init.signal!;
+        oldResponse = new Response(
+          new ReadableStream({
+            start(controller) {
+              oldSignal!.addEventListener(
+                'abort',
+                () => {
+                  void releaseOldBody.promise.then(() =>
+                    controller.error(new DOMException('Aborted', 'AbortError')),
+                  );
+                },
+                { once: true },
+              );
+            },
+          }),
+          { headers: { 'Content-Type': 'application/json' } },
+        );
+        return oldResponse;
+      }
+    }
+    return upstream(input, init);
+  });
+  server.use(
+    http.get('*/api/auth/me', () => HttpResponse.json(current)),
+    http.get('*/api/student/learning/status', async () => {
+      if (holdNewer) {
+        holdNewer = false;
+        newerEntered.resolve();
+        await releaseNewer.promise;
+        return HttpResponse.json(finishedStatus);
+      }
+      return HttpResponse.json(ready);
+    }),
+  );
+  function SwitchAccount() {
+    const accept = useAcceptAccount();
+    const account = useCurrentAccount();
+    return (
+      <>
+        <p>{account.data?.accountId}</p>
+        <button
+          onClick={() => {
+            current = studentB;
+            void accept(studentB);
+          }}
+        >
+          학생 B로 전환
+        </button>
+        <button
+          onClick={() => {
+            current = studentA;
+            void accept(studentA);
+          }}
+        >
+          학생 A로 복귀
+        </button>
+      </>
+    );
+  }
+  setup(undefined, undefined, <SwitchAccount />);
+  await userEvent.click(await screen.findByRole('button', { name: '다음 회차 시작' }));
+  await waitFor(() => expect(oldResponse?.bodyUsed).toBe(true));
+  const oldStart = starts.mock.results[0].value as Promise<unknown>;
+  try {
+    await userEvent.click(screen.getByRole('button', { name: '학생 B로 전환' }));
+    await screen.findByText('student-b');
+    expect(oldSignal?.aborted).toBe(true);
+    await userEvent.click(screen.getByRole('button', { name: '학생 A로 복귀' }));
+    await screen.findByText('student-a');
+    const next = await screen.findByRole('button', { name: '다음 회차 시작' });
+    await waitFor(() => expect(next).toBeEnabled());
+    holdNewer = true;
+    await userEvent.click(next);
+    await newerEntered.promise;
+    await act(async () => {
+      releaseOldBody.resolve();
+      await Promise.allSettled([oldStart]);
+    });
+    expect(next).toBeDisabled();
+    expect(screen.getByText('다음 학습을 확인하고 있어요')).toBeVisible();
+    expect(screen.getByRole('heading', { name: '회차 통과' })).toBeVisible();
+    expect(posts).toBe(1);
+    releaseNewer.resolve();
+    expect(await screen.findByText('다음 회차는 다음 학습 날짜에 열려요.')).toBeVisible();
+    expect(screen.queryByText('다음 학습을 확인하고 있어요')).toBeNull();
+    expect(readPendingCommand(studentA.accountId)).toBeNull();
+    expect(posts).toBe(1);
+  } finally {
+    releaseOldBody.resolve();
+    releaseNewer.resolve();
+  }
+});
 
 // Finish is navigation: a complete GET restores the result without another save request.
 it('completedSessionRestoresWithoutAFinishMutation', async () => {
