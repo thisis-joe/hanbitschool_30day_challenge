@@ -1,4 +1,4 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { replaceEqualDeep, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useCurrentAccount } from '../auth/queries';
 import { getGame, getJourney } from './api';
 import type { GameView, JourneyView } from './types';
@@ -14,6 +14,14 @@ export function useGame(): UseQueryResult<GameView> {
   return useQuery({
     queryKey: gameKeys.view(owner ?? ''),
     queryFn: ({ signal }) => getGame(signal),
+    structuralSharing: (previous, incoming) => {
+      const cached = previous as GameView | undefined;
+      const received = incoming as GameView;
+      // Compare at publication: a read may have started while a save was still pending.
+      return cached && cached.revision > received.revision
+        ? cached
+        : replaceEqualDeep(previous, incoming);
+    },
     enabled: owner !== undefined,
   });
 }

@@ -11,7 +11,7 @@ import { clearAllPendingCommands } from '../learning/pendingCommands';
 import type { AccountMe } from '../auth/types';
 import { gameKeys, useGame, useJourney } from './queries';
 import { useAppearance } from './useAppearance';
-import type { Equipment } from './types';
+import type { AppearanceCommand, Equipment } from './types';
 
 const studentA: AccountMe = { ...student, role: 'STUDENT' };
 const studentB: AccountMe = { ...studentA, accountId: 'student-b' };
@@ -271,6 +271,93 @@ it('newerCacheRevisionCannotBeOverwrittenByALateSave', async () => {
   });
   expect(result.current.error).not.toBeNull();
 });
+
+// A GET started during PUT must not publish an older revision after the accepted save.
+it.each(['response', 'canonicalRecovery'])(
+  'lateGameReadCannotRegressAnAcceptedSave: %s',
+  async (completion) => {
+    const putEntered = deferred<void>(),
+      releasePut = deferred<void>();
+    const readEntered = deferred<void>(),
+      releaseRead = deferred<void>();
+    const commands: AppearanceCommand[] = [];
+    const accepted = { ...gameView, characterId: 'haru' as const, revision: 8 };
+    server.use(
+      http.put('*/api/student/game/appearance', async ({ request }) => {
+        const command = (await request.json()) as AppearanceCommand;
+        commands.push(command);
+        if (commands.length === 1) {
+          putEntered.resolve();
+          await releasePut.promise;
+          return completion === 'response' ? HttpResponse.json(accepted) : HttpResponse.error();
+        }
+        return HttpResponse.json({ ...accepted, characterId: command.characterId, revision: 9 });
+      }),
+      http.get('*/api/student/game', async () => {
+        readEntered.resolve();
+        await releaseRead.promise;
+        return HttpResponse.json(gameView);
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(meKey, studentA);
+    client.setQueryData(gameKeys.view(studentA.accountId), gameView);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => ({ game: useGame(), appearance: useAppearance() }), {
+      wrapper,
+    });
+    let saving!: Promise<boolean>, reading!: Promise<void>;
+    act(() => {
+      saving = result.current.appearance.save('haru', gameView.equippedBySlot);
+    });
+    await putEntered.promise;
+    act(() => {
+      reading = client.refetchQueries({ queryKey: gameKeys.view(studentA.accountId), exact: true });
+    });
+    await readEntered.promise;
+    // A separate immediate handler supplies the canonical GET after a lost PUT response.
+    server.use(http.get('*/api/student/game', () => HttpResponse.json(accepted)));
+    await act(async () => {
+      releasePut.resolve();
+      expect(await saving).toBe(true);
+    });
+    expect(client.getQueryData(gameKeys.view(studentA.accountId))).toMatchObject({
+      characterId: 'haru',
+      revision: 8,
+    });
+    await act(async () => {
+      releaseRead.resolve();
+      await reading;
+    });
+    expect(client.getQueryData(gameKeys.view(studentA.accountId))).toMatchObject({
+      characterId: 'haru',
+      revision: 8,
+    });
+    await waitFor(() =>
+      expect(result.current.game.data).toMatchObject({ characterId: 'haru', revision: 8 }),
+    );
+    await act(async () =>
+      expect(await result.current.appearance.save('bora', gameView.equippedBySlot)).toBe(true),
+    );
+    expect(commands).toHaveLength(2);
+    expect(commands[1]).toEqual({
+      characterId: 'bora',
+      expectedRevision: 8,
+      equippedBySlot: {
+        face: 'face-1',
+        hat: null,
+        top: null,
+        bottom: null,
+        shoes: null,
+        hand: null,
+      },
+    });
+  },
+);
 
 it('accountQueriesAreIsolatedDisabledForStaffAndAbortOnDeparture', async () => {
   const entered = deferred<void>(),
