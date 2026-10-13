@@ -301,3 +301,106 @@ test('cosmeticReadsCannotHoldTheLearningCommandOrResetItsDeadline', async ({ pag
     await page.unrouteAll({ behavior: 'wait' });
   }
 });
+
+// Uses normally earned saved reward and actual GETs; fault injection never fabricates a game snapshot.
+test('finalPresentationGuideRecoveryAndGiftPreview', async ({ page }) => {
+  await provisionLearner(page);
+  let puts = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'PUT' && request.url().endsWith('/game/appearance')) puts++;
+  });
+  await expect(
+    page.getByText('아직 여행 친구를 선택하지 않았어요.', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: '캐릭터 선택하기', exact: true })).toHaveAttribute(
+    'href',
+    '/student/character',
+  );
+  await layoutAndTargets(page);
+  expect(puts).toBe(0);
+
+  let failing = true;
+  await page.route(/\/api\/student\/(game|learning\/map)$/, async (route) => {
+    const actual = await route.fetch();
+    expect(actual.status()).toBe(200);
+    if (failing) await route.abort('failed');
+    else await route.fulfill({ response: actual });
+  });
+  await page.reload();
+  await expect(page.getByRole('button', { name: '여행 친구 다시 불러오기' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '지도 다시 불러오기' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '오늘 학습 시작', exact: true })).toBeEnabled();
+  await layoutAndTargets(page);
+  failing = false;
+  await page.getByRole('button', { name: '여행 친구 다시 불러오기' }).click();
+  await page.getByRole('button', { name: '지도 다시 불러오기' }).click();
+  await expect(page.getByRole('button', { name: '여행 친구 다시 불러오기' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '지도 다시 불러오기' })).toHaveCount(0);
+  expect(puts).toBe(0);
+  const first = await firstPass(page);
+  const saved = await game(page);
+  const xp = (await status(page)).totalXp;
+  expect(saved.characterId).toBeNull();
+  expect(saved.equippedBySlot.face).toBeNull();
+  await resultPage(page, first.sessionId, '회차 통과');
+  const preview = page.getByRole('region', { name: '선물 착용 미리보기' });
+  await expect(preview).toContainText('미리보기예요. 지금 착용하기를 누르면 저장돼요.');
+  await expect(preview.getByRole('img', { name: /캐릭터 미선택/ })).toBeVisible();
+  await layoutAndTargets(page);
+  expect(await game(page)).toEqual(saved);
+  expect((await status(page)).totalXp).toBe(xp);
+  expect(puts).toBe(0);
+  // Once both real canvases finish, preview pixels must differ from the saved unequipped scene.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const picture = (selector: string) => {
+          const canvas = document.querySelector<HTMLCanvasElement>(selector)!;
+          return Array.from(canvas.getContext('2d')!.getImageData(0, 0, 128, 176).data);
+        };
+        const saved = picture('.game-learning-scene canvas');
+        const preview = picture('.learning-gift-preview canvas');
+        return (
+          saved.some((value) => value !== 0) &&
+          preview.some((value) => value !== 0) &&
+          saved.some((value, index) => value !== preview[index])
+        );
+      }),
+    )
+    .toBe(true);
+  await captureSanitizedResultProof(page);
+  failing = true;
+  await page.reload();
+  await expect(page.getByRole('button', { name: '여행 친구 다시 불러오기' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '지도 다시 불러오기' })).toBeEnabled();
+  await expect(page.getByText('저장된 선물 정보를 불러오고 있어요.', { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole('button', { name: '다음 회차 시작', exact: true })).toBeEnabled();
+  await layoutAndTargets(page);
+  failing = false;
+  await page.getByRole('button', { name: '여행 친구 다시 불러오기' }).click();
+  await page.getByRole('button', { name: '지도 다시 불러오기' }).click();
+  await expect(preview).toBeVisible();
+  expect(puts).toBe(0);
+  expect(await game(page)).toEqual(saved);
+  await page.unrouteAll({ behavior: 'wait' });
+  const put = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PUT' && response.url().endsWith('/game/appearance'),
+  );
+  await page.getByRole('button', { name: '지금 착용하기', exact: true }).click();
+  expect((await put).status()).toBe(200);
+  expect(puts).toBe(1);
+  const worn = await game(page);
+  expect(worn.characterId).toBeNull();
+  expect(worn.equippedBySlot).toEqual({
+    face: 'face-1',
+    hat: null,
+    top: null,
+    bottom: null,
+    shoes: null,
+    hand: null,
+  });
+  expect((await status(page)).totalXp).toBe(xp);
+});

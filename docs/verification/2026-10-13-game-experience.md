@@ -114,7 +114,37 @@ With both capture variables explicitly unset, the full actual Chromium suite pas
 ## Deferred findings for final-review triage
 
 - Task 2 runtime output: JVM CDS warning and Spring shutdown INFO. Record separately from test failures; do not claim literal pristine output.
-- Task 5 home game-read error recovery: loading fallback lacks an explicit error/retry at the reported dashboard boundary. Final reviewer must triage; Task 7 has not silently resolved or pre-judged it.
+- Task 5 home game-read error recovery: resolved in the bounded final presentation fix below; its scoped re-review remains pending.
 - Task 5 Vitest jsdom environment performance hint remains informational output; final reviewer must triage.
 - Browser runner emits `NO_COLOR`/`FORCE_COLOR` environment warning; no suppression or blanket pristine-output claim.
 - Teacher G08/G09 and teacher portions of G10/G12/G13/G14, final game/whole-branch review and combined regression are outstanding work in the parent plan. No push, PR, merge, deployment, integration menu or scratch removal has been performed.
+
+## Bounded final presentation fix — 2026-10-13
+
+Fix base: `c70b0b8ec2a24d23cc6371eee182a45bcb217d77`. Product work units: `f643d1a` (home selection guide and read recovery) and `d4f86e6` (saved gift preview and result read recovery). This implements the three approved final-review presentation findings from spec sections 4/6/11; it does not complete the outstanding teacher plan or the root final review gate.
+
+Home now visibly explains the nullable character selection and links to `/student/character`, alongside its canonical start/continue controls. Failed home game and journey reads expose independent GET retries. Saved results expose the same independent cosmetic-read recovery, and a gift lookup failure no longer claims indefinite loading. A labeled `선물 착용 미리보기` uses the saved character and a copied six-slot outfit with only the awarded slot replaced. The saved scene, query equipment, nullable character and XP stay canonical until the existing explicit `지금 착용하기` appearance PUT succeeds. No backend/auth/renderer/query-guard/learning-writer changes were made.
+
+TDD RED: focused dashboard/result tests on the base implementation produced **39 passed / 9 expected failures** for absent selection guidance, cosmetic retry controls, and gift preview. A new actual-browser test against the previously built owned test web failed at the absent visible selection guide (**1 failed**, expected visible text not found). The supplemental command-independence cases characterize already-required learning behavior.
+
+The new result recovery test initially observed the existing restored-lastAnswer boundary: its automatic game refresh cancels/replaces the initial read. It now observes two real API invocations and the affected account query's `status: error, fetchStatus: idle`, then clicks the current enabled retry button. That is a synchronization correction within the new test only. All old assertions, timings, owner/epoch, pending writer, deadline, first facts and XP assertions remain intact; the four Ruling lines above are unchanged.
+
+Final commands used Node **v24.19.0** / pnpm **11.25.0** with `/Users/Joseph/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin` on PATH:
+
+```sh
+pnpm --dir frontend test src/features/learning/LearningDashboardPage.test.tsx src/features/learning/LearningResultPage.test.tsx src/features/game/LearningGameScene.test.tsx
+pnpm --dir frontend test
+pnpm --dir frontend build
+pnpm --dir frontend lint
+pnpm --dir frontend exec tsc --project tsconfig.e2e.json --noEmit
+HANBIT_E2E_BASE_URL=http://127.0.0.1:8090 HANBIT_E2E_COMPOSE_PROJECT=hanbit-game-e2e HANBIT_E2E_EVIDENCE_PLAN=2026-10-13-student-game-experience HANBIT_E2E_EVIDENCE_RUN=final-fix-20261013-1950 pnpm --dir frontend test:e2e e2e/game-flow.spec.ts --grep finalPresentationGuideRecoveryAndGiftPreview
+HANBIT_E2E_BASE_URL=http://127.0.0.1:8090 HANBIT_E2E_COMPOSE_PROJECT=hanbit-game-e2e pnpm --dir frontend test:e2e e2e/game-flow.spec.ts
+```
+
+GREEN: focused dashboard/result/scene **61/61**, whole frontend **236/236 in 28 files** (previous count 221 + 15 new cases), build/lint/E2E typecheck exit 0. Build emitted `index-QdhdjeKi.js` and `index-F3_eAIFd.css`. Opt-in final presentation browser test **1/1 in 3.7s**, then all actual game-browser cases **9/9 in 21.0s** with evidence variables unset. These include existing appearance relogin, locks, first-pass/replay XP, revision conflict, nullable-character/deadline and held-real-response command independence cases. The full unit gate includes the unchanged prior-owner/unmount/account/epoch/monotonic-revision regressions. Vitest's jsdom performance hint and Playwright's `NO_COLOR`/`FORCE_COLOR` warning remain informational output; no literal pristine-output claim is made.
+
+Before rebuilding, all three Compose service labels matched project `hanbit-game-e2e` and this worktree's `infra` working directory; `.env.e2e.local` mode was 600 without reading its values, and the existing backend was healthy. Only the owned web image was built and web recreated with `up -d --no-deps --force-recreate web`, followed by public readiness HTTP 200. Backend/database container IDs were unchanged (`37cfe0ed28e3` / `52419d668b75`); no backend/database/volume restart or recreation occurred. Vite art handle 1791 and default 8088/production were untouched. Test account data was provisioned through the unchanged credential helper and normal UI/API; cosmetic fault injection first fetched the actual HTTP 200 response, then aborted delivery, never synthesized a game snapshot.
+
+The new browser case checks GET-only home/result retries, real normally-earned face-1 preview pixels differing from the saved unequipped scene, no appearance PUT before the explicit click, unchanged saved nullable character/equipment/XP before that click, and one successful PUT with the complete six-slot outfit afterward. It measures home guide, home error, result preview and result error states at **360px and 1280px**: all **overflow 0**, every matched target at least **48 × 48px**. Counts by sampled state are **48 / 50 / 12 / 13**. Sanitized result images at both widths were visually inspected: portrait, preview explanation, actual gift art and save action remain contained and readable, with stacked mobile and side-by-side desktop preview. New evidence only: `.superpowers/sdd/2026-10-13-student-game-experience/evidence/final-fix-20261013-1950/{result-360.png,result-1280.png,layout.jsonl}`. No other plan's SDD path was read or written, and automatic screenshots/traces/video remain off.
+
+Self-review: changed pages preserve the existing hook order, accessible Korean guide/retry/preview labels, independent query enable/disable states, six-slot null preservation and explicit appearance writer. The gift outfit is a render-local object; GameAvatar tracks primitive slot values and aborts render on departure. Existing `useAppearance` ownership/revision/epoch checks and monotonic query publication are untouched. No old test assertion was removed or weakened. Scope ends with the three presentation fixes and their evidence; the root's one scoped re-review and teacher four-task implementation remain pending.
