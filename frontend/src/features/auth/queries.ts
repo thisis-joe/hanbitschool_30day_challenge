@@ -12,19 +12,30 @@ export function replaceAccountCache(client: QueryClient, account: AccountMe | nu
   client.setQueryData(meKey, account);
 }
 export function useCurrentAccount() {
+  const client = useQueryClient();
   return useQuery({
     queryKey: meKey,
     queryFn: async () => {
       const epoch = getPendingCommandEpoch();
+      let account: AccountMe | null;
       try {
-        return await getMe();
+        account = await getMe();
       } catch (error) {
-        if (error instanceof HttpError && error.status === 401) {
-          if (epoch === getPendingCommandEpoch()) clearAllPendingCommands();
-          return null;
-        }
-        throw error;
+        if (!(error instanceof HttpError) || error.status !== 401) throw error;
+        account = null;
       }
+      // An explicit acceptance may have superseded this /me request while it was pending.
+      if (epoch !== getPendingCommandEpoch())
+        return client.getQueryData<AccountMe | null>(meKey) ?? null;
+      const previous = client.getQueryData<AccountMe | null>(meKey);
+      if (
+        account === null ||
+        (previous !== undefined && previous?.accountId !== account.accountId)
+      ) {
+        clearAllPendingCommands();
+        replaceAccountCache(client, account);
+      }
+      return account;
     },
     retry: false,
   });

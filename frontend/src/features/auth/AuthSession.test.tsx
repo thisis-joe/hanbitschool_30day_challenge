@@ -118,7 +118,7 @@ it('latePreviousAccount401DoesNotClearTheNewStudentsPendingCommand', async () =>
   await act(async () => {
     release.resolve();
     // The spy forwards the actual MSW request; await its rejection after the hook's own handler.
-    await expect(oldRequest).rejects.toMatchObject({ status: 401 });
+    await expect(oldRequest).rejects.toMatchObject({ name: 'AbortError' });
   });
   expect(readPendingCommand('student-b')).toEqual({
     kind: 'ADVANCE',

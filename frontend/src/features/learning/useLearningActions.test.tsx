@@ -31,6 +31,7 @@ import {
 } from './pendingCommands';
 
 afterEach(() => {
+  vi.restoreAllMocks();
   clearAllPendingCommands();
   sessionStorage.clear();
 });
@@ -145,29 +146,31 @@ it('fastDoubleClickSubmitsOnlyOneLogicalAnswer', async () => {
 
 // Missing signals or checking only the mounted hook (not auth epoch) lets old student data reappear.
 it('accountChangeAbortsReadsAndIgnoresLateMutationCompletion', async () => {
-  const outgoing = vi.spyOn(globalThis, 'fetch');
+  const upstream = globalThis.fetch;
   const release = deferred<void>();
   let reads = 0;
   let posts = 0;
   const studentB = { ...student, accountId: 'student-b' } as AccountMe;
-  server.use(
-    http.get('*/api/student/learning/*', async ({ request }) => {
-      reads++;
-      await release.promise;
-      return HttpResponse.json(
-        new URL(request.url).pathname.endsWith('/questions')
+  // Keep canceled transport promises explicit; MSW's Node socket reuse can outlive an abort.
+  const outgoing = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    if (typeof input !== 'string' || !input.startsWith('/api/student/learning/'))
+      return upstream(input, init);
+    init?.signal?.throwIfAborted();
+    const mutation = init?.method === 'POST';
+    if (mutation) posts++;
+    else reads++;
+    await release.promise;
+    const path = new URL(input, window.location.origin).pathname;
+    return Response.json(
+      mutation
+        ? answerResult
+        : path.endsWith('/questions')
           ? [personalQuestion]
-          : new URL(request.url).pathname.endsWith('/status')
+          : path.endsWith('/status')
             ? learningStatus
             : activeSession,
-      );
-    }),
-    http.post('*/api/student/learning/sessions/:id/answers', async () => {
-      posts++;
-      await release.promise;
-      return HttpResponse.json(answerResult);
-    }),
-  );
+    );
+  });
   const { result, client } = setup(student as AccountMe, true);
   await waitFor(() => expect(reads).toBe(3));
   let oldAnswer!: Promise<unknown>;
@@ -187,6 +190,9 @@ it('accountChangeAbortsReadsAndIgnoresLateMutationCompletion', async () => {
   await act(async () => {
     release.resolve();
     expect(await oldAnswer).toBeNull();
+    await Promise.allSettled(
+      outgoing.mock.results.map((result) => result.value as Promise<unknown>),
+    );
   });
   expect(client.getQueryData(learningKeys.session('student-a', sessionId))).toBeUndefined();
   expect(readPendingCommand('student-a')).toBeNull();
