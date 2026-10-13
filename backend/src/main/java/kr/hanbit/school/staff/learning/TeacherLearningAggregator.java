@@ -71,6 +71,73 @@ public class TeacherLearningAggregator {
     }).sorted(Comparator.comparingInt(TeacherQuestionRow::questionId)).toList();
   }
 
+  public List<TeacherAnswerRow> answers(TeacherLearningFacts facts, UUID studentId) {
+    var first = firstAnswers(facts).stream().filter(a -> a.getStudentAccountId().equals(studentId))
+        .collect(Collectors.toMap(FirstAnswer::getQuestionId, a -> a));
+    var mastered = facts.masteries().stream().filter(m -> m.getStudentAccountId().equals(studentId))
+        .map(m -> new QuestionKey(studentId, m.getVersion(), m.getQuestionId())).collect(Collectors.toSet());
+    return facts.questions().stream().map(q -> {
+      var answer = first.get(q.getQuestionId());
+      return new TeacherAnswerRow(q.getQuestionId(), q.getDay(), q.getPosition(), q.getText(),
+          q.getAnswer().name(), choice(answer), outcome(answer),
+          answer == null ? null : answer.getAnsweredAt(),
+          answer != null && !answer.isCorrect()
+              && mastered.contains(new QuestionKey(studentId, q.getVersion(), q.getQuestionId())));
+    }).sorted(Comparator.comparingInt(TeacherAnswerRow::questionId)).toList();
+  }
+
+  public List<TeacherDayRow> days(TeacherLearningFacts facts, UUID studentId,
+      List<TeacherAnswerRow> answers) {
+    var versions = facts.questions().stream().map(q -> q.getVersion()).collect(Collectors.toSet());
+    var progress = facts.progress().stream().filter(p -> p.getStudentAccountId().equals(studentId)
+        && versions.contains(p.getVersion())).collect(Collectors.toMap(DayProgress::getDay, p -> p));
+    var byDay = answers.stream().filter(a -> a.outcome() != TeacherAnswerState.UNANSWERED)
+        .collect(Collectors.groupingBy(TeacherAnswerRow::dayNumber));
+    var rows = new ArrayList<TeacherDayRow>();
+    for (int day = 1; day <= 30; day++) {
+      var first = byDay.getOrDefault(day, List.of());
+      var actual = progress.get(day);
+      rows.add(new TeacherDayRow(day, actual == null ? "NOT_STARTED" : actual.getState().name(),
+          first.size(), (int) first.stream().filter(a -> a.outcome() == TeacherAnswerState.CORRECT).count(),
+          (int) first.stream().filter(a -> a.outcome() == TeacherAnswerState.TIMED_OUT).count(),
+          actual == null ? null : actual.getPassedAt()));
+    }
+    return List.copyOf(rows);
+  }
+
+  public Distinction distinctionForAnswers(List<TeacherAnswerRow> answers, String correctChoice) {
+    var selected = answers.stream().filter(a -> a.correctChoice().equals(correctChoice)
+        && a.outcome() != TeacherAnswerState.UNANSWERED).toList();
+    int correct = (int) selected.stream().filter(a -> a.outcome() == TeacherAnswerState.CORRECT).count();
+    return new Distinction(selected.size(), correct, ratio(correct, selected.size()));
+  }
+
+  public TeacherQuestionDetail question(TeacherLearningFacts facts, int questionId) {
+    var canonical = facts.questions().stream().filter(q -> q.getQuestionId() == questionId).findFirst()
+        .orElseThrow(() -> new kr.hanbit.school.shared.web.ApiException(404, "NOT_FOUND", "문항을 찾을 수 없습니다."));
+    var row = questions(facts).stream().filter(q -> q.questionId() == questionId).findFirst().orElseThrow();
+    var answers = firstAnswers(facts).stream().filter(a -> a.getQuestionId() == questionId)
+        .collect(Collectors.toMap(FirstAnswer::getStudentAccountId, a -> a));
+    var respondents = facts.students().stream().filter(s -> answers.containsKey(s.accountId()))
+        .sorted(Comparator.comparingInt(TeacherLearningFacts.Student::studentNumber)
+            .thenComparing(s -> s.accountId().toString()))
+        .map(s -> new TeacherRespondent(s.accountId(), s.studentNumber(), s.name(),
+            choice(answers.get(s.accountId())), outcome(answers.get(s.accountId())))).toList();
+    return new TeacherQuestionDetail(row, canonical.getExplanation(),
+        respondents.stream().filter(r -> r.outcome() == TeacherAnswerState.CORRECT).toList(),
+        respondents.stream().filter(r -> r.outcome() != TeacherAnswerState.CORRECT).toList(), row.unanswered());
+  }
+
+  private TeacherAnswerState outcome(FirstAnswer answer) {
+    if (answer == null) return TeacherAnswerState.UNANSWERED;
+    if (answer.isTimedOut()) return TeacherAnswerState.TIMED_OUT;
+    return answer.isCorrect() ? TeacherAnswerState.CORRECT : TeacherAnswerState.WRONG;
+  }
+
+  private String choice(FirstAnswer answer) {
+    return answer == null || answer.getChoice() == null ? null : answer.getChoice().name();
+  }
+
   private List<FirstAnswer> firstAnswers(TeacherLearningFacts facts) {
     var students = facts.students().stream().map(TeacherLearningFacts.Student::accountId).collect(Collectors.toSet());
     var questions = facts.questions().stream().collect(Collectors.toMap(q -> q.getQuestionId(), q -> q.getVersion()));

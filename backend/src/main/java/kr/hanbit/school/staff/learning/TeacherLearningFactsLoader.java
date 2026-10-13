@@ -51,7 +51,7 @@ public class TeacherLearningFactsLoader {
       return new TeacherLearningFacts(students, canonical, List.of(), List.of(), List.of());
     return new TeacherLearningFacts(students, canonical,
         first.findByStudentAccountIdInAndVersion(validIds, version),
-        progress.findByStudentAccountIdInAndVersionAndState(validIds, version, DayProgressState.PASSED),
+        progress.findByStudentAccountIdInAndVersion(validIds, version),
         masteries.findByIdStudentAccountIdInAndIdVersion(validIds, version));
   }
 }
