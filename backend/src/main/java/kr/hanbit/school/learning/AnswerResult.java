@@ -2,6 +2,7 @@ package kr.hanbit.school.learning;
 
 import java.util.UUID;
 import kr.hanbit.school.content.AnswerChoice;
+import kr.hanbit.school.game.RewardGrant;
 
 public record AnswerResult(
     UUID attemptAnswerId,
@@ -17,4 +18,5 @@ public record AnswerResult(
     DayAttemptState attemptState,
     DayProgressState dayState,
     boolean nextDayAvailable,
-    boolean reviewPromptEligible) {}
+    boolean reviewPromptEligible,
+    RewardGrant rewardGranted) {}

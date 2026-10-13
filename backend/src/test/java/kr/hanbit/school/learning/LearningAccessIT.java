@@ -242,7 +242,7 @@ class LearningAccessIT extends LearningApiTestSupport {
             UUID.randomUUID(), 1, AnswerOutcome.CORRECT,
             kr.hanbit.school.content.AnswerChoice.O, "서버에만 남아야 하는 이전 해설",
             565, 565, 1, 1, 1, DayAttemptState.ACTIVE,
-            DayProgressState.IN_PROGRESS, false, false);
+            DayProgressState.IN_PROGRESS, false, false, null);
     jdbc.update("update learning_sessions set last_result_json=cast(? as jsonb) where id=?",
         json.writeValueAsString(staleFeedback), sessionId);
 
