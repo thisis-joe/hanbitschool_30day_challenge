@@ -492,6 +492,57 @@ test('teacherQuestionDialogShowsTimeoutSeparateFromUntouched', async ({ page }) 
     .toBe('TIMED_OUT');
   await signOut(page);
   await teacher(page, c);
+  // A mounted question-table trigger can own focus before classroom metadata is ready.
+  let releaseMetadata!: () => void;
+  const metadataGate = new Promise<void>((resolve) => {
+    releaseMetadata = resolve;
+  });
+  let metadataHeld = false;
+  const metadataUrl = '**/api/staff/classrooms?scope=SCHOOL';
+  await page.route(metadataUrl, async (request) => {
+    const response = await request.fetch();
+    metadataHeld = true;
+    await metadataGate;
+    await request.fulfill({ response });
+  });
+  try {
+    await page.reload();
+    await expect.poll(() => metadataHeld).toBe(true);
+    await protectedText(page.locator('h1'), '학급 학습 통계');
+    await page.getByRole('button', { name: '문항 분석', exact: true }).click();
+    const pendingTrigger = page.getByRole('button', { name: '1번 문항 상세', exact: true });
+    await pendingTrigger.focus();
+    const sameTrigger = await pendingTrigger.elementHandle();
+    expect(sameTrigger !== null).toBe(true);
+    expect(
+      await sameTrigger!.evaluate(
+        (element) => element.isConnected && element === document.activeElement,
+      ),
+    ).toBe(true);
+    await page.keyboard.press('Enter');
+    await protectedText(page.getByRole('dialog'), '미응답 1명 · 선택 오답 0명 · 시간초과 1명', {
+      contains: true,
+    });
+    await page.keyboard.press('Escape');
+    await modalReleased(page);
+    expect(
+      await sameTrigger!.evaluate(
+        (element) => element.isConnected && element === document.activeElement,
+      ),
+    ).toBe(true);
+    releaseMetadata();
+    await page.unrouteAll({ behavior: 'wait' });
+    await protectedText(page.locator('h1'), `${c.gradeLabel} ${c.classNumber}반 학습 통계`);
+    expect(
+      await sameTrigger!.evaluate(
+        (element) => element.isConnected && element === document.activeElement,
+      ),
+    ).toBe(true);
+    await sameTrigger!.dispose();
+  } finally {
+    releaseMetadata();
+    await page.unrouteAll({ behavior: 'wait' });
+  }
   await page.getByRole('button', { name: '문항 분석', exact: true }).click();
   const questions = await get<PageResult<TeacherQuestionRow>>(
     page,
