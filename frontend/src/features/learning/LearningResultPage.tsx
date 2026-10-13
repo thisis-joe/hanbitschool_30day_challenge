@@ -12,6 +12,7 @@ import { useGame, useJourney } from '../game/queries';
 import { useAppearance } from '../game/useAppearance';
 import { RewardCard } from '../game/RewardCard';
 import { LearningGameScene } from '../game/LearningGameScene';
+import { GameAvatar } from '../game/GameAvatar';
 
 function availableDay(status: LearningStatus): number | null {
   const day = status.earliestUnpassedDay;
@@ -49,7 +50,10 @@ export function LearningResultPage() {
   const view = session.data;
   const result = view?.lastAnswer;
   const gift = result?.rewardGranted;
-  const giftItem = gift ? game.data?.items.find((item) => item.itemId === gift.itemId) : undefined;
+  const savedAppearance = game.isError ? undefined : game.data;
+  const giftItem = gift
+    ? savedAppearance?.items.find((item) => item.itemId === gift.itemId)
+    : undefined;
   const giftOwned = giftItem
     ? game.data?.inventory.some((item) => item.itemId === giftItem.itemId && item.owned) === true
     : false;
@@ -213,10 +217,28 @@ export function LearningResultPage() {
           </h1>
           <LearningGameScene
             key={accountId}
-            appearance={game.data}
-            journey={journey.data}
+            appearance={savedAppearance}
+            journey={journey.isError ? undefined : journey.data}
             outcome={result.outcome}
           />
+          {game.isError ? (
+            <div className="learning-error">
+              <p role="alert">
+                여행 친구와 선물 정보를 불러오지 못했어요. {errorMessage(game.error)}
+              </p>
+              <button disabled={game.isFetching} onClick={() => void game.refetch()}>
+                여행 친구 다시 불러오기
+              </button>
+            </div>
+          ) : null}
+          {journey.isError ? (
+            <div className="learning-error">
+              <p role="alert">여정 정보를 불러오지 못했어요. {errorMessage(journey.error)}</p>
+              <button disabled={journey.isFetching} onClick={() => void journey.refetch()}>
+                지도 다시 불러오기
+              </button>
+            </div>
+          ) : null}
           {view.mode === 'REVIEW' ? (
             <p>문항별 복습 상태는 나의 문제에서 확인해 주세요.</p>
           ) : replayKeepsPass ? (
@@ -245,6 +267,24 @@ export function LearningResultPage() {
           {gift ? (
             <div className="learning-saved-gift">
               <p className="learning-eyebrow">새 선물</p>
+              {giftItem && savedAppearance ? (
+                <section className="learning-gift-preview" aria-label="선물 착용 미리보기">
+                  <GameAvatar
+                    characterId={savedAppearance.characterId}
+                    equippedBySlot={{
+                      ...savedAppearance.equippedBySlot,
+                      [giftItem.slot]: giftItem.itemId,
+                    }}
+                  />
+                  <div>
+                    <h2>선물 착용 미리보기</h2>
+                    <p>미리보기예요. 지금 착용하기를 누르면 저장돼요.</p>
+                    {savedAppearance.characterId === null ? (
+                      <p>캐릭터 미선택 상태의 하루 미리보기예요.</p>
+                    ) : null}
+                  </div>
+                </section>
+              ) : null}
               {giftItem ? (
                 <RewardCard
                   item={giftItem}
@@ -266,8 +306,12 @@ export function LearningResultPage() {
                       : undefined
                   }
                 />
-              ) : (
+              ) : game.isError ? (
+                <p>다시 불러오면 저장된 선물을 확인할 수 있어요.</p>
+              ) : game.isPending ? (
                 <p>저장된 선물 정보를 불러오고 있어요.</p>
+              ) : (
+                <p>저장된 선물 정보를 확인할 수 없어요. 옷장에서 보유 장비를 확인해 주세요.</p>
               )}
               {appearance.busy ? <p role="status">외형을 저장하고 있어요</p> : null}
               {appearance.error ? <p role="alert">{appearance.error}</p> : null}

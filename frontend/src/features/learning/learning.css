@@ -42,6 +42,18 @@
 .learning-saved-gift {
   margin-bottom: 24px;
 }
+.learning-gift-preview {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px dashed var(--game-green, #244d3a);
+  border-radius: 1rem;
+}
+.learning-gift-preview > div {
+  flex: 1 1 12rem;
+}
 .game-learning-result .game-reward-card {
   background: #fbefc8;
   border-color: #ecd791;
