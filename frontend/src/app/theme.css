@@ -25,6 +25,7 @@
 }
 .student-header nav a,
 .student-header .nav-button {
+  min-width: 48px;
   min-height: 48px;
 }
 @media (max-width: 720px) {

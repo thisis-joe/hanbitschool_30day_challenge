@@ -433,6 +433,7 @@
   border-radius: 6px;
 }
 .game-page-nav a {
+  min-width: 48px;
   min-height: 48px;
 }
 .game-closet-slot {
