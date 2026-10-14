@@ -8,6 +8,8 @@ import kr.hanbit.school.account.StudentProfileRepository;
 import kr.hanbit.school.classroom.ClassroomRepository;
 import kr.hanbit.school.content.ContentCatalog;
 import kr.hanbit.school.content.LearningQuestion;
+import kr.hanbit.school.game.GameCatalog;
+import kr.hanbit.school.game.RewardGrant;
 import kr.hanbit.school.learning.xp.XpEntry;
 import kr.hanbit.school.learning.xp.XpEntryRepository;
 import kr.hanbit.school.learning.xp.XpKind;
@@ -41,6 +43,7 @@ public class LearningAnswerFinalizer {
   private final LearningCalendar calendar;
   private final StudentProfileRepository profiles;
   private final ClassroomRepository classrooms;
+  private final GameCatalog gameCatalog;
 
   public LearningAnswerFinalizer(
       LearningSessionRepository sessions,
@@ -62,7 +65,8 @@ public class LearningAnswerFinalizer {
       ObjectMapper json,
       LearningCalendar calendar,
       StudentProfileRepository profiles,
-      ClassroomRepository classrooms) {
+      ClassroomRepository classrooms,
+      GameCatalog gameCatalog) {
     this.sessions = sessions;
     this.sessionQuestions = sessionQuestions;
     this.sessionModule = sessionModule;
@@ -83,6 +87,7 @@ public class LearningAnswerFinalizer {
     this.calendar = calendar;
     this.profiles = profiles;
     this.classrooms = classrooms;
+    this.gameCatalog = gameCatalog;
   }
 
   @Transactional(propagation = Propagation.MANDATORY)
@@ -243,6 +248,7 @@ public class LearningAnswerFinalizer {
                 == sessionQuestions.findByIdSessionIdOrderByIdPositionAsc(session.getId()).size()
             : answeredCount == 5;
     boolean nextDayAvailable = false;
+    RewardGrant rewardGranted = null;
     if (completed && !review) {
       boolean passed = attempt.getState() == DayAttemptState.PASSED;
       if (day.getState() != DayProgressState.PASSED) {
@@ -252,6 +258,11 @@ public class LearningAnswerFinalizer {
           int passXp = xpPolicy.firstPass(attempt.isCatchUp());
           appendXp(session.getStudentAccountId(), XpKind.FIRST_DAY_PASS, day.getId(), passXp, now);
           awarded += passXp;
+          rewardGranted =
+              new RewardGrant(
+                  gameCatalog.rewardForDay(day.getDay()).itemId(),
+                  day.getDay(),
+                  day.getPassedAt());
         }
       }
       if (day.getState() == DayProgressState.PASSED) nextDayAvailable = nextDayAvailable(session);
@@ -272,7 +283,8 @@ public class LearningAnswerFinalizer {
             review ? null : attempt.getState(),
             review ? null : day.getState(),
             nextDayAvailable,
-            reviewPromptEligible);
+            reviewPromptEligible,
+            rewardGranted);
     session.finalizeAnswer(json.writeValueAsString(result), completed, now);
     sessions.saveAndFlush(session);
     idempotency.record(

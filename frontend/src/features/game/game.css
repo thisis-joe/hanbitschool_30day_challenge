@@ -1,0 +1,490 @@
+.game-avatar {
+  display: inline-block;
+  width: 128px;
+  height: auto;
+  aspect-ratio: 128 / 176;
+  max-width: 100%;
+  flex-shrink: 0;
+  vertical-align: bottom;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 0 #334a3420);
+}
+
+.game-learning-scene {
+  position: relative;
+  min-width: 0;
+  height: 226px;
+  margin: 20px 0 14px;
+  border: 1px solid #c6d2ad;
+  border-radius: 12px;
+  overflow: hidden;
+  background: url('/game/scenes/forest.webp') center 64% / cover;
+  image-rendering: pixelated;
+}
+.game-learning-road {
+  position: absolute;
+  bottom: 0;
+  left: 15%;
+  right: 15%;
+  height: 34px;
+  background: #e4d3a970;
+  border-top: 3px solid #f2e1b470;
+}
+.game-learning-traveler {
+  position: absolute;
+  left: calc(50% - 44px);
+  bottom: 12px;
+}
+.game-learning-travel {
+  animation: game-hop 0.25s ease;
+}
+.game-learning-traveler .game-avatar {
+  width: 88px;
+}
+.game-learning-location,
+.game-scene-fallback {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  width: fit-content;
+  max-width: calc(100% - 24px);
+  border-radius: 7px;
+  padding: 6px 10px;
+  background: #fffde8de;
+  color: #263d35;
+  font-size: 0.8rem;
+}
+.game-learning-scene[data-outcome] {
+  height: 160px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-learning-travel {
+    animation: none;
+  }
+}
+.game-equipment-icon {
+  display: block;
+  width: 96px;
+  height: auto;
+  max-width: 100%;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+.game-avatar.game-avatar-idle {
+  animation: game-breathe 3s steps(2, end) infinite;
+}
+.game-avatar.game-avatar-moving {
+  animation: game-hop 0.25s ease;
+}
+@keyframes game-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+@keyframes game-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-avatar.game-avatar-idle,
+  .game-avatar.game-avatar-moving {
+    animation: none;
+  }
+}
+
+/* Shared reference palette is scoped to game surfaces, leaving account/staff forms alone. */
+.game-journey-page,
+.game-character-page,
+.game-closet-page {
+  --cream: #fffdf3;
+  --paper: #fffef9;
+  --butter: #f4d66e;
+  --ink: #263d35;
+  --line: #e2dec9;
+  color: var(--ink);
+  min-width: 0;
+  max-width: 1120px;
+}
+.game-journey-page h2,
+.game-character-page h2,
+.game-closet-page h2 {
+  font-size: 1.35rem;
+  margin: 8px 0;
+}
+.game-home-intro {
+  margin-bottom: 24px;
+}
+.game-home-intro p {
+  color: #68775f;
+}
+.game-camp {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  padding: 0;
+  min-height: 420px;
+  overflow: hidden;
+  background: #edf3df;
+  border-color: #d4dcb9;
+  border-radius: 14px;
+}
+.game-camp-copy {
+  padding: 38px;
+  background: #f3f6e8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+.game-camp-copy h2 {
+  font-size: 2rem;
+}
+.game-camp-copy p {
+  font-size: 0.9rem;
+  color: #68775f;
+}
+.game-tag {
+  border: 1px solid #c9d5b6;
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 5px 10px;
+}
+.game-camp-scene {
+  position: relative;
+  min-height: 420px;
+  background: url('/game/scenes/forest.webp') center / cover;
+  image-rendering: pixelated;
+}
+.game-scene-village {
+  background-image: url('/game/scenes/village.webp');
+}
+.game-scene-beach {
+  background-image: url('/game/scenes/beach.webp');
+}
+.game-camp-scene > .game-avatar {
+  position: absolute;
+  width: 145px;
+  left: 32%;
+  bottom: 9%;
+}
+.game-signpost {
+  position: absolute;
+  bottom: 13%;
+  right: 8%;
+  background: #dab47a;
+  border: 3px solid #937346;
+  border-radius: 2px;
+  box-shadow: inset 0 -3px #bb925d;
+  color: #654c2a;
+}
+.game-signpost::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  width: 8px;
+  height: 29px;
+  background: #937346;
+  left: 50%;
+}
+.game-home-stats {
+  padding: 20px 0;
+}
+.game-home-under {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 24px;
+  margin: 12px 0 28px;
+}
+.game-reward-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  min-width: 0;
+}
+.game-reward-card p {
+  font-size: 0.85rem;
+  margin: 6px 0;
+}
+.game-reward-art {
+  width: 80px;
+  flex-shrink: 0;
+  background: #faf0c4;
+  border-radius: 13px;
+}
+.game-reward-locked .game-reward-art {
+  filter: grayscale(1) blur(0.55px);
+}
+.game-regions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.game-regions a {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  color: #69766e;
+  font-size: 0.8rem;
+}
+.game-regions a span {
+  border: 2px solid #d8dbc2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  text-align: center;
+}
+.game-regions .game-region-reached {
+  color: var(--ink);
+}
+.game-region-reached span {
+  background: var(--butter);
+}
+.game-map-stage {
+  border: 1px solid #b7c69d;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #d2deb7;
+  box-shadow: 0 6px 0 #dfe5c9;
+  min-width: 0;
+}
+.game-map-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--paper);
+  font-size: 0.8rem;
+}
+.game-map-toolbar button {
+  flex-shrink: 0;
+}
+.game-map-viewport {
+  height: clamp(440px, 70dvh, 760px);
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  position: relative;
+  touch-action: pan-x pan-y;
+}
+.game-map-world {
+  width: 1050px;
+  height: 3150px;
+  position: relative;
+  overflow: hidden;
+}
+.game-map-image {
+  position: absolute;
+  inset: 0;
+  background: url('/game/scenes/ascending-map.webp') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+}
+.game-map-gray {
+  filter: grayscale(1) blur(1.15px) contrast(0.94) brightness(1.025);
+}
+.game-map-revealed {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent calc(var(--game-reveal-edge) - 0.55%),
+    #000 calc(var(--game-reveal-edge) + 0.55%)
+  );
+}
+.game-map-route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.game-map-route polyline {
+  fill: none;
+  stroke: #9d987a;
+  stroke-width: 0.3;
+  stroke-dasharray: 0.2 0.7;
+}
+.game-map-day {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 48px;
+  min-height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  border: 2px solid #a4afaa;
+  background: #edf0ebe8;
+  color: #68736e;
+  font-weight: 800;
+  box-shadow: 0 3px 0 #6f7c7430;
+}
+.game-map-passed {
+  background: #6e995e;
+  color: white;
+  border-color: #e4efc8;
+}
+.game-map-current {
+  background: #ffe38a;
+  border-color: #8f7532;
+  color: #5d5032;
+  box-shadow: 0 4px 0 #b79642;
+}
+.game-map-place {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+.game-map-place strong {
+  display: block;
+  background: #fffde8ed;
+  color: #5b7147;
+  padding: 6px 12px;
+  border-radius: 5px;
+  box-shadow: 0 2px 0 #82966a55;
+}
+.game-map-place span {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+.game-map-unexplored strong {
+  background: #eef1ebed;
+  color: #69766e;
+}
+.game-map-hero {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  width: 72px;
+  pointer-events: none;
+}
+.game-map-hero .game-avatar {
+  width: 72px;
+}
+.game-map-location {
+  display: block;
+  background: var(--butter);
+  padding: 8px;
+  border-radius: 6px;
+}
+.game-map-caption {
+  padding: 0 16px;
+  font-size: 0.8rem;
+}
+.game-map-dock {
+  margin: 24px 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.game-map-dock .game-camp-copy {
+  padding: 24px;
+}
+.game-map-compact .game-map-viewport {
+  height: 360px;
+}
+.game-character-card,
+.game-closet-card {
+  border-radius: 14px;
+}
+.game-character-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  background: #f7f7eb;
+  border-color: #dbe0c9;
+}
+.game-character-option .game-avatar {
+  width: 72px;
+}
+.game-character-option[aria-pressed='true'],
+.game-item-option[aria-pressed='true'] {
+  background: #fbefbc;
+  border: 2px solid #bda35a;
+}
+.game-appearance-preview {
+  display: grid;
+  justify-items: center;
+  padding: 32px 16px;
+  border: 1px solid #d4be87;
+  border-radius: 12px;
+  background: url('/game/scenes/room.webp') center / cover;
+  image-rendering: pixelated;
+  margin: 20px 0;
+}
+.game-appearance-preview p {
+  background: var(--paper);
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.game-page-nav a {
+  min-width: 48px;
+  min-height: 48px;
+}
+.game-closet-slot {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 24px;
+}
+.game-base-option {
+  margin-bottom: 12px;
+  background: var(--paper);
+}
+.game-item-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  background: var(--paper);
+  border-color: var(--line);
+}
+.game-item-locked {
+  background: #f3f2eb;
+}
+.game-item-art {
+  width: 80px;
+}
+@media (max-width: 720px) {
+  .game-camp {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .game-camp-copy {
+    padding: 24px;
+  }
+  .game-camp-scene {
+    min-height: 300px;
+  }
+  .game-camp-scene > .game-avatar {
+    left: 23%;
+  }
+  .game-home-under {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .game-map-toolbar {
+    flex-wrap: wrap;
+  }
+  .game-map-viewport {
+    height: clamp(440px, calc(100dvh - 220px), 670px);
+  }
+  .game-map-stage {
+    border-radius: 12px;
+  }
+  .game-home-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

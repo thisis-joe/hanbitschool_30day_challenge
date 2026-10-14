@@ -86,6 +86,7 @@ it('homeOffersRetryForSessionNetworkFailureInsteadOfLogin', async () => {
 it.each([
   '/student/learning',
   '/student/questions',
+  '/student/map',
   `/student/learning/sessions/${sessionId}`,
   `/student/learning/sessions/${sessionId}/result`,
 ])('staffCannotReadProtectedStudentRoute%s', async (path) => {

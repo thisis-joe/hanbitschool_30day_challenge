@@ -27,6 +27,237 @@ import {
 } from './pendingCommands';
 import { learningKeys } from './queries';
 import type { LearningSessionView } from './types';
+import { gameKeys } from '../game/queries';
+import { gameView, journeyView } from '../../test/gameFixtures';
+
+it('preAnswerInitialCosmeticReadsCannotPublishStaleMapAfterCanonicalAnswer', async () => {
+  const oldRelease = deferred<void>();
+  let gameReads = 0;
+  let mapReads = 0;
+  let view = activeSession;
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () => json(view)),
+    http.get('*/api/student/game', async () => {
+      const old = ++gameReads === 1;
+      if (old) await oldRelease.promise;
+      return HttpResponse.json({ ...gameView, revision: old ? 7 : 8 });
+    }),
+    http.get('*/api/student/learning/map', async () => {
+      const old = ++mapReads === 1;
+      if (old) await oldRelease.promise;
+      return HttpResponse.json({
+        ...journeyView,
+        journeyPosition: old ? 0 : 1,
+        firstAnswerCount: old ? 0 : 1,
+      });
+    }),
+    http.post('*/api/student/learning/sessions/:id/answers', () => {
+      view = answeredSession;
+      return HttpResponse.json(answerResult);
+    }),
+  );
+  const { client } = setup();
+  try {
+    await screen.findByRole('button', { name: 'O · 사실' });
+    await waitFor(() => {
+      expect(gameReads).toBe(1);
+      expect(mapReads).toBe(1);
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'O · 사실' }));
+    await screen.findByRole('heading', { name: '정답이에요' });
+    await waitFor(() => expect(screen.getByRole('button', { name: '다음 문제' })).toBeEnabled());
+    await waitFor(() =>
+      expect(client.getQueryData(gameKeys.journey('student-a'))).toMatchObject({
+        journeyPosition: 1,
+      }),
+    );
+    expect(client.getQueryData(gameKeys.view('student-a'))).toMatchObject({ revision: 8 });
+    await act(async () => {
+      oldRelease.resolve();
+    });
+    expect(client.getQueryData(gameKeys.journey('student-a'))).toMatchObject({
+      journeyPosition: 1,
+    });
+    expect(client.getQueryData(gameKeys.view('student-a'))).toMatchObject({ revision: 8 });
+  } finally {
+    await act(async () => {
+      oldRelease.resolve();
+    });
+  }
+});
+
+it('heldCosmeticRefreshDoesNotKeepCanonicalFeedbackOrNextPending', async () => {
+  const release = deferred<void>();
+  const learningRelease = deferred<void>();
+  const learningEntered = deferred<void>();
+  let view = activeSession;
+  let advances = 0;
+  const held: Promise<unknown>[] = [];
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () => json(view)),
+    http.get('*/api/student/learning/status', async () => {
+      if (view !== activeSession) {
+        learningEntered.resolve();
+        await learningRelease.promise;
+      }
+      return HttpResponse.json(learningStatus);
+    }),
+    http.get('*/api/student/learning/questions', async () => {
+      if (view !== activeSession) await learningRelease.promise;
+      return HttpResponse.json([]);
+    }),
+    http.get('*/api/student/game', async () => {
+      if (view !== activeSession) {
+        held.push(release.promise);
+        await release.promise;
+      }
+      return HttpResponse.json(gameView);
+    }),
+    http.get('*/api/student/learning/map', async () => {
+      if (view !== activeSession) {
+        held.push(release.promise);
+        await release.promise;
+      }
+      return HttpResponse.json(journeyView);
+    }),
+    http.post('*/api/student/learning/sessions/:id/answers', () => {
+      view = answeredSession;
+      return HttpResponse.json(answerResult);
+    }),
+    http.post('*/api/student/learning/sessions/:id/advance', () => {
+      advances++;
+      view = {
+        ...activeSession,
+        question: { ...activeSession.question!, questionId: 2, position: 2 },
+      };
+      return json(view);
+    }),
+  );
+  const { client } = setup();
+  try {
+    await screen.findByRole('button', { name: 'O · 사실' });
+    await waitFor(() => expect(client.isFetching({ queryKey: ['game'] })).toBe(0));
+    await userEvent.click(screen.getByRole('button', { name: 'O · 사실' }));
+    await screen.findByRole('heading', { name: '정답이에요' });
+    await waitFor(() => expect(held).toHaveLength(2));
+    await learningEntered.promise;
+    expect(screen.getByRole('button', { name: '다음 문제' })).toBeDisabled();
+    expect(screen.getByText('답변을 확인하고 있어요')).toBeVisible();
+    expect(readPendingCommand('student-a')?.kind).toBe('ANSWER');
+    await act(async () => {
+      learningRelease.resolve();
+    });
+    await waitFor(() => expect(screen.getByRole('button', { name: '다음 문제' })).toBeEnabled());
+    expect(readPendingCommand('student-a')).toBeNull();
+    expect(client.isFetching({ queryKey: ['game'] })).toBe(2);
+    await userEvent.click(screen.getByRole('button', { name: '다음 문제' }));
+    await screen.findByRole('heading', { name: '문항 2 / 5' });
+    expect(advances).toBe(1);
+    expect(document.querySelector('time')).toHaveAttribute(
+      'dateTime',
+      activeSession.question!.deadlineAt,
+    );
+  } finally {
+    await act(async () => {
+      learningRelease.resolve();
+      release.resolve();
+      await Promise.all(held);
+    });
+  }
+});
+
+it('gameReadFailureDoesNotBlockActiveLearning', async () => {
+  let view = activeSession;
+  let writes = 0;
+  server.use(
+    http.get('*/api/student/game', () => new HttpResponse(null, { status: 503 })),
+    http.get('*/api/student/learning/map', () => new HttpResponse(null, { status: 503 })),
+    http.get('*/api/student/learning/sessions/:id', () => json(view)),
+    http.post('*/api/student/learning/sessions/:id/answers', () => {
+      writes++;
+      view = answeredSession;
+      return HttpResponse.json(answerResult);
+    }),
+  );
+  setup();
+  const choice = await screen.findByRole('button', { name: 'O · 사실' });
+  expect(await screen.findByText('여행 장면을 준비하고 있어요')).toBeVisible();
+  expect(document.querySelector('time')).toHaveAttribute(
+    'dateTime',
+    activeSession.question!.deadlineAt,
+  );
+  expect(screen.getByRole('button', { name: 'X · 해석' })).toBeEnabled();
+  await userEvent.click(choice);
+  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
+  expect(writes).toBe(1);
+});
+
+it('journeyAnimationCannotAdvanceOrResetDeadline', async () => {
+  const writes: string[] = [];
+  server.use(
+    http.post('*/api/student/learning/*', ({ request }) => {
+      writes.push(request.url);
+      return new HttpResponse(null, { status: 500 });
+    }),
+  );
+  const { client } = setup();
+  await screen.findByRole('button', { name: 'O · 사실' });
+  const scene = await screen.findByRole('region', { name: '학습 여행 장면' });
+  const deadline = document.querySelector('time')!.getAttribute('dateTime');
+  await act(async () => {
+    client.setQueryData(gameKeys.journey('student-a'), {
+      ...journeyView,
+      journeyPosition: 51,
+      firstAnswerCount: 51,
+    });
+    scene.dispatchEvent(new Event('animationend', { bubbles: true }));
+  });
+  expect(document.querySelector('time')).toHaveAttribute('dateTime', deadline);
+  expect(screen.getByRole('button', { name: 'O · 사실' })).toBeEnabled();
+  expect(writes).toEqual([]);
+});
+
+it('workerTimeoutRestorationRefreshesGameAndMap', async () => {
+  let view = activeSession;
+  let reads = 0;
+  let mapReads = 0;
+  let position = 0;
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () => json(view)),
+    http.get('*/api/student/game', () => {
+      reads++;
+      return HttpResponse.json(gameView);
+    }),
+    http.get('*/api/student/learning/map', () => {
+      mapReads++;
+      return HttpResponse.json({
+        ...journeyView,
+        journeyPosition: position,
+        firstAnswerCount: position,
+      });
+    }),
+  );
+  const { client } = setup();
+  await screen.findByRole('button', { name: 'O · 사실' });
+  await waitFor(() => expect(mapReads).toBe(1));
+  view = { ...answeredSession, lastAnswer: { ...answerResult, outcome: 'TIMED_OUT' } };
+  position = 1;
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: learningKeys.session('student-a', sessionId) });
+  });
+  expect(await screen.findByRole('heading', { name: '시간이 초과되었어요' })).toBeVisible();
+  await waitFor(() =>
+    expect(client.getQueryData(gameKeys.journey('student-a'))).toMatchObject({
+      journeyPosition: 1,
+    }),
+  );
+  expect(reads).toBe(2);
+  expect(mapReads).toBe(2);
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: learningKeys.session('student-a', sessionId) });
+  });
+  expect(mapReads).toBe(2);
+});
 
 const date = 'Tue, 13 Oct 2026 00:00:00 GMT';
 const json = (view: LearningSessionView, serverDate = date) =>
@@ -187,6 +418,8 @@ it.each([
   expect(screen.getByText('정답은 X · 해석')).toBeVisible();
   expect(screen.getByText('테스트용 설명입니다.')).toBeVisible();
   expect(screen.getByText('이번 답변으로 받은 경험치: 1 XP')).toBeVisible();
+  // Canonical feedback publishes before the existing learning cache refresh settles.
+  await waitFor(() => expect(screen.queryByText('답변을 확인하고 있어요')).toBeNull());
   expect(screen.getByRole('button', { name: '다음 문제' })).toBeEnabled();
   expect(screen.queryByRole('button', { name: 'X · 해석' })).not.toBeInTheDocument();
 });
@@ -211,19 +444,28 @@ it('zeroCountdownWaitsForTheServerAndNeverAdvances', async () => {
     }),
   );
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
-  setup();
+  const { client } = setup();
   expect(await screen.findByText('서버에서 답변을 확인하고 있어요')).toBeVisible();
   expect(screen.getByRole('button', { name: 'O · 사실' })).toBeDisabled();
+  const query = client
+    .getQueryCache()
+    .find({ queryKey: learningKeys.session('student-a', sessionId) });
+  // Fake intervals do not settle real MSW I/O. Finish the immediate expiry
+  // refetch before checking that the next tick starts another request.
+  await act(async () => {
+    await query?.promise;
+  });
   const startReads = reads;
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1000);
+    await query?.promise;
   });
   expect(reads).toBeGreaterThan(startReads);
   view = { ...answeredSession, lastAnswer: { ...answerResult, outcome: 'TIMED_OUT' } };
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1000);
   });
-  expect(screen.getByRole('heading', { name: '시간이 초과되었어요' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '시간이 초과되었어요' })).toBeVisible();
   const confirmedReads = reads;
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2000);
@@ -655,7 +897,7 @@ it('sessionConflictOffersTheCanonicalActiveSessionRecoveryLink', async () => {
     'href',
     `/student/learning/sessions/${other}`,
   );
-  expect(screen.getByRole('alert')).toHaveTextContent('연결을 확인하고 다시 시도해 주세요.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('연결을 확인하고 다시 시도해 주세요.');
   expect(readPendingCommand('student-a')?.kind).toBe('START');
 });
 

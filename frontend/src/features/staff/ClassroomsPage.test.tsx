@@ -60,6 +60,10 @@ it('scopeToggleAndSafeSchoolRoster', async () => {
   const { client } = renderPage(<ClassroomsPage />);
   const u = userEvent.setup();
   expect(await screen.findByLabelText('1학년 1반 가입 코드')).toHaveValue('ABCDEFGH');
+  expect(screen.getByRole('link', { name: '학습 통계' })).toHaveAttribute(
+    'href',
+    '/staff/classrooms/mine/learning',
+  );
   expect(client.getQueryData(['staff', 'classrooms', 'teacher-a', 'MINE'])).toEqual([mine]);
   await u.click(screen.getByRole('button', { name: '명단 보기' }));
   expect(await screen.findByText('김민수')).toBeVisible();
@@ -67,6 +71,10 @@ it('scopeToggleAndSafeSchoolRoster', async () => {
   await u.click(screen.getByRole('button', { name: '학교 전체' }));
   await waitFor(() => expect(url?.searchParams.get('scope')).toBe('SCHOOL'));
   await screen.findByText('1학년 2반');
+  expect(screen.getByRole('link', { name: '학습 통계' })).toHaveAttribute(
+    'href',
+    '/staff/classrooms/other/learning',
+  );
   expect(screen.queryByLabelText(/가입 코드/)).not.toBeInTheDocument();
   expect(client.getQueryData(['staff', 'classrooms', 'teacher-a', 'SCHOOL'])).toEqual([other]);
   await u.click(screen.getByRole('button', { name: '명단 보기' }));

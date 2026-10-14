@@ -1,0 +1,150 @@
+{
+  "version": "game-v1",
+  "sources": {
+    "game": {
+      "label": "hanbit-ox.html",
+      "sha256": "b20ff57104f9ebb6568b9d40ca3a32fa837079dcfdc423978f1572dc20e435f5"
+    },
+    "equipment": {
+      "label": "equipment-design-review.html",
+      "sha256": "22ee83b618ca9c5b2f24eb547aa28dc424bd268d92ebb7d5e6ac17a57a3fbf46"
+    }
+  },
+  "assets": [
+    {
+      "id": "haru",
+      "path": "characters/haru.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[0]",
+      "byteLength": 29437,
+      "sha256": "dd2f59800239c14515e9532ae0dc2cf7b1a59d7f0a374095e47aadc7f10d07c3"
+    },
+    {
+      "id": "naru",
+      "path": "characters/naru.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[1]",
+      "byteLength": 31187,
+      "sha256": "a597e310a2bdc1f9dc225f22c3c39a65d17714627662370e6e96eb7e7aaa9136"
+    },
+    {
+      "id": "sodam",
+      "path": "characters/sodam.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[2]",
+      "byteLength": 35713,
+      "sha256": "5dc67f5dcbe4ef3a6e7b4cb41c5a4a525386c2bc80d4ae633e2ae2c33461b0a5"
+    },
+    {
+      "id": "iden",
+      "path": "characters/iden.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[3]",
+      "byteLength": 26458,
+      "sha256": "5b6c034de83936ff08e305899b220653047c3bcf807a070238324d717c0bd8a2"
+    },
+    {
+      "id": "arin",
+      "path": "characters/arin.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[4]",
+      "byteLength": 32229,
+      "sha256": "1a7cedba920fb0a6adec027ec77a43a1348cfb52ceb868a11b791b0a8d6cfea0"
+    },
+    {
+      "id": "rumi",
+      "path": "characters/rumi.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[5]",
+      "byteLength": 28260,
+      "sha256": "8b727caf27e0042616ad29a3ee81b49c82df75ace372ffa680e6ade7fac1568c"
+    },
+    {
+      "id": "onyu",
+      "path": "characters/onyu.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[6]",
+      "byteLength": 28414,
+      "sha256": "619265bec41683072f774b25eb337a72469d454f71455fa4a3ae401f57837c22"
+    },
+    {
+      "id": "bora",
+      "path": "characters/bora.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[7]",
+      "byteLength": 38112,
+      "sha256": "b3340b6a01a998ae175c99fdc89e52a9f2295bb66781cedae153060921610fac"
+    },
+    {
+      "id": "sion",
+      "path": "characters/sion.png",
+      "type": "image/png",
+      "source": "game+equipment",
+      "selector": "ART[8]",
+      "byteLength": 32212,
+      "sha256": "12f105ab5f3a9835c35cce039ce55b83bfed00a6d6649b48ad7798cc7c106f65"
+    },
+    {
+      "id": "forest",
+      "path": "scenes/forest.webp",
+      "type": "image/webp",
+      "source": "game",
+      "selector": "--forest-image",
+      "byteLength": 311430,
+      "sha256": "825f72e1be11da20b4ab503c398a0b5418be333d8afa41a813d120230f9c7862"
+    },
+    {
+      "id": "map",
+      "path": "scenes/map.webp",
+      "type": "image/webp",
+      "source": "game",
+      "selector": "--map-image",
+      "byteLength": 555552,
+      "sha256": "4849a5751bdab6caff9d189f31c9d630089704dd0f84e16491071e71ae0a3079"
+    },
+    {
+      "id": "room",
+      "path": "scenes/room.webp",
+      "type": "image/webp",
+      "source": "game",
+      "selector": "--room-image",
+      "byteLength": 147788,
+      "sha256": "2f9812979c27f4fa8f473d0bb66d78766d5c072e8d715ebd65c81bb339de7a9c"
+    },
+    {
+      "id": "village",
+      "path": "scenes/village.webp",
+      "type": "image/webp",
+      "source": "game",
+      "selector": "--village-image",
+      "byteLength": 414950,
+      "sha256": "4b3a4901616ea3d19c6322992bd077b8447868639d9f98f370a283c426c0301d"
+    },
+    {
+      "id": "beach",
+      "path": "scenes/beach.webp",
+      "type": "image/webp",
+      "source": "game",
+      "selector": "--beach-image",
+      "byteLength": 261368,
+      "sha256": "986f15f61b2d895e6fb720cddc9bdf1f9a0e449ba33751fae7e5b90613958ad6"
+    },
+    {
+      "id": "ascending-map",
+      "path": "scenes/ascending-map.webp",
+      "type": "image/webp",
+      "source": "game",
+      "selector": "--ascending-map-image",
+      "byteLength": 655972,
+      "sha256": "c6e034cf0abeffb28c4d0d70dd2fd0bcd34621bffb508ead503c21a0255cd520"
+    }
+  ]
+}

@@ -1,8 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { e2eComposeProject } from '../playwright.config';
 import {
   adminId,
   adminPassword,
@@ -13,6 +15,25 @@ import {
   staffLogin,
 } from './helpers';
 
+function assertOwnedProject(root: string) {
+  const project = e2eComposeProject();
+  // Labels identify the checkout that owns this exact project before any restart/recreate.
+  for (const service of ['db', 'backend', 'web']) {
+    const labels = JSON.parse(
+      execFileSync(
+        'docker',
+        ['inspect', '--format', '{{json .Config.Labels}}', `${project}-${service}-1`],
+        { cwd: root, stdio: 'pipe', timeout: 5000 },
+      ).toString(),
+    ) as Record<string, string>;
+    if (
+      labels['com.docker.compose.project'] !== project ||
+      resolve(labels['com.docker.compose.project.working_dir'] ?? '') !== resolve(root, 'infra')
+    )
+      throw new Error('E2E project does not belong to this worktree');
+  }
+}
+
 async function waitForBackendHealth(root: string) {
   await expect
     .poll(
@@ -20,7 +41,7 @@ async function waitForBackendHealth(root: string) {
         try {
           return execFileSync(
             'docker',
-            ['inspect', '--format', '{{.State.Health.Status}}', 'hanbit-account-e2e-backend-1'],
+            ['inspect', '--format', '{{.State.Health.Status}}', `${e2eComposeProject()}-backend-1`],
             { cwd: root, stdio: 'pipe', timeout: 5000 },
           )
             .toString()
@@ -69,10 +90,11 @@ test('admin teacher classroom student and real roster', async ({ page, browser }
     await expect(teacher.getByText('김민수', { exact: true })).toBeVisible();
     await expect(teacher.getByText('1번', { exact: true })).toBeVisible();
     const root = fileURLToPath(new URL('../../', import.meta.url));
+    assertOwnedProject(root);
     const argsFor = (envFile: string) => [
       'compose',
       '-p',
-      'hanbit-account-e2e',
+      e2eComposeProject(),
       '--env-file',
       envFile,
       '-f',
@@ -109,9 +131,11 @@ test('admin teacher classroom student and real roster', async ({ page, browser }
     writeFileSync(
       root + '.env.e2e-no-bootstrap.local',
       original.replace(/^HANBIT_BOOTSTRAP_ADMIN_(ID|PASSWORD)=.*$/gm, 'HANBIT_BOOTSTRAP_ADMIN_$1='),
+      { mode: 0o600 },
     );
     chmodSync(root + '.env.e2e-no-bootstrap.local', 0o600);
     const noBootstrapArgs = argsFor('.env.e2e-no-bootstrap.local');
+    assertOwnedProject(root);
     try {
       execFileSync(
         'docker',

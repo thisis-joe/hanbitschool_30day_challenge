@@ -6,6 +6,12 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DayProgressRepository extends JpaRepository<DayProgress, UUID> {
+  List<DayProgress> findByStudentAccountIdInAndVersion(
+      List<UUID> studentAccountIds, String version);
+
+  List<DayProgress> findByStudentAccountIdInAndVersionAndState(
+      List<UUID> studentAccountIds, String version, DayProgressState state);
+
   Optional<DayProgress> findByStudentAccountIdAndVersionAndDay(
       UUID studentAccountId, String version, int day);
 

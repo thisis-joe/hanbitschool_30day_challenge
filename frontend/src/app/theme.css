@@ -1,4 +1,51 @@
 @charset "UTF-8";
+/* Student navigation uses the travel palette without changing other headers. */
+.game-student-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 8px 32px;
+  gap: 8px;
+  background: #fffdf3f5;
+  border-bottom: 1px solid #e2dec9;
+}
+.game-student-nav a {
+  justify-content: center;
+  min-height: 48px;
+  border-radius: 8px;
+  color: #263d35;
+}
+.game-student-nav a.active {
+  background: #f4d66e;
+  font-weight: 800;
+}
+.student-header nav a,
+.student-header .nav-button {
+  min-width: 48px;
+  min-height: 48px;
+}
+.site-header nav a,
+.site-header .nav-button {
+  min-width: 48px;
+  min-height: 48px;
+}
+@media (max-width: 720px) {
+  .game-student-nav {
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  .student-header {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .student-header nav {
+    gap: 8px;
+  }
+}
 :root {
   --cream: #fffdf3;
   --paper: #fffef9;

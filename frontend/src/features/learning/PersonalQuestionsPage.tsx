@@ -28,7 +28,7 @@ export function PersonalQuestionsPage() {
     value === 'MASTERED' || value === 'BOOKMARKED' ? value : 'REVIEW_QUEUE';
   const { data: account } = useCurrentAccount();
   return (
-    <section className="learning-page">
+    <section className="learning-page game-personal-page">
       <h1>나의 문제</h1>
       <p>다시 보고 싶은 문제와 별표한 문제를 관리해요.</p>
       <nav className="learning-filters" aria-label="개인 문제 필터">

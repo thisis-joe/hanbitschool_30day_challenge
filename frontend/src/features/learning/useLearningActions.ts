@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { meKey, useCurrentAccount } from '../auth/queries';
 import type { AccountMe } from '../auth/types';
 import { errorMessage, HttpError } from '../../lib/http';
@@ -11,6 +11,7 @@ import {
   submitLearningAnswer,
 } from './api';
 import { learningKeys } from './queries';
+import { gameKeys } from '../game/queries';
 import {
   clearPendingCommand,
   getPendingCommandEpoch,
@@ -47,7 +48,46 @@ const conflicts = new Set([
   'PREVIOUS_DAY_NOT_PASSED',
 ]);
 
-export function useLearningActions() {
+// A canonical answer can arrive from a POST reconciliation, worker poll or restored GET.
+// Share the observed fact across mounted pages, without sharing data across QueryClients.
+const refreshedAnswers = new WeakMap<QueryClient, Map<string, { epoch: number; id: string }>>();
+async function refreshGameForAnswer(
+  client: QueryClient,
+  owner: string,
+  view?: LearningSessionView | null,
+) {
+  const id = view?.lastAnswer?.attemptAnswerId;
+  const current = client.getQueryData<AccountMe | null>(meKey);
+  if (!id || current?.role !== 'STUDENT' || current.accountId !== owner) return;
+  const epoch = getPendingCommandEpoch();
+  let seen = refreshedAnswers.get(client);
+  if (!seen) {
+    seen = new Map();
+    refreshedAnswers.set(client, seen);
+  }
+  const key = `${owner}:${view!.sessionId}`;
+  const previous = seen.get(key);
+  if (previous?.epoch === epoch && previous.id === id) return;
+  seen.set(key, { epoch, id });
+  // Invalidating a still-initial GET otherwise deduplicates onto its pre-answer snapshot.
+  await Promise.all([
+    client.cancelQueries({ queryKey: gameKeys.view(owner), exact: true }),
+    client.cancelQueries({ queryKey: gameKeys.journey(owner), exact: true }),
+  ]);
+  const accepted = client.getQueryData<AccountMe | null>(meKey);
+  if (
+    epoch !== getPendingCommandEpoch() ||
+    accepted?.role !== 'STUDENT' ||
+    accepted.accountId !== owner
+  )
+    return;
+  await Promise.all([
+    client.invalidateQueries({ queryKey: gameKeys.view(owner), exact: true }),
+    client.invalidateQueries({ queryKey: gameKeys.journey(owner), exact: true }),
+  ]);
+}
+
+export function useLearningActions(canonicalView?: LearningSessionView) {
   const client = useQueryClient();
   const { data: account } = useCurrentAccount();
   const accountId = account?.role === 'STUDENT' ? account.accountId : undefined;
@@ -77,6 +117,10 @@ export function useLearningActions() {
     };
   }, [accountId]);
 
+  useEffect(() => {
+    if (accountId) void refreshGameForAnswer(client, accountId, canonicalView);
+  }, [client, accountId, canonicalView]);
+
   function isCurrent(flight: Flight): boolean {
     const current = client.getQueryData<AccountMe | null>(meKey);
     return (
@@ -88,7 +132,9 @@ export function useLearningActions() {
     );
   }
 
-  async function refreshRelated(owner: string) {
+  async function refreshRelated(owner: string, canonical?: LearningSessionView | null) {
+    // Cosmetic reads cannot extend the learning command lock or delay explicit Next.
+    void refreshGameForAnswer(client, owner, canonical);
     await Promise.all([
       client.invalidateQueries({ queryKey: learningKeys.status(owner), exact: true }),
       client.invalidateQueries({ queryKey: ['learning', owner, 'questions'] }),
@@ -178,7 +224,7 @@ export function useLearningActions() {
         canonical = await canonicalSession(id, flight);
       } else canonical = await recoverConflict(pending, flight);
       if (!isCurrent(flight)) return null;
-      await refreshRelated(accountId);
+      await refreshRelated(accountId, canonical);
       if (!isCurrent(flight)) return null;
       clearPendingCommand(accountId);
       if (canonical) {

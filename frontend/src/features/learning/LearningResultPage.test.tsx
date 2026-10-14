@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -25,6 +25,302 @@ import {
 } from './pendingCommands';
 import { learningKeys } from './queries';
 import type { LearningSessionView, LearningStatus } from './types';
+import { gameView, journeyView } from '../../test/gameFixtures';
+import { gameKeys } from '../game/queries';
+import * as avatarRenderer from '../game/avatarRenderer';
+import * as gameApi from '../game/api';
+
+const reward = { itemId: 'face-1', dayNumber: 1, acquiredAt: '2026-10-13T00:00:00Z' };
+
+// A gift preview must replace only its slot locally, leaving the saved cache and XP unchanged.
+it.each([null, 'bora'] as const)(
+  'savedGiftPreviewsOnCurrentCharacter%sBeforeExplicitSave',
+  async (characterId) => {
+    const renderAvatar = vi.spyOn(avatarRenderer, 'renderAvatar').mockResolvedValue(undefined);
+    const release = deferred<void>();
+    const saved = {
+      ...gameView,
+      characterId,
+      equippedBySlot: { ...gameView.equippedBySlot, face: null, hat: 'hat-1' },
+    };
+    const bodies: unknown[] = [];
+    server.use(
+      http.get('*/api/student/learning/sessions/:id', () =>
+        json({ ...completed, lastAnswer: { ...completed.lastAnswer!, rewardGranted: reward } }),
+      ),
+      http.get('*/api/student/game', () => HttpResponse.json(saved)),
+      http.put('*/api/student/game/appearance', async ({ request }) => {
+        bodies.push(await request.json());
+        await release.promise;
+        return HttpResponse.json({
+          ...saved,
+          revision: 8,
+          equippedBySlot: { ...saved.equippedBySlot, face: 'face-1' },
+        });
+      }),
+    );
+    const { client } = setup();
+    try {
+      const preview = await screen.findByRole('region', { name: '선물 착용 미리보기' });
+      expect(
+        within(preview).getByText('미리보기예요. 지금 착용하기를 누르면 저장돼요.'),
+      ).toBeVisible();
+      const canvas = within(preview).getByRole('img', {
+        name: characterId ? /보라/ : /캐릭터 미선택/,
+      });
+      await waitFor(() =>
+        expect(renderAvatar).toHaveBeenCalledWith(
+          canvas,
+          characterId ?? 'haru',
+          { face: 'face-1', hat: 'hat-1', top: null, bottom: null, shoes: null, hand: null },
+          expect.any(AbortSignal),
+        ),
+      );
+      expect(client.getQueryData(gameKeys.view(student.accountId))).toEqual(saved);
+      expect(bodies).toEqual([]);
+      expect(screen.getByText('301 XP')).toBeVisible();
+      await userEvent.click(screen.getByRole('button', { name: '지금 착용하기' }));
+      await waitFor(() => expect(bodies).toHaveLength(1));
+      expect(client.getQueryData(gameKeys.view(student.accountId))).toEqual(saved);
+      expect(bodies[0]).toEqual({
+        characterId,
+        expectedRevision: 7,
+        equippedBySlot: {
+          face: 'face-1',
+          hat: 'hat-1',
+          top: null,
+          bottom: null,
+          shoes: null,
+          hand: null,
+        },
+      });
+      release.resolve();
+      await waitFor(() =>
+        expect(client.getQueryData(gameKeys.view(student.accountId))).toMatchObject({
+          revision: 8,
+          characterId,
+          equippedBySlot: { face: 'face-1' },
+        }),
+      );
+      expect(screen.getByText('301 XP')).toBeVisible();
+    } finally {
+      release.resolve();
+      renderAvatar.mockRestore();
+    }
+  },
+);
+
+it.each(['game', 'journey'] as const)(
+  'resultRecoversFailed%sReadWithoutWritingOrBlockingNextLearning',
+  async (read) => {
+    const cosmeticReads = vi.spyOn(gameApi, read === 'game' ? 'getGame' : 'getJourney');
+    let reads = 0;
+    let writes = 0;
+    server.use(
+      http.get('*/api/student/learning/sessions/:id', () =>
+        json({ ...completed, lastAnswer: { ...completed.lastAnswer!, rewardGranted: reward } }),
+      ),
+      http.get('*/api/student/learning/status', () =>
+        HttpResponse.json({ ...finishedStatus, nextAction: 'START_FIRST', calendarCap: 2 }),
+      ),
+      http.get(read === 'game' ? '*/api/student/game' : '*/api/student/learning/map', () => {
+        reads++;
+        return HttpResponse.error();
+      }),
+      http.put('*/api/student/game/appearance', () => {
+        writes++;
+        return HttpResponse.json(gameView);
+      }),
+      http.post('*/api/student/learning/*', () => {
+        writes++;
+        return new HttpResponse(null, { status: 500 });
+      }),
+    );
+    const { client } = setup();
+    const retryName = read === 'game' ? '여행 친구 다시 불러오기' : '지도 다시 불러오기';
+    await screen.findByRole('button', { name: retryName });
+    // Restored lastAnswer cancels the initial cosmetic read and explicitly refetches it.
+    await waitFor(() => {
+      expect(cosmeticReads.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(
+        client.getQueryState(
+          read === 'game' ? gameKeys.view(student.accountId) : gameKeys.journey(student.accountId),
+        ),
+      ).toMatchObject({ status: 'error', fetchStatus: 'idle' });
+    });
+    expect(screen.getByRole('button', { name: '다음 회차 시작' })).toBeEnabled();
+    if (read === 'game') {
+      await screen.findByText('다시 불러오면 저장된 선물을 확인할 수 있어요.');
+      expect(screen.queryByText('저장된 선물 정보를 불러오고 있어요.')).toBeNull();
+    }
+    const failedReads = reads;
+    server.use(
+      http.get(read === 'game' ? '*/api/student/game' : '*/api/student/learning/map', () => {
+        reads++;
+        return HttpResponse.json(
+          read === 'game' ? gameView : { ...journeyView, journeyPosition: 5, firstAnswerCount: 5 },
+        );
+      }),
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: retryName })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: retryName }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: retryName })).toBeNull());
+    expect(await screen.findByRole('region', { name: '선물 착용 미리보기' })).toBeVisible();
+    expect(reads).toBeGreaterThan(failedReads);
+    expect(writes).toBe(0);
+    expect(screen.getByText('301 XP')).toBeVisible();
+  },
+);
+
+it.each(['failed', 'held'] as const)(
+  'resultStartsCanonicalNextDayWith%sCosmeticReads',
+  async (cosmetics) => {
+    const release = deferred<void>();
+    const other = '44444444-4444-4444-8444-444444444444';
+    const started = { ...activeSession, sessionId: other, dayNumber: 2 };
+    let command: unknown;
+    server.use(
+      http.get('*/api/student/learning/status', () =>
+        HttpResponse.json({ ...finishedStatus, nextAction: 'START_FIRST', calendarCap: 2 }),
+      ),
+      http.get('*/api/student/game', async () => {
+        if (cosmetics === 'held') await release.promise;
+        return HttpResponse.error();
+      }),
+      http.get('*/api/student/learning/map', async () => {
+        if (cosmetics === 'held') await release.promise;
+        return HttpResponse.error();
+      }),
+      http.post('*/api/student/learning/sessions', async ({ request }) => {
+        command = await request.json();
+        return json(started);
+      }),
+      http.get(`*/api/student/learning/sessions/${other}`, () => json(started)),
+    );
+    setup();
+    try {
+      await userEvent.click(await screen.findByRole('button', { name: '다음 회차 시작' }));
+      expect(await screen.findByRole('button', { name: 'O · 사실' })).toBeEnabled();
+      expect(command).toMatchObject({ mode: 'FIRST', dayNumber: 2, questionIds: null });
+    } finally {
+      release.resolve();
+    }
+  },
+);
+
+it.each(['FIRST', 'REVIEW'] as const)(
+  'resultContinuesCanonical%sSessionWithFailedCosmetics',
+  async (mode) => {
+    const other = '44444444-4444-4444-8444-444444444444';
+    let starts = 0;
+    const active = {
+      ...activeSession,
+      sessionId: other,
+      mode,
+      dayNumber: mode === 'REVIEW' ? null : 1,
+    };
+    server.use(
+      http.get('*/api/student/learning/status', () =>
+        HttpResponse.json({
+          ...finishedStatus,
+          nextAction: 'CONTINUE_SESSION',
+          activeSession: { sessionId: other, mode, dayNumber: active.dayNumber },
+        }),
+      ),
+      http.get('*/api/student/game', () => HttpResponse.error()),
+      http.get('*/api/student/learning/map', () => HttpResponse.error()),
+      http.post('*/api/student/learning/sessions', () => {
+        starts++;
+        return json(active);
+      }),
+      http.get(`*/api/student/learning/sessions/${other}`, () => json(active)),
+    );
+    setup();
+    await screen.findByRole('button', { name: '여행 친구 다시 불러오기' });
+    await userEvent.click(screen.getByRole('button', { name: '이어풀기' }));
+    expect(await screen.findByRole('button', { name: 'O · 사실' })).toBeEnabled();
+    expect(starts).toBe(0);
+  },
+);
+
+it('fifthFeedbackLeavesWithoutFinishAndRestoresGift', async () => {
+  const writes: string[] = [];
+  const saved = { ...completed, lastAnswer: { ...completed.lastAnswer!, rewardGranted: reward } };
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () => json(saved)),
+    http.post('*/api/student/learning/*', ({ request }) => {
+      writes.push(request.url);
+      return new HttpResponse(null, { status: 500 });
+    }),
+  );
+  const first = setup(`/student/learning/sessions/${sessionId}`);
+  await userEvent.click(await screen.findByRole('link', { name: '학습 홈으로' }));
+  first.unmount();
+  setup();
+  expect(await screen.findByText('새 선물')).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '동그란 안경' })).toBeVisible();
+  expect(screen.getByRole('img', { name: '동그란 안경' })).toBeVisible();
+  expect(screen.getByText('301 XP')).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
+it.each([
+  { name: 'wearSavedRewardUsesOwnedAppearanceMutationOnly', characterId: 'haru' as const },
+  { name: 'wearRewardKeepsUnselectedCharacterNull', characterId: null },
+])('$name', async ({ characterId }) => {
+  const bodies: unknown[] = [];
+  const writes: string[] = [];
+  const appearance = {
+    ...gameView,
+    characterId,
+    equippedBySlot: { ...gameView.equippedBySlot, face: null, hat: 'hat-1' },
+  };
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () =>
+      json({ ...completed, lastAnswer: { ...completed.lastAnswer!, rewardGranted: reward } }),
+    ),
+    http.get('*/api/student/game', () => HttpResponse.json(appearance)),
+    http.put('*/api/student/game/appearance', async ({ request }) => {
+      bodies.push(await request.json());
+      return HttpResponse.json({
+        ...appearance,
+        revision: 8,
+        equippedBySlot: { ...appearance.equippedBySlot, face: 'face-1' },
+      });
+    }),
+    http.post('*/api/student/learning/*', ({ request }) => {
+      writes.push(request.url);
+      return new HttpResponse(null, { status: 500 });
+    }),
+  );
+  setup();
+  const wear = await screen.findByRole('button', { name: '지금 착용하기' });
+  await userEvent.dblClick(wear);
+  await waitFor(() => expect(bodies).toHaveLength(1));
+  expect(bodies[0]).toEqual({
+    characterId,
+    expectedRevision: 7,
+    equippedBySlot: {
+      face: 'face-1',
+      hat: 'hat-1',
+      top: null,
+      bottom: null,
+      shoes: null,
+      hand: null,
+    },
+  });
+  expect(screen.getByText('301 XP')).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
+it('legacySavedResultWithoutRewardStillRestores', async () => {
+  setup();
+  expect(await screen.findByRole('heading', { name: '회차 통과' })).toBeVisible();
+  expect(screen.queryByText('새 선물')).toBeNull();
+  expect(screen.queryByRole('button', { name: '지금 착용하기' })).toBeNull();
+  expect(screen.queryByRole('region', { name: '선물 착용 미리보기' })).toBeNull();
+  expect(screen.getByText('301 XP')).toBeVisible();
+});
 
 const completed: LearningSessionView = {
   ...activeSession,

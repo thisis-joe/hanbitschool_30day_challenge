@@ -1,5 +1,7 @@
 import { TeacherAccountsPage } from '../features/staff/TeacherAccountsPage';
 import { ClassroomsPage } from '../features/staff/ClassroomsPage';
+import { StatisticsPage } from '../features/staff/learning/StatisticsPage';
+import { StudentDetailPage } from '../features/staff/learning/StudentDetailPage';
 import { Routes, Route } from 'react-router-dom';
 import { HomeRedirect } from './HomeRedirect';
 import { RequireRole } from './RequireRole';
@@ -12,6 +14,9 @@ import { LearningDashboardPage } from '../features/learning/LearningDashboardPag
 import { PersonalQuestionsPage } from '../features/learning/PersonalQuestionsPage';
 import { LearningSessionPage } from '../features/learning/LearningSessionPage';
 import { LearningResultPage } from '../features/learning/LearningResultPage';
+import { CharacterSelectionPage } from '../features/game/CharacterSelectionPage';
+import { ClosetPage } from '../features/game/ClosetPage';
+import { JourneyMapPage } from '../features/game/JourneyMapPage';
 import '../features/learning/learning.css';
 export function AppRoutes() {
   return (
@@ -21,6 +26,11 @@ export function AppRoutes() {
       </Route>
       <Route element={<RequireRole allowed={['TEACHER', 'ADMIN']} />}>
         <Route path="/staff/classrooms" element={<ClassroomsPage />} />
+        <Route path="/staff/classrooms/:classroomId/learning" element={<StatisticsPage />} />
+        <Route
+          path="/staff/classrooms/:classroomId/learning/students/:studentId"
+          element={<StudentDetailPage />}
+        />
       </Route>
       <Route path="/" element={<HomeRedirect />} />
       <Route path="/signup" element={<StudentSignupPage />} />
@@ -28,6 +38,9 @@ export function AppRoutes() {
       <Route path="/staff/login" element={<StaffLoginPage />} />
       <Route element={<RequireRole allowed={['STUDENT']} />}>
         <Route path="/student/account" element={<StudentAccountPage />} />
+        <Route path="/student/character" element={<CharacterSelectionPage />} />
+        <Route path="/student/closet" element={<ClosetPage />} />
+        <Route path="/student/map" element={<JourneyMapPage />} />
         <Route path="/student/learning" element={<LearningDashboardPage />} />
         <Route path="/student/questions" element={<PersonalQuestionsPage />} />
         <Route path="/student/learning/sessions/:sessionId" element={<LearningSessionPage />} />

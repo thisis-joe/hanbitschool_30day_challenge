@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentAccount } from '../auth/queries';
 import { FormError, useSubmission } from '../auth/FormParts';
@@ -99,6 +100,12 @@ export function ClassroomsPage() {
                 <p>
                   시작일 {c.startDate} / 가입 학생 {c.studentCount}명
                 </p>
+                <Link
+                  className="button secondary"
+                  to={`/staff/classrooms/${encodeURIComponent(c.id)}/learning`}
+                >
+                  학습 통계
+                </Link>
               </div>
               <button
                 className="secondary"

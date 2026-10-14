@@ -7,6 +7,7 @@ import { logout } from '../features/auth/api';
 import { FormError, useSubmission } from '../features/auth/FormParts';
 import { refreshCsrf, setUnauthorizedHandler } from '../lib/http';
 import { clearAllPendingCommands } from '../features/learning/pendingCommands';
+import { StudentGameNav } from '../features/game/StudentGameNav';
 export function App() {
   const client = useQueryClient();
   const session = useCurrentAccount();
@@ -33,8 +34,6 @@ export function App() {
         <nav aria-label="주 메뉴">
           {me?.role === 'STUDENT' ? (
             <>
-              <Link to="/student/learning">학습 홈</Link>
-              <Link to="/student/questions?filter=REVIEW_QUEUE">나의 문제</Link>
               <Link to="/student/account">내 정보</Link>
             </>
           ) : null}
@@ -66,6 +65,7 @@ export function App() {
           )}
         </nav>
       </header>
+      {me?.role === 'STUDENT' ? <StudentGameNav /> : null}
       <main id="main-content">
         <FormError message={submit.error} />
         <AppRoutes />
