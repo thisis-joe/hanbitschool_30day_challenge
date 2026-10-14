@@ -11,36 +11,58 @@
   --paper: #fffef9;
   --butter: #f4d66e;
   --ink: #263d35;
-  --line: #e2dec9;
+  --line: #435748;
   color: var(--ink);
 }
 .game-learning-page .learning-card,
 .game-personal-page .learning-card {
-  border-radius: 13px;
+  border-radius: 24px;
+}
+.game-learning-page .learning-card {
+  display: flex;
+  flex-direction: column;
+}
+/* Keep the mounted traveler stable while placing the question above its scene. */
+.game-learning-page .learning-card > .game-learning-scene {
+  order: 1;
+  flex-shrink: 0;
+}
+.game-learning-page .learning-card > .learning-choices,
+.game-learning-page .learning-card > .learning-feedback,
+.game-learning-page .learning-card > [role='status'] {
+  order: 2;
 }
 .game-learning-page .learning-choices button {
-  background: #edf3e3;
-  border: 2px solid #ccd9b8;
-  color: #34584b;
+  background: #e2edcc;
+  border: 3px solid var(--ink);
+  color: #263d35;
 }
 .game-learning-page .learning-choices button.secondary {
-  background: #fbf0d8;
-  border-color: #ead8ac;
-  color: #937c54;
+  background: #fae9bc;
+  border-color: var(--ink);
+  color: #66532e;
 }
 .game-learning-page .learning-feedback {
-  border-radius: 11px;
-  padding: 18px;
+  border-radius: 18px;
+  padding: clamp(18px, 4vw, 28px);
   background: #edf3e3;
-  border: 1px solid #ccd9b8;
+  border: 3px solid var(--ink);
+  box-shadow: 0 4px 0 var(--shadow);
 }
 .game-learning-page .learning-feedback[data-outcome='WRONG'],
 .game-learning-page .learning-feedback[data-outcome='TIMED_OUT'] {
   background: #fbf0d8;
-  border-color: #ead8ac;
+  border-color: var(--ink);
 }
 .learning-saved-gift {
   margin-bottom: 24px;
+}
+.learning-completion[aria-disabled='true'] {
+  opacity: 0.68;
+  cursor: not-allowed;
+  box-shadow: 0 2px 0 var(--shadow);
+  filter: none;
+  transform: none;
 }
 .learning-gift-preview {
   display: flex;
@@ -54,18 +76,15 @@
 .learning-gift-preview > div {
   flex: 1 1 12rem;
 }
-.game-learning-result .game-reward-card {
-  background: #fbefc8;
-  border-color: #ecd791;
-}
 .game-personal-page .learning-filters .button {
   border-radius: 10px;
 }
 .learning-card {
-  border: 1px solid var(--line);
+  border: 4px solid var(--ink);
   border-radius: 24px;
   padding: clamp(20px, 5vw, 40px);
   background: var(--paper);
+  box-shadow: 0 6px 0 var(--shadow);
 }
 .learning-page h1:focus {
   outline: 3px solid #486e5a;
@@ -90,7 +109,7 @@
 }
 .learning-progress {
   width: 100%;
-  height: 10px;
+  height: 14px;
   accent-color: var(--ink);
   margin: 16px 0 28px;
 }
@@ -99,7 +118,8 @@
 }
 .learning-timer {
   padding: 8px 12px;
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
+  background: #fff2b9;
   border-radius: 10px;
   font-variant-numeric: tabular-nums;
 }
@@ -110,7 +130,7 @@
   line-height: 1.85;
 }
 .learning-source {
-  margin: 28px 0;
+  margin: 30px 0;
   font-size: clamp(1.15rem, 3.8vw, 1.5rem);
   font-weight: 700;
 }
@@ -123,16 +143,17 @@
   gap: 12px;
 }
 .learning-choices button {
-  min-height: 88px;
-  padding: 12px;
-  font-size: clamp(1.2rem, 4vw, 1.6rem);
-  border-radius: 16px;
+  min-height: 96px;
+  padding: 16px 12px;
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  border-radius: 18px;
 }
 .learning-feedback .learning-correct-choice {
   display: inline-block;
   border-radius: 10px;
   padding: 10px 16px;
   background: #f1ebcf;
+  border: 2px solid var(--ink);
   font-weight: 700;
 }
 .learning-explanation {
@@ -141,7 +162,7 @@
 .learning-pending,
 .learning-error {
   padding: 18px;
-  border: 1px solid var(--line);
+  border: 3px solid var(--line);
   background: #f8f5e7;
   border-radius: 14px;
   margin-top: 20px;
@@ -167,9 +188,11 @@
   margin: 28px 0;
 }
 .learning-result-stats div {
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  border: 3px solid var(--line);
+  border-radius: 16px;
   padding: 16px 12px;
+  background: #f0f1dc;
+  box-shadow: 0 4px 0 var(--shadow);
 }
 .learning-result-stats.learning-home-stats {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -179,7 +202,7 @@
 }
 .learning-result-stats dd {
   margin: 8px 0 0;
-  font-size: 1.2rem;
+  font-size: 1.45rem;
   font-weight: 700;
 }
 .learning-result-links {
@@ -214,7 +237,7 @@
 }
 .learning-day-card {
   padding: 18px;
-  border: 1px solid var(--line);
+  border: 3px solid var(--line);
   background: var(--paper);
   border-radius: 16px;
   display: flex;
@@ -243,8 +266,8 @@
   margin: 24px 0;
 }
 .learning-filters [aria-current='page'] {
-  border: 2px solid var(--ink);
-  background: #f1ebcf;
+  border: 3px solid var(--ink);
+  background: #f8df89;
   text-decoration: underline;
 }
 .learning-question-list {
@@ -255,6 +278,8 @@
 }
 .learning-personal-heading {
   justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--line);
 }
 .learning-personal-text {
   white-space: pre-wrap;
@@ -280,7 +305,7 @@
 .learning-consent {
   margin-top: 12px;
   padding: 16px;
-  border: 1px solid var(--line);
+  border: 3px solid var(--line);
   background: #f8f5e7;
   border-radius: 12px;
 }
@@ -296,11 +321,69 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .student-header {
-    flex-direction: column;
-    align-items: flex-start;
+    min-height: 76px;
+    padding: 10px 16px;
+    flex-wrap: nowrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .student-header .brand {
+    font-size: 1rem;
+    min-height: 48px;
   }
   .student-header nav {
-    gap: 8px 16px;
+    gap: 6px;
+    flex-wrap: nowrap;
+    font-size: 0.72rem;
+  }
+  .student-header .nav-button {
+    font-size: 0.72rem;
+    padding-inline: 6px;
+  }
+  .game-learning-page .learning-card {
+    padding: 16px;
+  }
+  .game-learning-page .learning-progress {
+    height: 10px;
+    margin: 8px 0 14px;
+  }
+  .game-learning-page .learning-question-header h1 {
+    font-size: 1.25rem;
+  }
+  .game-learning-page .learning-timer {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  .game-learning-page .learning-source {
+    line-height: 1.65;
+    margin: 16px 0;
+  }
+  .game-learning-page .learning-description {
+    font-size: 0.85rem;
+    margin: 0 0 12px;
+  }
+  .game-learning-page .game-learning-scene {
+    height: 190px;
+    margin: 0 0 14px;
+  }
+  .game-learning-page .game-learning-traveler {
+    left: calc(50% - 50px);
+  }
+  .game-learning-page .game-learning-traveler .game-avatar {
+    width: 100px;
+  }
+  .game-learning-page .game-learning-location {
+    top: auto;
+    bottom: 6px;
+    left: auto;
+    right: 8px;
+    margin: 0;
+    padding: 3px 7px;
+    font-size: 0.7rem;
+  }
+  .game-learning-page .learning-choices button {
+    min-height: 64px;
+    padding: 10px;
   }
   .learning-day-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

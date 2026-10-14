@@ -1,0 +1,482 @@
+/* Treasure and wardrobe artwork is decorative; names and unlock rules stay crisp. */
+.game-reward-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(140px, 210px) minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+  padding: 28px;
+  border: 4px solid var(--ink);
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 15% 50%, #ffe29b 0%, transparent 50%), #fff6d6;
+  box-shadow:
+    0 6px 0 #a98b42,
+    inset 0 0 0 3px #fffbee,
+    inset 0 0 0 5px #c8a65b;
+}
+.game-home-under > .game-reward-card {
+  grid-column: 1 / -1;
+}
+.game-home-under > .game-regions {
+  grid-column: 1 / -1;
+}
+.game-reward-card:has(.game-reward-character) {
+  grid-template-columns: minmax(140px, 210px) minmax(0, 1fr) 160px;
+}
+.game-reward-card p {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  word-break: keep-all;
+}
+.game-reward-copy {
+  min-width: 0;
+}
+.game-reward-copy h2 {
+  font-size: clamp(1.45rem, 3vw, 1.9rem);
+  margin: 8px 0 12px;
+}
+.game-reward-copy button {
+  margin-top: 12px;
+}
+.game-reward-condition {
+  color: #596448;
+}
+.game-treasure-stage {
+  position: relative;
+  min-width: 0;
+  height: 204px;
+}
+.game-reward-art {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.game-reward-art > .game-equipment-icon {
+  width: 96px;
+  height: 96px;
+  position: relative;
+  z-index: 1;
+}
+.game-treasure-chest {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  margin-top: -12px;
+  image-rendering: pixelated;
+}
+.game-reward-locked .game-reward-art {
+  filter: grayscale(1) blur(6px);
+}
+.game-treasure-spark {
+  position: absolute;
+  right: 5%;
+  top: 8%;
+  color: #ad762b;
+  font-size: 32px;
+  pointer-events: none;
+}
+.game-reward-character {
+  display: grid;
+  justify-items: center;
+  border-left: 2px solid #b89a59;
+  padding-left: 20px;
+}
+.game-reward-character .game-avatar {
+  width: 116px;
+}
+.game-reward-character p {
+  font-size: 0.8rem;
+  text-align: center;
+}
+.game-reward-preview .learning-gift-preview {
+  display: grid;
+  justify-items: center;
+  padding: 0;
+  border: 0;
+  gap: 8px;
+}
+.game-reward-preview .learning-gift-preview h2 {
+  font-size: 0.9rem;
+  text-align: center;
+}
+.game-reward-preview .learning-gift-preview p {
+  font-size: 0.75rem;
+}
+.game-mystery-cloud {
+  position: absolute;
+  background: #fffbee;
+  border-radius: 50%;
+  width: 75%;
+  height: 32%;
+  bottom: 20%;
+  opacity: 0.91;
+  pointer-events: none;
+}
+.game-mystery-cloud::before,
+.game-mystery-cloud::after {
+  content: '';
+  position: absolute;
+  background: inherit;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.game-mystery-cloud::before {
+  width: 54%;
+  height: 150%;
+  left: 15%;
+  bottom: 0;
+}
+.game-mystery-cloud::after {
+  width: 40%;
+  height: 110%;
+  right: 5%;
+  bottom: 0;
+}
+.game-cloud-left {
+  left: -8%;
+}
+.game-cloud-right {
+  right: -8%;
+  bottom: 9%;
+  transform: scaleX(-1);
+}
+.game-treasure-stage > .game-mystery-cloud {
+  display: none;
+}
+.game-reward-locked .game-treasure-stage > .game-mystery-cloud,
+.game-reward-card[data-revealing='true'] .game-treasure-stage > .game-mystery-cloud {
+  display: block;
+}
+.game-reward-card[data-revealing='true'] .game-cloud-left {
+  animation: reward-cloud-left 900ms ease-out both;
+}
+.game-reward-card[data-revealing='true'] .game-cloud-right {
+  animation: reward-cloud-right 900ms ease-out both;
+}
+.game-reward-card[data-revealing='true'] .game-treasure-spark {
+  animation: reward-spark 900ms ease-out both;
+}
+@keyframes reward-cloud-left {
+  to {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+@keyframes reward-cloud-right {
+  to {
+    transform: translateX(24px) scaleX(-1);
+    opacity: 0;
+  }
+}
+@keyframes reward-spark {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.game-closet-card > h1 {
+  font-size: clamp(2rem, 5vw, 2.65rem);
+}
+.game-closet-card > p {
+  max-width: 650px;
+  color: #53634f;
+}
+.game-closet-card .game-page-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0 28px;
+}
+.game-closet-card .game-page-nav a {
+  display: inline-flex;
+  align-items: center;
+  background: #fff9dc;
+}
+.game-wardrobe-studio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 26px;
+  align-items: start;
+}
+.game-wardrobe-left,
+.game-closet-slot {
+  min-width: 0;
+}
+.game-appearance-preview {
+  margin: 0;
+  border: 4px solid var(--ink);
+  border-radius: 20px;
+  overflow: hidden;
+  background: #fff9e4;
+  box-shadow: 0 6px 0 var(--shadow);
+}
+.game-wardrobe-room {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 390px;
+  padding: 28px 20px 32px;
+  background: url('/game/scenes/room.webp') center / cover;
+  image-rendering: pixelated;
+}
+.game-wardrobe-room > .game-tag {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+}
+.game-wardrobe-room .game-avatar {
+  width: 184px;
+}
+.game-preview-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border-top: 2px solid var(--ink);
+}
+.game-preview-controls p {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+.game-preview-controls button {
+  flex: 1 1 auto;
+}
+.game-wardrobe-categories {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 20px;
+}
+.game-wardrobe-categories button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+  min-width: 0;
+  min-height: 74px;
+  background: #eceede;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+.game-wardrobe-categories .game-equipment-icon {
+  width: 32px;
+  height: 32px;
+}
+.game-wardrobe-categories [aria-pressed='true'] {
+  background: #f4d66e;
+  box-shadow:
+    0 4px 0 var(--shadow),
+    inset 0 0 0 2px #fff7d7;
+}
+.game-wardrobe-note {
+  font-size: 0.8rem;
+  color: #52644d;
+  margin: 20px 0 0;
+}
+.game-closet-slot {
+  border: 4px solid var(--ink);
+  border-radius: 20px;
+  background: #e9ecd9;
+  padding: 18px;
+  box-shadow: 0 6px 0 var(--shadow);
+}
+.game-inventory-heading {
+  padding: 0 2px 14px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #62735b;
+}
+.game-inventory-heading .learning-eyebrow {
+  color: #52644d;
+  margin: 0;
+  font-size: 0.75rem;
+}
+.game-inventory-heading h2 {
+  font-size: 1.65rem;
+}
+.game-inventory-heading > p:last-child {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.game-wardrobe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.game-item-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 6px 12px;
+  min-width: 0;
+  min-height: 176px;
+  color: var(--ink);
+  background: #fff9db;
+  border: 3px solid var(--ink);
+  border-radius: 13px;
+  overflow-wrap: anywhere;
+}
+.game-item-option strong {
+  font-size: 0.8rem;
+}
+.game-item-state {
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.game-item-option[data-equipped='true'] {
+  background: #ffe6a0;
+  box-shadow:
+    0 4px 0 var(--shadow),
+    inset 0 0 0 2px #fffdf0;
+}
+.game-item-option[aria-pressed='true'] {
+  background: #dce8c9;
+  outline: 2px solid #627a4c;
+  outline-offset: 2px;
+}
+.game-item-locked {
+  background: #f2f1e7;
+}
+.game-item-art {
+  position: relative;
+  display: block;
+  width: 84px;
+  max-width: 100%;
+  height: 84px;
+}
+.game-item-locked .game-item-art > .game-equipment-icon {
+  filter: grayscale(1) blur(6px);
+}
+.game-item-art .game-mystery-cloud {
+  height: 20%;
+  bottom: 22%;
+  width: 65%;
+  opacity: 0.86;
+}
+.game-item-art .game-cloud-right {
+  bottom: 10%;
+}
+.game-lock-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 21px;
+  height: 23px;
+  padding: 3px;
+  background: #fffdf3;
+  border: 2px solid #78806b;
+  border-radius: 6px;
+  pointer-events: none;
+}
+.game-lock-badge svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: #596448;
+  stroke-width: 2;
+}
+@media (max-width: 1000px) {
+  .game-wardrobe-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .game-wardrobe-categories {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .game-wardrobe-categories button {
+    flex-direction: row;
+    gap: 8px;
+    min-height: 52px;
+  }
+}
+@media (max-width: 720px) {
+  .game-wardrobe-studio {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .game-closet-card {
+    padding: 18px 14px;
+  }
+  .game-wardrobe-room {
+    min-height: 290px;
+    padding-bottom: 24px;
+  }
+  .game-wardrobe-room .game-avatar {
+    width: 152px;
+  }
+  .game-wardrobe-categories {
+    gap: 4px;
+  }
+  .game-wardrobe-categories button {
+    font-size: 0.75rem;
+    border-radius: 9px;
+  }
+  .game-closet-slot {
+    padding: 14px;
+  }
+  .game-reward-card,
+  .game-reward-card:has(.game-reward-character) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    padding: 22px 18px;
+  }
+  .game-treasure-stage {
+    height: 174px;
+    align-self: center;
+  }
+  .game-reward-art > .game-equipment-icon {
+    width: 88px;
+    height: 88px;
+  }
+  .game-reward-character {
+    padding-left: 10px;
+  }
+  .game-reward-character .game-avatar {
+    width: 98px;
+  }
+  .game-reward-copy {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    border-top: 2px solid #c2ac72;
+    padding-top: 14px;
+  }
+  .game-reward-copy button {
+    width: 100%;
+  }
+  .game-reward-card:not(:has(.game-reward-character)) .game-treasure-stage {
+    grid-column: 1 / -1;
+    width: 190px;
+    justify-self: center;
+    height: 198px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-reward-card[data-revealing='true'] .game-mystery-cloud,
+  .game-reward-card[data-revealing='true'] .game-treasure-spark {
+    animation: none;
+  }
+  .game-reward-card[data-revealing='true'] .game-mystery-cloud {
+    display: none;
+  }
+}

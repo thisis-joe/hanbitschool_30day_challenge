@@ -175,7 +175,7 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
               <button onClick={() => void journey.refetch()}>지도 다시 불러오기</button>
             </div>
           ) : null}
-          {map ? <JourneyMap journey={map} appearance={appearance} /> : null}
+          {map ? <JourneyMap owner={accountId} journey={map} appearance={appearance} /> : null}
         </>
       ) : null}
       <section
@@ -271,6 +271,9 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
         <div className="game-home-under">
           {reward ? (
             <RewardCard
+              owner={accountId}
+              contentVersion={appearance!.contentVersion}
+              appearance={appearance}
               item={reward}
               owned={appearance!.inventory.some(
                 (item) => item.itemId === reward.itemId && item.owned,
@@ -279,7 +282,9 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
           ) : (
             <section className="game-reward-card">
               <p>회차를 처음 통과하면 여행 선물을 받아요.</p>
-              <Link to="/student/closet">옷장 둘러보기</Link>
+              <Link className="game-reward-fallback-link" to="/student/closet">
+                옷장 둘러보기
+              </Link>
             </section>
           )}
           <nav className="game-regions" aria-label="여행 지역">

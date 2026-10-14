@@ -267,26 +267,30 @@ export function LearningResultPage() {
           {gift ? (
             <div className="learning-saved-gift">
               <p className="learning-eyebrow">새 선물</p>
-              {giftItem && savedAppearance ? (
-                <section className="learning-gift-preview" aria-label="선물 착용 미리보기">
-                  <GameAvatar
-                    characterId={savedAppearance.characterId}
-                    equippedBySlot={{
-                      ...savedAppearance.equippedBySlot,
-                      [giftItem.slot]: giftItem.itemId,
-                    }}
-                  />
-                  <div>
-                    <h2>선물 착용 미리보기</h2>
-                    <p>미리보기예요. 지금 착용하기를 누르면 저장돼요.</p>
-                    {savedAppearance.characterId === null ? (
-                      <p>캐릭터 미선택 상태의 하루 미리보기예요.</p>
-                    ) : null}
-                  </div>
-                </section>
-              ) : null}
               {giftItem ? (
                 <RewardCard
+                  owner={accountId}
+                  contentVersion={savedAppearance?.contentVersion ?? ''}
+                  preview={
+                    savedAppearance ? (
+                      <section className="learning-gift-preview" aria-label="선물 착용 미리보기">
+                        <GameAvatar
+                          characterId={savedAppearance.characterId}
+                          equippedBySlot={{
+                            ...savedAppearance.equippedBySlot,
+                            [giftItem.slot]: giftItem.itemId,
+                          }}
+                        />
+                        <div>
+                          <h2>선물 착용 미리보기</h2>
+                          <p>미리보기예요. 지금 착용하기를 누르면 저장돼요.</p>
+                          {savedAppearance.characterId === null ? (
+                            <p>캐릭터 미선택 상태의 하루 미리보기예요.</p>
+                          ) : null}
+                        </div>
+                      </section>
+                    ) : null
+                  }
                   item={giftItem}
                   owned={giftOwned}
                   wearLabel="지금 착용하기"

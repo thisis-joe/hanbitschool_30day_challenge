@@ -824,10 +824,11 @@ test('combinedGameHistoryAndTeacherStatsSurviveBackendRestart', async ({ page, b
     await page.goto('/student/map');
     await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toBeEnabled();
     await layoutAndTargets(page);
-    // The map's hero is a static canvas; actual idle motion belongs to the home scene.
+    // The map's hero is static; the home scene has one finite arrival animation.
     await page.goto('/student/learning');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await expect(page.locator('.game-avatar-idle')).toHaveCSS('animation-name', 'game-breathe');
+    await expect(page.locator('.game-avatar-idle')).toHaveCSS('animation-name', 'game-arrive');
+    await expect(page.locator('.game-avatar-idle')).toHaveCSS('animation-iteration-count', '1');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await expect(page.locator('.game-avatar-idle')).toHaveCSS('animation-name', 'none');
     await layoutAndTargets(page);

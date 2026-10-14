@@ -1,0 +1,57 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen } from '@testing-library/react';
+import { expect, it } from 'vitest';
+import { meKey } from '../auth/queries';
+import { gameView } from '../../test/gameFixtures';
+import { student } from '../../test/server';
+import { RewardCard } from './RewardCard';
+
+function mount(owned: boolean) {
+  const client = new QueryClient();
+  client.setQueryData(meKey, student);
+  const ui = (
+    next: boolean,
+    item = gameView.items[0],
+    owner = student.accountId,
+    version = 'v1',
+  ) => (
+    <QueryClientProvider client={client}>
+      <RewardCard owner={owner} contentVersion={version} item={item} owned={next} />
+    </QueryClientProvider>
+  );
+  const result = render(ui(owned));
+  return {
+    client,
+    update: (next: boolean, item = gameView.items[0], owner = student.accountId, version = 'v1') =>
+      result.rerender(ui(next, item, owner, version)),
+  };
+}
+
+// Treating existing inventory as newly earned produces a false celebration on every visit.
+it('celebrates only an observed ownership transition for the same reward', () => {
+  const { update } = mount(true);
+  const card = screen.getByRole('region', { name: '여행 선물' });
+  expect(card).not.toHaveAttribute('data-revealing', 'true');
+  update(false, gameView.items[1]);
+  expect(card).not.toHaveAttribute('data-revealing', 'true');
+  update(true, gameView.items[1]);
+  expect(card).toHaveAttribute('data-revealing', 'true');
+  update(true, gameView.items[0]);
+  expect(card).not.toHaveAttribute('data-revealing', 'true');
+});
+
+// A different account/course must not inherit another identity's reward animation.
+it('keeps reward celebrations scoped to owner and content version', () => {
+  const { client, update } = mount(false);
+  update(true, gameView.items[0], student.accountId, 'v2');
+  expect(screen.getByRole('region', { name: '여행 선물' })).not.toHaveAttribute(
+    'data-revealing',
+    'true',
+  );
+  act(() => client.setQueryData(meKey, { ...student, accountId: 'another-student' }));
+  update(true, gameView.items[0], 'another-student');
+  expect(screen.getByRole('region', { name: '여행 선물' })).not.toHaveAttribute(
+    'data-revealing',
+    'true',
+  );
+});
