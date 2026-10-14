@@ -322,6 +322,7 @@
   }
   .student-header .brand {
     font-size: 1rem;
+    min-height: 48px;
   }
   .student-header nav {
     gap: 6px;
