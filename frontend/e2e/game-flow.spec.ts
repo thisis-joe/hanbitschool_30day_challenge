@@ -290,6 +290,7 @@ test('lockedPreviewCannotBecomeSavedGear', async ({ page }) => {
   page.on('request', (r) => {
     if (r.method() === 'PUT' && r.url().endsWith('/game/appearance')) writes++;
   });
+  await page.getByRole('button', { name: '모자 장비 보기', exact: true }).click();
   await page.getByRole('button', { name: '새벽왕관 미리보기', exact: true }).click();
   await expect(page.getByRole('region', { name: '외형 미리보기' })).toContainText('미보유');
   await expect(page.getByRole('button', { name: '착용하기', exact: true })).toHaveCount(0);

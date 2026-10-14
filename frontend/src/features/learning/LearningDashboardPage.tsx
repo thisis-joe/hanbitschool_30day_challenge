@@ -271,6 +271,9 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
         <div className="game-home-under">
           {reward ? (
             <RewardCard
+              owner={accountId}
+              contentVersion={appearance!.contentVersion}
+              appearance={appearance}
               item={reward}
               owned={appearance!.inventory.some(
                 (item) => item.itemId === reward.itemId && item.owned,

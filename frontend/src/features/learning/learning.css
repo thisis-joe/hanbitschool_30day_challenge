@@ -69,10 +69,6 @@
 .learning-gift-preview > div {
   flex: 1 1 12rem;
 }
-.game-learning-result .game-reward-card {
-  background: #fbefc8;
-  border-color: #ecd791;
-}
 .game-personal-page .learning-filters .button {
   border-radius: 10px;
 }

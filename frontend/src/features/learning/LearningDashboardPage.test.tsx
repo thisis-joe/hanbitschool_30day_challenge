@@ -61,7 +61,9 @@ it.each([null, 'bora'] as const)(
     );
     renderHome();
     expect(
-      await screen.findByRole('img', { name: characterId ? '보라' : /캐릭터 미선택/ }),
+      await within(screen.getByRole('region', { name: '오늘의 탐험' })).findByRole('img', {
+        name: characterId ? '보라' : /캐릭터 미선택/,
+      }),
     ).toBeVisible();
     if (characterId === null) {
       expect(screen.getByText('아직 여행 친구를 선택하지 않았어요.')).toBeVisible();

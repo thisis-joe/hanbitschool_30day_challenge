@@ -1,4 +1,5 @@
 @import './journey-map.css';
+@import './wardrobe-rewards.css';
 
 .game-avatar {
   display: inline-block;
@@ -231,29 +232,6 @@
   gap: 24px;
   margin: 12px 0 28px;
 }
-.game-reward-card {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--paper);
-  min-width: 0;
-}
-.game-reward-card p {
-  font-size: 0.85rem;
-  margin: 6px 0;
-}
-.game-reward-art {
-  width: 80px;
-  flex-shrink: 0;
-  background: #faf0c4;
-  border-radius: 13px;
-}
-.game-reward-locked .game-reward-art {
-  filter: grayscale(1) blur(0.55px);
-}
 .game-regions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -357,54 +335,12 @@
   font-weight: 900;
   pointer-events: none;
 }
-.game-item-option[aria-pressed='true'] {
-  background: #fbefbc;
-  border: 2px solid #bda35a;
-}
-.game-appearance-preview {
-  display: grid;
-  justify-items: center;
-  padding: 32px 16px;
-  border: 1px solid #d4be87;
-  border-radius: 12px;
-  background: url('/game/scenes/room.webp') center / cover;
-  image-rendering: pixelated;
-  margin: 20px 0;
-}
-.game-appearance-preview p {
-  background: var(--paper);
-  padding: 8px 12px;
-  border-radius: 6px;
-}
 .game-page-nav a {
   min-width: 48px;
   min-height: 48px;
   padding: 4px 12px;
   border: 3px solid var(--line);
   border-radius: 9px;
-}
-.game-closet-slot {
-  border-top: 1px solid var(--line);
-  padding-top: 20px;
-  margin-top: 24px;
-}
-.game-base-option {
-  margin-bottom: 12px;
-  background: var(--paper);
-}
-.game-item-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px;
-  background: var(--paper);
-  border-color: var(--line);
-}
-.game-item-locked {
-  background: #f3f2eb;
-}
-.game-item-art {
-  width: 80px;
 }
 @media (max-width: 720px) {
   .learning-card.game-camp {

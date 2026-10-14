@@ -9,6 +9,24 @@ import { App } from '../../app/App';
 import { meKey } from '../auth/queries';
 import type { AppearanceCommand } from './types';
 
+// Dropping a category or rendering every slot at once breaks browsable inventory.
+it('filters inventory by category and keeps all six slots reachable without saving', async () => {
+  const { user, commands } = setup();
+  await screen.findByRole('button', { name: '동그란 안경 미리보기' });
+  expect(screen.queryByRole('button', { name: '작은 모자 미리보기' })).toBeNull();
+  for (const name of ['얼굴', '모자', '상의', '하의', '신발', '손']) {
+    const category = screen.getByRole('button', { name: `${name} 장비 보기` });
+    await user.click(category);
+    expect(category).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('region', { name })).toBeVisible();
+    expect(screen.getByRole('button', { name: `${name} 기본 모습` })).toBeVisible();
+    expect(category).toHaveFocus();
+  }
+  expect(screen.getByRole('button', { name: '빛나는 지팡이 미리보기' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: '동그란 안경 미리보기' })).toBeNull();
+  expect(commands).toHaveLength(0);
+});
+
 function setup(view = gameView) {
   let saved = structuredClone(view);
   const commands: AppearanceCommand[] = [];
@@ -28,6 +46,7 @@ function setup(view = gameView) {
 // Sending preview to the server or mutating canonical gear breaks cancellation and ownership.
 it('unownedPreviewNeverPutsAndCancelRestoresSavedGear', async () => {
   const { user, commands } = setup();
+  await user.click(await screen.findByRole('button', { name: '손 장비 보기' }));
   await user.click(await screen.findByRole('button', { name: '빛나는 지팡이 미리보기' }));
   const preview = screen.getByRole('region', { name: '외형 미리보기' });
   expect(within(preview).getByText(/미보유/)).toBeVisible();
@@ -43,9 +62,11 @@ it('unownedPreviewNeverPutsAndCancelRestoresSavedGear', async () => {
 // Saving a partial slot map or inventing haru would erase another slot/character choice.
 it('ownedEquipAndBaseRestoreSendSixSlotsAndRevision', async () => {
   const { user, commands } = setup();
+  await user.click(await screen.findByRole('button', { name: '모자 장비 보기' }));
   await user.click(await screen.findByRole('button', { name: '작은 모자 미리보기' }));
   await user.click(screen.getByRole('button', { name: '착용하기' }));
   await waitFor(() => expect(commands).toHaveLength(1));
+  await user.click(screen.getByRole('button', { name: '얼굴 장비 보기' }));
   await waitFor(() => expect(screen.getByRole('button', { name: '얼굴 기본 모습' })).toBeEnabled());
   await user.click(screen.getByRole('button', { name: '얼굴 기본 모습' }));
   await waitFor(() => expect(commands).toHaveLength(2));
@@ -75,6 +96,7 @@ it('unknownCatalogArtDoesNotExecuteMarkup', async () => {
     items: [{ itemId: bad, assetKey: bad, name: bad, slot: 'hand', value: 6, rewardDay: 30 }],
     inventory: [{ itemId: bad, owned: false, acquiredAt: null }],
   });
+  await user.click(await screen.findByRole('button', { name: '손 장비 보기' }));
   await user.click(await screen.findByRole('button', { name: `${bad} 미리보기` }));
   expect(container.querySelector('img[src="x"]')).toBeNull();
   expect(container.querySelector('[onerror]')).toBeNull();
@@ -83,6 +105,7 @@ it('unknownCatalogArtDoesNotExecuteMarkup', async () => {
 
 it('previewClearsImmediatelyWhenOwnerChanges', async () => {
   const { user, client } = setup();
+  await user.click(await screen.findByRole('button', { name: '손 장비 보기' }));
   await user.click(await screen.findByRole('button', { name: '빛나는 지팡이 미리보기' }));
   const next = {
     ...gameView,
