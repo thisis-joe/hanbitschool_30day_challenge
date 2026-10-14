@@ -4,6 +4,7 @@ import type { ClassroomSummary } from '../src/features/staff/types';
 import { signOut, studentLogin } from './helpers';
 import {
   provisionLearner,
+  provisionLearningClass,
   start,
   answer,
   advance,
@@ -78,6 +79,84 @@ async function firstPass(page: Page) {
   await finishDay(page, view, [true, true, true, true, true]);
   return view;
 }
+
+// Catches completion unmounting the confirmed-answer flight before pending cleanup.
+test('completionWaitsForRelatedStatusThenHomeReplayNeedsNoRetry', async ({ page }) => {
+  await provisionLearningClass(page, 1);
+  const first = await start(
+    page,
+    page.getByRole('button', { name: '오늘 학습 시작', exact: true }),
+    'FIRST',
+    1,
+  );
+  await finishDay(page, first, [false, true, true, true, true]);
+  await expect(page.locator('.learning-pending')).toHaveCount(0);
+  await resultPage(page, first.sessionId, '회차 통과');
+  await page.getByRole('link', { name: '나의 문제 보기', exact: true }).click();
+  await page.getByRole('checkbox', { name: '복습할 문제 선택', exact: true }).first().check();
+  const review = await start(
+    page,
+    page.getByRole('button', { name: '선택한 문제 복습하기', exact: true }),
+    'REVIEW',
+    null,
+  );
+  await expect(page.locator('.learning-pending')).toHaveCount(0);
+
+  let answerAccepted = false;
+  let heldStatus = false;
+  let releaseStatus!: () => void;
+  let enteredStatus!: () => void;
+  const release = new Promise<void>((resolve) => { releaseStatus = resolve; });
+  const entered = new Promise<void>((resolve) => { enteredStatus = resolve; });
+  const observe = (response: Response) => {
+    if (
+      new URL(response.url()).pathname === `/api/student/learning/sessions/${review.sessionId}/answers` &&
+      response.request().method() === 'POST' && response.status() === 200
+    ) answerAccepted = true;
+  };
+  page.on('response', observe);
+  await page.route('**/api/student/learning/status', async (route) => {
+    if (!answerAccepted || heldStatus) {
+      await route.continue();
+      return;
+    }
+    heldStatus = true;
+    const canonicalResponse = await route.fetch();
+    enteredStatus();
+    await release;
+    await route.fulfill({ response: canonicalResponse });
+  });
+  try {
+    await answer(page, review, true);
+    await entered;
+    const completion = page.getByRole('link', { name: '완료하기', exact: true });
+    await expect(completion).toBeDisabled();
+    await expect(page.locator('.learning-pending')).toHaveCount(1);
+    // Force only bypasses Playwright's disabled actionability check, not the actual click handler.
+    await completion.click({ force: true });
+    await expect(page).toHaveURL(new RegExp(`/sessions/${review.sessionId}$`));
+    await completion.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(new RegExp(`/sessions/${review.sessionId}$`));
+    expect((await session(page, review.sessionId)).state === 'COMPLETED').toBe(true);
+    const saved = await status(page);
+    expect(saved.activeSession === null && saved.passedDayCount === 1).toBe(true);
+    releaseStatus();
+    await expect(completion).toBeEnabled();
+    await expect(page.locator('.learning-pending')).toHaveCount(0);
+    await resultPage(page, review.sessionId, '복습 풀이를 마쳤어요');
+  } finally {
+    releaseStatus();
+    page.off('response', observe);
+    await page.unroute('**/api/student/learning/status');
+  }
+  await page.goto('/student/learning');
+  await expect(page.getByRole('button', { name: '1회차 다시 풀기', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '같은 요청 다시 확인', exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => Object.keys(sessionStorage).some((key) =>
+    key.startsWith('hanbit.learning.pending.v1:'),
+  ))).toBe(false);
+});
 
 // Catches unsaved clothing, appearance reset on relogin, and missing six-slot persistence.
 test('characterWardrobePersistsAcrossRelogin', async ({ page }) => {

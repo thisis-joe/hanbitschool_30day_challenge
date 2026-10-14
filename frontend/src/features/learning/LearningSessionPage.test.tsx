@@ -30,6 +30,74 @@ import type { LearningSessionView } from './types';
 import { gameKeys } from '../game/queries';
 import { gameView, journeyView } from '../../test/gameFixtures';
 
+// Removing the completion guard would unmount the answer flight before its pending command clears.
+it.each(['FIRST', 'REVIEW'] as const)(
+  'completionWaitsForFinalAnswerConfirmationBeforeMouseOrKeyboardNavigation: %s',
+  async (mode) => {
+    const release = deferred<void>();
+    const entered = deferred<void>();
+    const count = mode === 'FIRST' ? 5 : 1;
+    const finalAnswer = {
+      ...answerResult,
+      attemptAnsweredCount: count,
+      attemptCorrectCount: count,
+      attemptState: mode === 'FIRST' ? ('PASSED' as const) : null,
+      dayState: mode === 'FIRST' ? ('PASSED' as const) : null,
+    };
+    let view: LearningSessionView = {
+      ...activeSession,
+      mode,
+      dayNumber: mode === 'FIRST' ? 1 : null,
+      questionCount: count,
+      answeredCount: count - 1,
+      question: { ...activeSession.question!, position: count },
+    };
+    server.use(
+      http.get('*/api/student/learning/sessions/:id', () => json(view)),
+      http.get('*/api/student/learning/status', async () => {
+        if (view.state === 'COMPLETED') {
+          entered.resolve();
+          await release.promise;
+        }
+        return HttpResponse.json({ ...learningStatus, activeSession: null });
+      }),
+      http.post('*/api/student/learning/sessions/:id/answers', () => {
+        view = { ...view, state: 'COMPLETED', answeredCount: count, lastAnswer: finalAnswer };
+        return HttpResponse.json(finalAnswer);
+      }),
+    );
+    setup();
+    try {
+      await userEvent.click(await screen.findByRole('button', { name: 'O · 사실' }));
+      const completion = await screen.findByRole('link', { name: '완료하기' });
+      await entered.promise;
+      expect(readPendingCommand('student-a')?.kind).toBe('ANSWER');
+      expect(completion).toHaveAttribute('href', `/student/learning/sessions/${sessionId}/result`);
+      await userEvent.click(completion);
+      expect(screen.getByRole('link', { name: '완료하기' })).toBe(completion);
+      completion.focus();
+      await userEvent.keyboard('{Enter}');
+      expect(screen.getByRole('link', { name: '완료하기' })).toBe(completion);
+      expect(completion).toHaveAttribute('aria-disabled', 'true');
+      expect(screen.getByRole('heading', { name: '정답이에요' })).toBeVisible();
+      expect(readPendingCommand('student-a')?.kind).toBe('ANSWER');
+      await act(async () => release.resolve());
+      await waitFor(() => expect(completion).toHaveAttribute('aria-disabled', 'false'));
+      expect(readPendingCommand('student-a')).toBeNull();
+      completion.focus();
+      await userEvent.keyboard('{Enter}');
+      expect(
+        await screen.findByRole('heading', {
+          name: mode === 'FIRST' ? '회차 통과' : '복습 풀이를 마쳤어요',
+        }),
+      ).toBeVisible();
+      expect(readPendingCommand('student-a')).toBeNull();
+    } finally {
+      await act(async () => release.resolve());
+    }
+  },
+);
+
 it('preAnswerInitialCosmeticReadsCannotPublishStaleMapAfterCanonicalAnswer', async () => {
   const oldRelease = deferred<void>();
   let gameReads = 0;

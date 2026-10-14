@@ -210,7 +210,14 @@ export function LearningSessionPage() {
               <p>이번 답변으로 받은 경험치: {feedback.xpAwarded} XP</p>
               <QuestionFeedbackActions questionId={feedback.questionId} result={feedback} />
               {view.state === 'COMPLETED' ? (
-                <Link className="button" to={`/student/learning/sessions/${view.sessionId}/result`}>
+                <Link
+                  className="button learning-completion"
+                  to={`/student/learning/sessions/${view.sessionId}/result`}
+                  aria-disabled={blocked}
+                  onClick={(event) => {
+                    if (blocked) event.preventDefault();
+                  }}
+                >
                   완료하기
                 </Link>
               ) : (

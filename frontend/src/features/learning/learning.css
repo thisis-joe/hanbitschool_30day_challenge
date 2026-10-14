@@ -57,6 +57,13 @@
 .learning-saved-gift {
   margin-bottom: 24px;
 }
+.learning-completion[aria-disabled='true'] {
+  opacity: 0.68;
+  cursor: not-allowed;
+  box-shadow: 0 2px 0 var(--shadow);
+  filter: none;
+  transform: none;
+}
 .learning-gift-preview {
   display: flex;
   align-items: center;
