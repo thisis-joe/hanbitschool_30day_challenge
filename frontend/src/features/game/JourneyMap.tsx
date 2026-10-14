@@ -1,37 +1,61 @@
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, type CSSProperties } from 'react';
 import { GameAvatar } from './GameAvatar';
-import { journeyPoint, MAP_ANCHORS, MAP_TRAIL, REGIONS } from './journeyGeometry';
+import { journeyPoint, MAP_ANCHORS, MAP_TRAIL, MAP_REGIONS } from './journeyGeometry';
+import { useSeenTransition } from './useSeenTransition';
 import type { GameView, JourneyView } from './types';
 
 export function JourneyMap({
   journey,
   appearance,
+  owner,
   compact = false,
 }: {
   journey: JourneyView;
   appearance: GameView | undefined;
+  owner?: string;
   compact?: boolean;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
+  const world = useRef<HTMLDivElement>(null);
   const point = journeyPoint(journey.journeyPosition);
-  function recenter(animate: boolean) {
-    const element = viewport.current;
-    if (!element) return;
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    element.scrollTo?.({
-      left: Math.max(0, point.x * 10.5 - element.clientWidth / 2),
-      top: Math.max(0, point.y * 31.5 - element.clientHeight / 2),
-      behavior: animate && !reduced ? 'smooth' : 'auto',
-    });
-  }
+  const revealed = Object.fromEntries(
+    MAP_REGIONS.map((region) => {
+      const first = journey.days.find((day) => day.dayNumber === region.firstDay);
+      return [
+        region.firstDay,
+        first?.state === 'PASSED' ||
+          first?.availability === 'AVAILABLE' ||
+          first?.availability === 'PASSED',
+      ];
+    }),
+  );
+  const revealing = useSeenTransition(owner, journey.contentVersion, 'journey-regions', revealed);
+  const recenter = useCallback(
+    (animate: boolean) => {
+      const element = viewport.current;
+      if (!element) return;
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      element.scrollTo?.({
+        left: Math.max(
+          0,
+          (point.x / 100) * (world.current?.clientWidth || 1050) - element.clientWidth / 2,
+        ),
+        top: Math.max(
+          0,
+          (point.y / 100) * (world.current?.clientHeight || 3150) - element.clientHeight / 2,
+        ),
+        behavior: animate && !reduced ? 'smooth' : 'auto',
+      });
+    },
+    [point.x, point.y],
+  );
   useEffect(() => {
-    const element = viewport.current;
-    element?.scrollTo?.({
-      left: Math.max(0, point.x * 10.5 - element.clientWidth / 2),
-      top: Math.max(0, point.y * 31.5 - element.clientHeight / 2),
-      behavior: 'auto',
-    });
-  }, [point.x, point.y]);
+    recenter(false);
+    if (!window.ResizeObserver || !world.current) return;
+    const observer = new ResizeObserver(() => recenter(false));
+    observer.observe(world.current);
+    return () => observer.disconnect();
+  }, [recenter]);
   return (
     <section
       className={`game-map-stage${compact ? ' game-map-compact' : ''}`}
@@ -54,14 +78,30 @@ export function JourneyMap({
         role="region"
         aria-label="아래 숲에서 위 등대로 올라가는 탐험 지도"
       >
-        <div
-          className="game-map-world"
-          style={
-            { '--game-reveal-edge': `${journey.courseCompleted ? 0 : point.y}%` } as CSSProperties
-          }
-        >
-          <div className="game-map-image game-map-gray" aria-hidden="true" />
-          <div className="game-map-image game-map-revealed" aria-hidden="true" />
+        <div className="game-map-world" ref={world}>
+          {MAP_REGIONS.map((region) => (
+            <div
+              key={region.firstDay}
+              className={`game-map-terrain${revealing.includes(String(region.firstDay)) ? ' game-map-region-revealing' : ''}`}
+              data-region-start={region.firstDay}
+              data-revealed={revealed[region.firstDay]}
+              aria-hidden="true"
+              style={
+                {
+                  '--region-top': `${region.top}%`,
+                  '--region-height': `${region.height}%`,
+                  '--region-bottom': `${100 - region.top - region.height}%`,
+                  '--region-accent': region.accent,
+                } as CSSProperties
+              }
+            >
+              <div className="game-map-art" />
+              <div className="game-map-clouds">
+                <i />
+                <i />
+              </div>
+            </div>
+          ))}
           <svg
             className="game-map-route"
             viewBox="0 0 100 100"
@@ -85,18 +125,27 @@ export function JourneyMap({
               </a>
             );
           })}
-          {REGIONS.map((name, index) => {
-            const [x, y] = MAP_ANCHORS[index * 5 + 2];
+          {MAP_REGIONS.map((region) => {
+            const [x, y] = MAP_ANCHORS[region.firstDay + 1];
             return (
               <div
-                key={name}
-                className={`game-map-place${journey.journeyPosition < index * 25 ? ' game-map-unexplored' : ''}`}
-                style={{ left: `${x < 50 ? x + 20 : x - 20}%`, top: `${y}%` }}
+                key={region.name}
+                className={`game-map-place${revealed[region.firstDay] ? '' : ' game-map-unexplored'}`}
+                style={
+                  {
+                    left: `${x < 50 ? x + 20 : x - 20}%`,
+                    top: `${y}%`,
+                    '--region-accent': region.accent,
+                  } as CSSProperties
+                }
               >
-                <strong>{name}</strong>
+                <strong>{region.name}</strong>
                 <span>
-                  {index * 5 + 1}~{index * 5 + 5}회차
+                  {region.firstDay}~{region.lastDay}회차
                 </span>
+                {!revealed[region.firstDay] ? (
+                  <small>{region.firstDay}회차가 열리면 탐험할 수 있어요</small>
+                ) : null}
               </div>
             );
           })}

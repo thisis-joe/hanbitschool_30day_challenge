@@ -175,7 +175,7 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
               <button onClick={() => void journey.refetch()}>지도 다시 불러오기</button>
             </div>
           ) : null}
-          {map ? <JourneyMap journey={map} appearance={appearance} /> : null}
+          {map ? <JourneyMap owner={accountId} journey={map} appearance={appearance} /> : null}
         </>
       ) : null}
       <section

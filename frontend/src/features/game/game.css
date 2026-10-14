@@ -1,3 +1,5 @@
+@import './journey-map.css';
+
 .game-avatar {
   display: inline-block;
   width: 128px;
@@ -283,149 +285,6 @@
 .game-region-reached span {
   background: var(--butter);
 }
-.game-map-stage {
-  border: 1px solid #b7c69d;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #d2deb7;
-  box-shadow: 0 6px 0 #dfe5c9;
-  min-width: 0;
-}
-.game-map-toolbar {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  background: var(--paper);
-  font-size: 0.8rem;
-}
-.game-map-toolbar button {
-  flex-shrink: 0;
-}
-.game-map-viewport {
-  height: clamp(440px, 70dvh, 760px);
-  width: 100%;
-  overflow: auto;
-  overscroll-behavior: contain;
-  position: relative;
-  touch-action: pan-x pan-y;
-}
-.game-map-world {
-  width: 1050px;
-  height: 3150px;
-  position: relative;
-  overflow: hidden;
-}
-.game-map-image {
-  position: absolute;
-  inset: 0;
-  background: url('/game/scenes/ascending-map.webp') center / 100% 100% no-repeat;
-  image-rendering: pixelated;
-}
-.game-map-gray {
-  filter: grayscale(1) blur(1.15px) contrast(0.94) brightness(1.025);
-}
-.game-map-revealed {
-  mask-image: linear-gradient(
-    to bottom,
-    transparent calc(var(--game-reveal-edge) - 0.55%),
-    #000 calc(var(--game-reveal-edge) + 0.55%)
-  );
-}
-.game-map-route {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.game-map-route polyline {
-  fill: none;
-  stroke: #9d987a;
-  stroke-width: 0.3;
-  stroke-dasharray: 0.2 0.7;
-}
-.game-map-day {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 48px;
-  min-height: 48px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  text-decoration: none;
-  border: 2px solid #a4afaa;
-  background: #edf0ebe8;
-  color: #68736e;
-  font-weight: 800;
-  box-shadow: 0 3px 0 #6f7c7430;
-}
-.game-map-passed {
-  background: #6e995e;
-  color: white;
-  border-color: #e4efc8;
-}
-.game-map-current {
-  background: #ffe38a;
-  border-color: #8f7532;
-  color: #5d5032;
-  box-shadow: 0 4px 0 #b79642;
-}
-.game-map-place {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  pointer-events: none;
-}
-.game-map-place strong {
-  display: block;
-  background: #fffde8ed;
-  color: #5b7147;
-  padding: 6px 12px;
-  border-radius: 5px;
-  box-shadow: 0 2px 0 #82966a55;
-}
-.game-map-place span {
-  display: block;
-  font-size: 0.75rem;
-  margin-top: 4px;
-}
-.game-map-unexplored strong {
-  background: #eef1ebed;
-  color: #69766e;
-}
-.game-map-hero {
-  position: absolute;
-  transform: translate(-50%, -100%);
-  width: 72px;
-  pointer-events: none;
-}
-.game-map-hero .game-avatar {
-  width: 72px;
-}
-.game-map-location {
-  display: block;
-  background: var(--butter);
-  padding: 8px;
-  border-radius: 6px;
-}
-.game-map-caption {
-  padding: 0 16px;
-  font-size: 0.8rem;
-}
-.game-map-dock {
-  margin: 24px 0;
-  padding: 0;
-  overflow: hidden;
-  border-radius: 12px;
-}
-.game-map-dock .game-camp-copy {
-  padding: 24px;
-}
-.game-map-compact .game-map-viewport {
-  height: 360px;
-}
 .game-character-card,
 .game-closet-card {
   border-radius: 24px;
@@ -596,15 +455,6 @@
   }
   .game-home-under {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .game-map-toolbar {
-    flex-wrap: wrap;
-  }
-  .game-map-viewport {
-    height: clamp(440px, calc(100dvh - 220px), 670px);
-  }
-  .game-map-stage {
-    border-radius: 12px;
   }
   .game-home-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -69,6 +69,18 @@ export const MAP_TRAIL: readonly (readonly [number, number])[] = [
 ];
 export const REGIONS = ['숲 입구', '깊은 숲', '작은 마을', '항구 마을', '바닷가', '작은 섬'];
 
+// The source terrain is uneven: each seam lies between the two adjacent route groups.
+const regionSeams = [100, 77.6, 54.1, 35.4, 20, 10.46, 0];
+const regionAccents = ['#8caa68', '#668d7d', '#b3976f', '#c38a65', '#75a7ab', '#8c95b6'];
+export const MAP_REGIONS = REGIONS.map((name, index) => ({
+  name,
+  firstDay: index * 5 + 1,
+  lastDay: index * 5 + 5,
+  top: regionSeams[index + 1],
+  height: Math.round((regionSeams[index] - regionSeams[index + 1]) * 100) / 100,
+  accent: regionAccents[index],
+}));
+
 export function journeyPoint(step: number): { x: number; y: number } {
   const bounded = Number.isFinite(step) ? Math.max(0, Math.min(150, step)) : 0;
   const day = Math.min(29, Math.floor(bounded / 5));
