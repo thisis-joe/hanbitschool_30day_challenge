@@ -1,5 +1,5 @@
 @charset "UTF-8";
-/* Student navigation uses the travel palette without changing other headers. */
+/* Paper tabs keep the student's four destinations visible at every width. */
 .game-student-nav {
   position: sticky;
   top: 0;
@@ -11,17 +11,30 @@
   padding: 8px 32px;
   gap: 8px;
   background: #fffdf3f5;
-  border-bottom: 1px solid #e2dec9;
+  border-bottom: 2px solid var(--line);
 }
 .game-student-nav a {
   justify-content: center;
   min-height: 48px;
-  border-radius: 8px;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  gap: 8px;
   color: #263d35;
 }
 .game-student-nav a.active {
   background: #f4d66e;
+  border-color: var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
   font-weight: 800;
+}
+.game-student-nav a:hover {
+  background: #f5edcc;
+}
+.game-student-nav svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  pointer-events: none;
 }
 .student-header nav a,
 .student-header .nav-button {
@@ -38,6 +51,15 @@
     padding: 8px 12px;
     gap: 4px;
   }
+  .game-student-nav a {
+    gap: 4px;
+    padding: 6px 1px;
+    font-size: 0.75rem;
+  }
+  .game-student-nav svg {
+    width: 18px;
+    height: 18px;
+  }
   .student-header {
     gap: 12px;
     flex-wrap: wrap;
@@ -51,7 +73,8 @@
   --paper: #fffef9;
   --butter: #f4d66e;
   --ink: #263d35;
-  --line: #e2dec9;
+  --line: #435748;
+  --shadow: #263d35;
   font-family: '맑은 고딕', 'Apple SD Gothic Neo', sans-serif;
   color: var(--ink);
   background: var(--cream);
@@ -78,8 +101,9 @@ button,
 .button {
   min-height: 48px;
   background: var(--butter);
-  border: 1px solid var(--ink);
-  border-radius: 10px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 0 4px 0 var(--shadow);
   padding: 10px 18px;
   font-weight: 700;
   cursor: pointer;
@@ -89,11 +113,18 @@ button,
   justify-content: center;
 }
 button:disabled {
-  opacity: 0.55;
-  cursor: wait;
+  opacity: 0.68;
+  cursor: not-allowed;
+  box-shadow: 0 2px 0 var(--shadow);
 }
-button:hover:not(:disabled) {
+button:hover:not(:disabled),
+.button:hover {
   filter: brightness(0.97);
+}
+button:active:not(:disabled),
+.button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--shadow);
 }
 :focus-visible {
   outline: 3px solid #486e5a;
@@ -105,7 +136,7 @@ select {
   width: 100%;
   min-width: 0;
   min-height: 48px;
-  border: 1px solid #a6ad99;
+  border: 3px solid var(--line);
   border-radius: 8px;
   background: white;
   padding: 10px 12px;
@@ -184,14 +215,15 @@ nav a {
   align-items: center;
 }
 .nav-button {
-  border: 0;
+  border: 3px solid var(--line);
   padding: 0 8px;
   background: transparent;
   font-size: 0.87rem;
-  min-height: 44px;
+  min-height: 48px;
+  box-shadow: none;
 }
 main {
-  max-width: 1060px;
+  max-width: 1184px;
   padding: 24px 32px 60px;
   margin: auto;
 }
@@ -199,7 +231,8 @@ main {
   display: grid;
   grid-template-columns: 1fr 1.1fr;
   min-height: 620px;
-  border: 1px solid var(--line);
+  border: 4px solid var(--ink);
+  box-shadow: 0 6px 0 var(--shadow);
   background: var(--paper);
   border-radius: 24px;
   overflow: hidden;
@@ -258,10 +291,15 @@ main {
   margin: 22px 0 12px;
   font-size: 0.9rem;
 }
+.form-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+}
 .quiet-link {
   font-size: 0.85rem;
   display: inline-block;
-  min-height: 44px;
+  min-height: 48px;
 }
 .form-error {
   background: #faeee8;
@@ -278,7 +316,8 @@ main {
 .notice,
 .workspace {
   background: var(--paper);
-  border: 1px solid var(--line);
+  border: 3px solid var(--line);
+  box-shadow: 0 4px 0 var(--shadow);
   border-radius: 20px;
   padding: 32px;
 }
@@ -292,7 +331,7 @@ main {
 .account-details {
   display: flex;
   gap: 30px;
-  border-block: 1px solid var(--line);
+  border-block: 2px solid var(--line);
   padding: 22px 0;
   margin: 32px 0;
 }
@@ -388,7 +427,7 @@ footer {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid var(--line);
   padding: 18px 0;
   overflow-wrap: anywhere;
 }
@@ -403,7 +442,7 @@ footer {
   white-space: nowrap;
 }
 .issued-result {
-  border: 1px solid #abbca7;
+  border: 3px solid var(--line);
   padding: 18px;
   margin-top: 24px;
   background: #f1f5ec;
@@ -419,13 +458,13 @@ footer {
 }
 .class-create {
   margin: 32px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid var(--line);
   padding-bottom: 24px;
 }
 .class-create summary {
   cursor: pointer;
   font-weight: 700;
-  min-height: 44px;
+  min-height: 48px;
 }
 .class-form {
   display: grid;
@@ -443,7 +482,7 @@ footer {
   margin: 24px 0;
 }
 .class-row {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid var(--line);
   padding: 24px 0;
 }
 .class-row-main {
@@ -482,7 +521,7 @@ footer {
 .roster-row {
   display: flex;
   gap: 24px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 2px solid var(--line);
   padding: 12px 0;
 }
 .roster-row span {

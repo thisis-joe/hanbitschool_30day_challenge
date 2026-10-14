@@ -43,7 +43,7 @@
 }
 .stats-metric {
   padding: 20px;
-  border: 1px solid #d5e3da;
+  border: 3px solid var(--line);
   border-radius: 16px;
   background: #f2f7f3;
 }
@@ -58,7 +58,7 @@
 }
 .stats-card {
   padding: 24px;
-  border: 1px solid #d5e3da;
+  border: 3px solid var(--line);
   border-radius: 18px;
   background: #fff;
   margin: 18px 0;
@@ -109,7 +109,7 @@
   flex-direction: column;
   text-align: left;
   gap: 8px;
-  border-color: #d6dfd7;
+  border-color: var(--line);
   background: #fafbf7;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -150,7 +150,7 @@
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  border: 1px solid #dce6df;
+  border: 3px solid var(--line);
   border-radius: 12px;
 }
 .teacher-stats table {
@@ -168,7 +168,7 @@
 .teacher-stats th,
 .teacher-stats td {
   padding: 12px;
-  border-bottom: 1px solid #e1e9e3;
+  border-bottom: 2px solid var(--line);
   vertical-align: middle;
 }
 .teacher-stats thead {
@@ -242,7 +242,7 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  border: 1px solid #d0ddd4;
+  border: 3px solid var(--line);
   background: #f4f6f3;
   color: #42584b;
   border-radius: 12px;
@@ -288,6 +288,7 @@
   padding: 24px;
 }
 .stats-dialog {
+  border: 4px solid var(--ink);
   width: min(700px, 100%);
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
@@ -330,7 +331,7 @@
   gap: 12px;
   flex-wrap: wrap;
   padding: 12px 0;
-  border-bottom: 1px solid #e1e9e3;
+  border-bottom: 2px solid var(--line);
 }
 @media (max-width: 760px) {
   .stats-metrics {

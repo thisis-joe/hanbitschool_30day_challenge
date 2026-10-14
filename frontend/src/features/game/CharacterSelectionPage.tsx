@@ -42,16 +42,18 @@ export function CharacterSelectionPage() {
                 ? `지금 함께하는 친구: ${CHARACTER_NAMES[view.characterId]}`
                 : '아직 친구를 선택하지 않았어요.'}
             </p>
-            <div
-              className="game-character-grid"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 128px), 1fr))',
-                gap: 16,
-              }}
-            >
-              {CHARACTER_IDS.filter((id) => view.characters.some((option) => option.id === id)).map(
-                (id) => (
+            <div className="game-character-studio">
+              <div className="game-character-portrait">
+                <span className="game-tag">나의 여행 친구</span>
+                <GameAvatar characterId={view.characterId} equippedBySlot={view.equippedBySlot} />
+                <strong>
+                  {view.characterId ? CHARACTER_NAMES[view.characterId] : '어떤 친구와 떠날까요?'}
+                </strong>
+              </div>
+              <div className="game-character-grid">
+                {CHARACTER_IDS.filter((id) =>
+                  view.characters.some((option) => option.id === id),
+                ).map((id) => (
                   <button
                     key={id}
                     className="game-character-option"
@@ -64,8 +66,8 @@ export function CharacterSelectionPage() {
                     <GameAvatar characterId={id} equippedBySlot={view.equippedBySlot} />
                     <span style={{ display: 'block' }}>{CHARACTER_NAMES[id]}</span>
                   </button>
-                ),
-              )}
+                ))}
+              </div>
             </div>
           </>
         ) : null}
