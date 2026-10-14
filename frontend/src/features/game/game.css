@@ -232,6 +232,13 @@
   gap: 24px;
   margin: 12px 0 28px;
 }
+.game-reward-fallback-link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-width: 48px;
+  min-height: 48px;
+}
 .game-regions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

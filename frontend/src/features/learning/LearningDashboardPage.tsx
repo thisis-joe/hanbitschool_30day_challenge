@@ -282,7 +282,9 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
           ) : (
             <section className="game-reward-card">
               <p>회차를 처음 통과하면 여행 선물을 받아요.</p>
-              <Link to="/student/closet">옷장 둘러보기</Link>
+              <Link className="game-reward-fallback-link" to="/student/closet">
+                옷장 둘러보기
+              </Link>
             </section>
           )}
           <nav className="game-regions" aria-label="여행 지역">
