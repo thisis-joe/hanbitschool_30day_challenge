@@ -1,0 +1,536 @@
+/* Full-viewport, finite acquisition sequence. Only transforms and opacity animate. */
+.acquisition-cinematic {
+  --burst-at: 180ms;
+  --reveal-at: 180ms;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  color: #fff7d6;
+  background: radial-gradient(ellipse at 50% 44%, #203543e8, #070e1af5 73%);
+  isolation: isolate;
+  animation: acquisition-scene var(--cinema-duration) linear both;
+}
+.acquisition-cinematic::backdrop {
+  background: #061022b8;
+}
+.acquisition-item {
+  --burst-at: 880ms;
+  --reveal-at: 1000ms;
+}
+.acquisition-atmosphere {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse at 36% 40%, #60e8c41c, transparent 45%),
+    radial-gradient(ellipse at 65% 60%, #e9ad4929, transparent 45%);
+  pointer-events: none;
+}
+.acquisition-stage {
+  position: absolute;
+  width: min(600px, 92vw, 66dvh);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.acquisition-aura,
+.acquisition-rays,
+.acquisition-flash,
+.acquisition-orbit,
+.acquisition-shockwave {
+  position: absolute;
+  border-radius: 50%;
+}
+.acquisition-aura {
+  inset: -45%;
+  background: radial-gradient(circle, #ffffd6c9 0%, #ffe99d5c 16%, #ffc65329 32%, transparent 66%);
+  animation: acquisition-aura 2900ms var(--burst-at) ease-out both;
+}
+.acquisition-rays {
+  inset: -65%;
+  background: repeating-conic-gradient(
+    from 5deg,
+    #fff4bc80 0deg 2deg,
+    #ffe07b28 5deg 9deg,
+    transparent 13deg 25deg
+  );
+  mask-image: radial-gradient(circle, transparent 6%, #000 16%, #0009 42%, transparent 69%);
+  animation: acquisition-rays 3200ms var(--burst-at) cubic-bezier(0.12, 0.7, 0.25, 1) both;
+}
+.acquisition-orbit {
+  inset: 17%;
+  border: 1px solid #ffe7a884;
+  box-shadow:
+    0 0 24px #ffeeb526,
+    inset 0 0 24px #ffeeb526;
+  animation: acquisition-orbit 3300ms var(--burst-at) ease-out both;
+}
+.acquisition-orbit::before,
+.acquisition-orbit::after {
+  content: '✦';
+  position: absolute;
+  top: 48%;
+  font-size: 28px;
+  color: #fff9d5;
+  text-shadow: 0 0 18px #ffd96a;
+}
+.acquisition-orbit::before {
+  left: -13px;
+}
+.acquisition-orbit::after {
+  right: -13px;
+}
+.acquisition-orbit-inner {
+  inset: 22%;
+  border-style: dashed;
+  animation-direction: reverse;
+  opacity: 0.7;
+}
+.acquisition-flash {
+  inset: 18%;
+  background: radial-gradient(circle, #fffef3, #fff4bca3 30%, transparent 70%);
+  animation: acquisition-flash 850ms var(--burst-at) ease-out both;
+}
+.acquisition-shockwave {
+  inset: 33%;
+  border: 4px solid #fff5c6;
+  box-shadow:
+    0 0 30px #ffc855,
+    inset 0 0 20px #ffe6a1;
+  animation: acquisition-shockwave 1600ms var(--burst-at) cubic-bezier(0.12, 0.6, 0.23, 1) both;
+}
+.acquisition-shockwave-late {
+  border-color: #b2ffe3;
+  animation-delay: calc(var(--burst-at) + 240ms);
+}
+.acquisition-sparks {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+.acquisition-spark {
+  position: absolute;
+  width: var(--spark-size);
+  height: var(--spark-size);
+  background: #fff3aa;
+  box-shadow:
+    0 0 12px #ffcc65,
+    0 0 3px #fff;
+  animation: acquisition-flight 2700ms calc(var(--burst-at) + var(--flight-delay))
+    cubic-bezier(0.08, 0.68, 0.16, 1) both;
+}
+.acquisition-spark:nth-child(3n) {
+  background: #a7ffde;
+  border-radius: 50%;
+}
+.acquisition-spark:nth-child(4n) {
+  clip-path: polygon(50% 0, 62% 35%, 100% 50%, 62% 65%, 50% 100%, 38% 65%, 0 50%, 38% 35%);
+  width: 24px;
+  height: 24px;
+}
+.acquisition-spark:nth-child(5n) {
+  width: 3px;
+  height: 36px;
+  background: #fffbed;
+}
+.acquisition-chest {
+  position: absolute;
+  width: 58%;
+  aspect-ratio: 1.5;
+  left: 21%;
+  bottom: 0;
+  perspective: 650px;
+  filter: drop-shadow(0 10px 18px #060b1c80);
+  animation: acquisition-chest-charge 880ms ease-in-out both;
+}
+.acquisition-chest-base,
+.acquisition-chest-lid,
+.acquisition-chest-lid svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.acquisition-chest-lid {
+  transform-origin: 50% 51%;
+  animation: acquisition-lid 850ms 800ms cubic-bezier(0.18, 0.85, 0.24, 1.12) both;
+}
+.acquisition-chest-light {
+  position: absolute;
+  width: 105%;
+  height: 170%;
+  bottom: 47%;
+  left: -2.5%;
+  background: linear-gradient(to top, #fff5b6d9, #ffdd8a2e 65%, transparent);
+  clip-path: polygon(0 0, 100% 0, 76% 100%, 24% 100%);
+  transform-origin: center bottom;
+  animation: acquisition-column 2800ms 760ms ease-out both;
+}
+.acquisition-prize {
+  position: absolute;
+  width: 48%;
+  aspect-ratio: 1;
+  left: 26%;
+  top: 18%;
+  z-index: 2;
+  animation: acquisition-item-rise 1000ms var(--reveal-at) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.acquisition-prize-float {
+  width: 100%;
+  height: 100%;
+  animation: acquisition-hover 1900ms 2000ms ease-in-out both;
+}
+.acquisition-prize .game-equipment-icon {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 2px #fff8d3) drop-shadow(0 0 24px #fff2a5)
+    drop-shadow(0 16px 20px #030c24a8);
+}
+.acquisition-prize-glint {
+  position: absolute;
+  top: 8%;
+  right: -5%;
+  font-size: clamp(28px, 7vmin, 48px);
+  color: #fffdf1;
+  text-shadow: 0 0 16px #fff4b1;
+  animation: acquisition-glint 1600ms 1500ms both;
+}
+.acquisition-prize-glint-small {
+  top: 69%;
+  left: -7%;
+  right: auto;
+  font-size: 28px;
+  animation-delay: 1900ms;
+}
+.acquisition-xp-medal {
+  position: absolute;
+  inset: 29%;
+  display: grid;
+  place-items: center;
+  border: 5px solid #fff0b4;
+  border-radius: 28%;
+  background: linear-gradient(145deg, #fffbd0, #ffdf76 35%, #d38b30 85%);
+  box-shadow:
+    inset 0 0 0 8px #c48632,
+    inset 0 0 0 12px #ffe6a0,
+    0 12px 0 #8d552a,
+    0 0 70px #ffe48386;
+  animation: acquisition-medal 1100ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.acquisition-xp-medal span {
+  font-size: clamp(70px, 15vmin, 138px);
+  color: #fffbe5;
+  text-shadow:
+    0 4px #ad742e,
+    0 0 24px #fff3ad;
+}
+.acquisition-caption {
+  position: absolute;
+  top: 70%;
+  left: 5%;
+  width: 90%;
+  text-align: center;
+  animation: acquisition-caption 650ms calc(var(--reveal-at) + 180ms) cubic-bezier(0.16, 1, 0.3, 1)
+    both;
+}
+.acquisition-caption p {
+  margin: 0;
+}
+.acquisition-eyebrow {
+  font-size: clamp(11px, 2vmin, 14px);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #c6eedb;
+}
+.acquisition-caption h2 {
+  margin: 10px 0 6px;
+  color: #fff2bc;
+  font-size: clamp(26px, 5.4vmin, 44px);
+  line-height: 1.2;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow:
+    0 3px 0 #78572e,
+    0 0 30px #f3c56470;
+}
+.acquisition-name {
+  color: #fffdf1;
+  font-size: clamp(24px, 5vmin, 40px);
+  font-weight: 900;
+  line-height: 1.3;
+  text-shadow: 0 0 25px #ffdb8b80;
+}
+.acquisition-xp .acquisition-caption {
+  top: 63%;
+}
+.acquisition-xp .acquisition-name {
+  font-size: clamp(52px, 10vmin, 86px);
+  letter-spacing: -0.03em;
+  color: #ffe798;
+}
+.acquisition-name span {
+  font-size: 0.45em;
+  letter-spacing: 0.05em;
+}
+.acquisition-caption .acquisition-detail {
+  margin-top: 12px;
+  font-size: clamp(11px, 2vmin, 14px);
+  color: #d2ddde;
+}
+.acquisition-cinematic .acquisition-skip {
+  position: absolute;
+  top: max(22px, env(safe-area-inset-top));
+  right: max(22px, env(safe-area-inset-right));
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #b8cec766;
+  border-radius: 999px;
+  background: #0c1d29c9;
+  color: #eff8ef;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.acquisition-skip span {
+  margin-left: 10px;
+}
+.acquisition-cinematic .acquisition-skip:focus-visible {
+  outline: 2px solid #fff1b0;
+  outline-offset: 4px;
+}
+@keyframes acquisition-scene {
+  0% {
+    opacity: 0;
+  }
+  7%,
+  91% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes acquisition-aura {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0.55;
+    transform: scale(1.2);
+  }
+}
+@keyframes acquisition-rays {
+  0% {
+    opacity: 0;
+    transform: scale(0.15) rotate(-32deg);
+  }
+  14% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1.15) rotate(35deg);
+  }
+}
+@keyframes acquisition-orbit {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-40deg);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.2;
+    transform: scale(1.45) rotate(75deg);
+  }
+}
+@keyframes acquisition-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.1);
+  }
+  25% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.4);
+  }
+}
+@keyframes acquisition-shockwave {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(5);
+    opacity: 0;
+  }
+}
+@keyframes acquisition-flight {
+  0% {
+    transform: translate(0, 0) scale(0.1);
+    opacity: 0;
+  }
+  10%,
+  45% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--flight-x), var(--flight-y)) rotate(var(--flight-turn)) scale(0.25);
+    opacity: 0;
+  }
+}
+@keyframes acquisition-chest-charge {
+  0% {
+    transform: translateY(35px) scale(0.65);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  40%,
+  60%,
+  80% {
+    transform: rotate(-3deg);
+  }
+  50%,
+  70%,
+  90% {
+    transform: rotate(3deg);
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes acquisition-lid {
+  0% {
+    transform: rotateX(0deg);
+  }
+  100% {
+    transform: translateY(-25%) rotateX(20deg) rotate(-6deg);
+  }
+}
+@keyframes acquisition-column {
+  0% {
+    transform: scaleY(0.02);
+    opacity: 0;
+  }
+  18% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1.1);
+    opacity: 0.25;
+  }
+}
+@keyframes acquisition-item-rise {
+  0% {
+    transform: translateY(130px) scale(0.05) rotate(-15deg);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-24px) scale(1.14) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes acquisition-hover {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+@keyframes acquisition-glint {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-60deg);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.2) rotate(70deg);
+  }
+}
+@keyframes acquisition-medal {
+  0% {
+    transform: scale(0.05) rotate(-55deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes acquisition-caption {
+  0% {
+    transform: translateY(24px) scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@media (max-height: 560px) and (min-width: 600px) {
+  .acquisition-stage {
+    left: 32%;
+    top: 50%;
+    width: 80dvh;
+  }
+  .acquisition-caption,
+  .acquisition-xp .acquisition-caption {
+    left: 52%;
+    top: 38%;
+    width: 44%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .acquisition-cinematic,
+  .acquisition-cinematic * {
+    animation: none !important;
+  }
+  .acquisition-atmosphere,
+  .acquisition-sparks,
+  .acquisition-rays,
+  .acquisition-flash,
+  .acquisition-shockwave,
+  .acquisition-orbit,
+  .acquisition-prize-glint {
+    display: none;
+  }
+}

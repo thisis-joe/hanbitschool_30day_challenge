@@ -1,85 +1,95 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 import { evidenceOutput } from './evidence-output';
 
-// Independent reference: ONLY the audited fixed graphics/coordinates from the supplied file.
-// No prototype questions, state, learning rules, or teacher sample rows are evaluated.
-test('allNineMatchingAndMixedOutfitsRenderSourcePixels', async ({ page }) => {
+// Acceptance uses actual browser pixels and native character art. It intentionally
+// does not compare against the old oversized equipment implementation.
+test('nine characters keep their fists in front of fitted bags and render every outfit', async ({
+  page,
+}) => {
   const target = new URL(
     process.env.HANBIT_GEAR_QA_URL ?? 'http://127.0.0.1:8091/e2e/fixtures/equipment-review.html',
   );
   if (target.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname))
     throw new Error('Artwork QA requires a loopback HTTP target');
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.setViewportSize({ width: 1320, height: 900 });
   await page.goto(target.href);
   await expect(page.locator('html')).toHaveAttribute('data-ready', 'true');
-  const source = readFileSync(
-    process.env.HANBIT_GEAR_REFERENCE ?? '/Users/Joseph/Downloads/equipment-design-review.html',
-    'utf8',
-  );
-  const lines = source.split(/\r?\n/);
-  const graphics = lines.slice(4, 377).join('\n');
-  const anchors = lines.slice(387, 398).join('\n');
-  const art = lines[398].match(/const ART=(\[.*?\]);/s)?.[1];
-  if (
-    !graphics.startsWith('function headHandDesign(') ||
-    !anchors.startsWith('const ANCHORS=') ||
-    !art
-  )
-    throw new Error('Original artwork boundaries changed; review the source before updating');
-  const images = JSON.parse(art) as string[];
-  expect(images).toHaveLength(9);
-  await page.addScriptTag({
-    content: `${graphics}\n${anchors}\nconst bitmapImages=${JSON.stringify(images)}.map(src=>{const img=new Image();img.src=src;return img;});
-    window.paintReference=async(canvas,index,gear)=>{
-      const layers=Object.entries(gear).filter(([,v])=>v).flatMap(([s,v])=>s==='shoes'?[equipmentBitmap(s,v,0),equipmentBitmap(s,v,1)]:[equipmentBitmap(s,v)]);
-      await Promise.all([...bitmapImages,...layers.map(l=>l.img)].map(img=>img.decode()));
-      renderEquippedAvatar(canvas,index,gear);
-    };`,
-  });
-  const comparison = await page.evaluate(async () => {
-    const reference = (
-      window as unknown as {
-        paintReference: (
-          c: HTMLCanvasElement,
-          i: number,
-          g: Record<string, number>,
-        ) => Promise<void>;
-      }
-    ).paintReference;
+  const observations = await page.evaluate(() => {
+    // Palm centers inspected on the original 128 × 176 sprites, independent of renderer imports.
+    const palms = [
+      [47, 139],
+      [54, 138],
+      [51, 137],
+      [45, 138],
+      [63, 142],
+      [54, 144],
+      [48, 140],
+      [55, 138],
+      [49, 139],
+    ];
     const results = [];
-    for (const actual of document.querySelectorAll<HTMLCanvasElement>('canvas[data-character]')) {
-      const original = document.createElement('canvas');
-      original.width = 128;
-      original.height = 176;
-      original.setAttribute('aria-label', '원본');
-      actual.after(original);
-      await reference(original, Number(actual.dataset.character), JSON.parse(actual.dataset.gear!));
-      const pixels = actual.getContext('2d')!.getImageData(0, 0, 128, 176).data;
-      const expected = original.getContext('2d')!.getImageData(0, 0, 128, 176).data;
-      let differences = 0,
-        opaque = 0;
-      for (let i = 0; i < pixels.length; i++) if (pixels[i] !== expected[i]) differences++;
+    for (const canvas of document.querySelectorAll<HTMLCanvasElement>('canvas[data-character]')) {
+      const character = Number(canvas.dataset.character),
+        outfit = Number(canvas.dataset.outfit);
+      const base = document.querySelector<HTMLCanvasElement>(
+        `canvas[data-character="${character}"][data-outfit="0"]`,
+      )!;
+      const pixels = canvas.getContext('2d')!.getImageData(0, 0, 128, 176).data;
+      const original = base.getContext('2d')!.getImageData(0, 0, 128, 176).data;
+      let opaque = 0,
+        heldPixels = 0,
+        preservedSkin = 0,
+        palmSkin = 0;
       for (let i = 3; i < pixels.length; i += 4) if (pixels[i]) opaque++;
-      results.push({
-        character: actual.dataset.character,
-        outfit: actual.dataset.outfit,
-        differences,
-        opaque,
-      });
+      const [px, py] = palms[character];
+      for (let y = py - 3; y <= py + 2; y++)
+        for (let x = px - 3; x <= px + 3; x++) {
+          const i = (y * 128 + x) * 4;
+          if (
+            original[i + 3] > 245 &&
+            original[i] > original[i + 1] * 1.08 &&
+            original[i + 1] > original[i + 2] * 1.08 &&
+            original[i + 1] > 100
+          ) {
+            palmSkin++;
+            // Native skin has alpha 252–254. Source-over on the handle makes
+            // it opaque, with up to 3 RGB levels of rounding/blending.
+            if (
+              pixels[i + 3] >= original[i + 3] &&
+              pixels.slice(i, i + 3).every((v, c) => Math.abs(v - original[i + c]) <= 3)
+            )
+              preservedSkin++;
+          }
+        }
+      // Bags must visibly hang below the palm, with a body smaller than the torso.
+      for (let y = py + 5; y < py + 22; y++)
+        for (let x = px - 10; x <= px + 10; x++) {
+          const i = (y * 128 + x) * 4;
+          if (pixels[i + 3] > 120 && pixels.slice(i, i + 4).some((v, c) => v !== original[i + c]))
+            heldPixels++;
+        }
+      results.push({ character, outfit, opaque, palmSkin, preservedSkin, heldPixels });
     }
     return results;
   });
-  expect(comparison).toHaveLength(72); // Nine characters × base, five matching, two mixed.
-  for (const entry of comparison) {
+  expect(observations).toHaveLength(72);
+  for (const entry of observations) {
     expect(entry.opaque, JSON.stringify(entry)).toBeGreaterThan(1000);
-    expect(entry.differences, JSON.stringify(entry)).toBe(0);
+    if (entry.outfit > 0) {
+      expect(entry.palmSkin, JSON.stringify(entry)).toBeGreaterThan(10);
+      expect(entry.preservedSkin, JSON.stringify(entry)).toBe(entry.palmSkin);
+    }
+    if ([1, 2, 3, 7].includes(entry.outfit))
+      expect(entry.heldPixels, JSON.stringify(entry)).toBeGreaterThan(35);
   }
+  expect(errors).toEqual([]);
   const output = evidenceOutput();
-  if (!output) return; // All pixel and shape assertions above still ran.
-  await page.setViewportSize({ width: 1280, height: 1000 });
-  for (let row = 0; row < 9; row++)
-    await page
-      .locator('section')
-      .nth(row)
-      .screenshot({ path: output.file(`character-${row}-actual-reference.png`) });
+  if (output)
+    for (let row = 0; row < 9; row++)
+      await page
+        .locator('section')
+        .nth(row)
+        .screenshot({ path: output.file(`character-${row}-fitted.png`) });
 });

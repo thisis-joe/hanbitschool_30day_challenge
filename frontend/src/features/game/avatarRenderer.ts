@@ -12,6 +12,7 @@ interface Anchor {
   pants: Box;
   feet: Point;
   head: Point;
+  grip: Point;
 }
 interface Bitmap {
   image: HTMLImageElement;
@@ -54,6 +55,7 @@ const ANCHORS: Anchor[] = [
     pants: [48, 134, 80, 146],
     feet: [45, 64],
     head: [65, 38],
+    grip: [47, 139],
   },
   {
     eyes: [
@@ -65,6 +67,7 @@ const ANCHORS: Anchor[] = [
     pants: [59, 134, 88, 146],
     feet: [53, 72],
     head: [69, 42],
+    grip: [54, 138],
   },
   {
     eyes: [
@@ -76,6 +79,7 @@ const ANCHORS: Anchor[] = [
     pants: [52, 133, 85, 145],
     feet: [48, 70],
     head: [65, 36],
+    grip: [51, 137],
   },
   {
     eyes: [
@@ -87,6 +91,7 @@ const ANCHORS: Anchor[] = [
     pants: [46, 133, 80, 146],
     feet: [42, 63],
     head: [62, 29],
+    grip: [45, 138],
   },
   {
     eyes: [
@@ -98,6 +103,7 @@ const ANCHORS: Anchor[] = [
     pants: [67, 145, 94, 151],
     feet: [61, 80],
     head: [81, 55],
+    grip: [63, 142],
   },
   {
     eyes: [
@@ -109,6 +115,7 @@ const ANCHORS: Anchor[] = [
     pants: [53, 145, 82, 152],
     feet: [52, 69],
     head: [70, 59],
+    grip: [54, 144],
   },
   {
     eyes: [
@@ -120,6 +127,7 @@ const ANCHORS: Anchor[] = [
     pants: [47, 136, 79, 147],
     feet: [43, 63],
     head: [63, 40],
+    grip: [48, 140],
   },
   {
     eyes: [
@@ -131,6 +139,7 @@ const ANCHORS: Anchor[] = [
     pants: [58, 137, 89, 146],
     feet: [55, 76],
     head: [70, 37],
+    grip: [55, 138],
   },
   {
     eyes: [
@@ -142,6 +151,7 @@ const ANCHORS: Anchor[] = [
     pants: [52, 137, 86, 146],
     feet: [48, 70],
     head: [70, 42],
+    grip: [49, 139],
   },
 ];
 
@@ -303,15 +313,25 @@ export async function renderAvatar(
   }
   if (gear.shoes) {
     const value = gear.shoes;
+    // Remove bare toes under the new soles, while preserving the ankles.
+    ctx.clearRect(a.feet[0] - 1, 161, a.feet[1] - a.feet[0] + 28, 11);
     a.feet.forEach((x, j) => {
       const part = bitmap('shoes', value, j);
-      if (part)
-        draw('shoes', value, x - 1, 171 - part.art.height, part.art.width, part.art.height, j);
+      if (part) draw('shoes', value, x, 170 - part.art.height, part.art.width, part.art.height, j);
     });
   }
   if (gear.hand) {
-    const [x, , , b] = a.shirt;
-    draw('hand', gear.hand, x - 20, b - 30, 32, 58);
+    const scale = gear.hand <= 3 ? 0.82 : 0.9;
+    // The handle/shaft meets the closed palm, not the torso's bounding box.
+    const handleY = gear.hand <= 3 ? 27 : 36;
+    draw(
+      'hand',
+      gear.hand,
+      a.grip[0] - 16 * scale,
+      a.grip[1] - handleY * scale,
+      32 * scale,
+      58 * scale,
+    );
     restoreGrip(ctx, base, a);
   }
   if (gear.face) {
@@ -336,9 +356,9 @@ export async function renderAvatar(
   if (gear.hat) {
     const fit = HAT_FITS[index],
       crown = gear.hat === 5;
-    const sx = fit.sx * (crown ? 1.13 : 1),
-      sy = fit.sy * (crown ? 0.86 : gear.hat === 2 ? 1.04 : 1);
-    const seat = fit.seat + (gear.hat === 2 ? 3 : crown ? -1 : 0);
+    const sx = crown ? 0.94 : fit.sx * 0.96,
+      sy = crown ? 0.82 : 1.18;
+    const seat = crown ? a.head[1] : fit.seat;
     draw('hat', gear.hat, fit.cx - 56 * sx, seat - 42 * sy, 112 * sx, 64 * sy);
   }
   if (!current()) return;
@@ -352,10 +372,10 @@ export async function renderAvatar(
 }
 
 function restoreGrip(ctx: CanvasRenderingContext2D, base: HTMLImageElement, a: Anchor): void {
-  const x = Math.max(0, a.shirt[0] - 9),
-    y = a.shirt[3] - 11,
+  const x = Math.max(0, a.grip[0] - 6),
+    y = a.grip[1] - 8,
     w = 13,
-    h = 17;
+    h = 14;
   const cached = equipmentGripCache.get(base);
   if (cached) {
     ctx.drawImage(cached, x, y);
@@ -367,10 +387,29 @@ function restoreGrip(ctx: CanvasRenderingContext2D, base: HTMLImageElement, a: A
   const s = context(scratch);
   s.drawImage(base, x, y, w, h, 0, 0, w, h);
   const pixels = s.getImageData(0, 0, w, h);
+  const skin = (p: number) =>
+    p >= 0 &&
+    p < pixels.data.length &&
+    pixels.data[p + 3] > 120 &&
+    pixels.data[p] > pixels.data[p + 1] * 1.08 &&
+    pixels.data[p + 1] > pixels.data[p + 2] * 1.08 &&
+    pixels.data[p + 1] > 80;
+  // Keep the original fist shading and its one-pixel outline over the handle.
+  // White clothes, background and hair cannot become a rectangular patch.
+  const mask = Array.from({ length: w * h }, (_, p) => {
+    const i = p * 4;
+    return (
+      skin(i) ||
+      (pixels.data[i + 3] > 120 &&
+        pixels.data[i + 1] < 100 &&
+        ((p % w > 0 && skin(i - 4)) ||
+          (p % w < w - 1 && skin(i + 4)) ||
+          skin(i - w * 4) ||
+          skin(i + w * 4)))
+    );
+  });
   for (let i = 0; i < pixels.data.length; i += 4) {
-    const d = pixels.data;
-    if (!(d[i + 3] > 120 && d[i] > d[i + 1] * 1.08 && d[i + 1] > d[i + 2] * 1.08 && d[i + 1] > 95))
-      d[i + 3] = 0;
+    if (!mask[i / 4]) pixels.data[i + 3] = 0;
   }
   s.putImageData(pixels, 0, 0);
   equipmentGripCache.set(base, scratch);
