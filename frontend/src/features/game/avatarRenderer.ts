@@ -145,6 +145,10 @@ const ANCHORS: Anchor[] = [
   },
 ];
 
+export function avatarAnchor(characterId: CharacterId): Anchor {
+  return ANCHORS[CHARACTER_IDS.indexOf(characterId)];
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   const cached = imageCache.get(src);
   if (cached) return cached;
