@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { meKey } from '../auth/queries';
 import { student } from '../../test/server';
@@ -25,15 +25,22 @@ it('celebrates each confirmed XP award once, stays finite and retains the awarde
     </QueryClientProvider>
   );
   const view = render(ui());
+  expect(screen.getByRole('dialog', { name: '경험치 획득 연출' })).toBeVisible();
+  expect(screen.getByRole('status')).not.toHaveAttribute('data-celebrating', 'true');
+  act(() => vi.advanceTimersByTime(2700));
+  expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByRole('status')).toHaveAttribute('data-celebrating', 'true');
-  act(() => vi.advanceTimersByTime(2600));
+  act(() => vi.advanceTimersByTime(2500));
   expect(screen.getByRole('status')).not.toHaveAttribute('data-celebrating', 'true');
   expect(screen.getByText('이번 답변으로 받은 경험치: 100 XP')).toBeVisible();
   view.unmount();
   const again = render(ui());
   expect(screen.getByRole('status')).not.toHaveAttribute('data-celebrating', 'true');
   again.rerender(ui('next-answer'));
-  expect(screen.getByRole('status')).toHaveAttribute('data-celebrating', 'true');
+  expect(screen.getByRole('dialog', { name: '경험치 획득 연출' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: '연출 건너뛰기' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(screen.getByRole('status')).toHaveFocus();
   again.rerender(ui('review-answer', 0));
   expect(screen.queryByRole('status')).toBeNull();
   expect(screen.getByText('이번 답변으로 받은 경험치: 0 XP')).toBeVisible();
@@ -50,4 +57,5 @@ it('keeps the XP reward readable without animation for reduced motion', () => {
   );
   expect(screen.getByRole('status')).not.toHaveAttribute('data-celebrating', 'true');
   expect(screen.getByText('이번 답변으로 받은 경험치: 100 XP')).toBeVisible();
+  expect(screen.queryByRole('dialog')).toBeNull();
 });

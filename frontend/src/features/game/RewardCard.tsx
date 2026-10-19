@@ -1,3 +1,10 @@
+import { useRef } from 'react';
+import { AcquisitionCinematic } from './AcquisitionCinematic';
+import {
+  acquisitionDuration,
+  inlineAcquisitionDuration,
+  useAcquisitionSequence,
+} from './useAcquisitionSequence';
 import { EquipmentIcon } from './EquipmentIcon';
 import { GameAvatar } from './GameAvatar';
 import { useSeenTransition } from './useSeenTransition';
@@ -30,6 +37,7 @@ export function RewardCard({
   /** A server-confirmed grant, including its acquisition time; never inferred from ownership. */
   acquisitionId?: string;
 }) {
+  const card = useRef<HTMLElement>(null);
   const transitioned = useSeenTransition(
     owner,
     contentVersion,
@@ -37,22 +45,34 @@ export function RewardCard({
     {
       [item.itemId]: owned,
     },
-    { durationMs: 2400 },
+    { durationMs: acquisitionDuration.item + inlineAcquisitionDuration },
   ).includes(item.itemId);
   const acquired = useSeenTransition(
     owner,
     contentVersion,
     'item-awards',
     acquisitionId && owned ? { [acquisitionId]: true } : {},
-    { celebrateInitial: true, durationMs: 2400 },
+    { celebrateInitial: true, durationMs: acquisitionDuration.item + inlineAcquisitionDuration },
   ).includes(acquisitionId ?? '');
-  const revealing = transitioned || acquired;
+  const identity = JSON.stringify([owner, contentVersion, acquisitionId ?? item.itemId]);
+  const sequence = useAcquisitionSequence(transitioned || acquired, identity);
+  const revealing = sequence.inline;
   return (
     <section
+      ref={card}
+      tabIndex={-1}
       className={`game-reward-card${owned ? '' : ' game-reward-locked'}`}
       aria-label="여행 선물"
       data-revealing={revealing || undefined}
     >
+      {sequence.cinematic ? (
+        <AcquisitionCinematic
+          key={identity}
+          prize={{ kind: 'item', item }}
+          onComplete={sequence.complete}
+          returnFocus={card}
+        />
+      ) : null}
       <div className="game-treasure-stage" role="img" aria-label={item.name}>
         {revealing ? <CelebrationBurst key={acquisitionId ?? item.itemId} /> : null}
         <div className="game-reward-art" aria-hidden="true">
