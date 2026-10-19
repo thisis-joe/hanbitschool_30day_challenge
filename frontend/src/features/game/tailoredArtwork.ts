@@ -30,15 +30,22 @@ export const tailoredHats: EquipmentArt[] = [
     <path d="M14 46Q55 60 99 47M25 42Q54 51 87 43" fill="none" stroke="#c4d2ac" stroke-width=".8"/>
     <path d="M77 35l5 1v5l-5-1Z" fill="#e5d3a0"/>
   `),
+  // Right-facing three-quarter cap: broad near side, foreshortened front badge
+  // and a visor projecting toward the same side as the character's gaze.
   hat(`
-    <path d="M22 34Q10 29 14 21Q19 9 40 12Q60 3 81 10Q99 9 101 21Q103 29 88 36Z" fill="#d7d5c8"/>
-    <path d="M21 25Q20 16 40 17Q61 7 81 15Q96 14 95 23Q72 33 28 30Z" fill="#fff7e0" stroke="none"/>
-    <path d="M28 18Q40 17 44 15M52 14Q65 11 77 15" fill="none" stroke="#fffdf3"/>
-    <path d="M25 33Q55 41 88 31L87 46Q56 56 25 46Z" fill="#547d96"/>
-    <path d="M28 35Q57 43 84 34L84 43Q57 51 28 44Z" fill="#8fb7c9" stroke="none"/>
-    <path d="M28 43Q57 51 83 42" fill="none" stroke="#ccdfdf"/>
-    <path d="M59 36v10m-4-7h8m-9 3q5 8 11 0" fill="none" stroke="#fff0c9" stroke-width="1.6"/>
-    <path d="M26 44q-4 7-11 10l4 3q9-7 10-12" fill="#668ea7"/>
+    <path d="M22 34Q9 27 15 19Q23 10 41 12Q62 3 84 10Q103 12 103 23Q102 30 91 34Q60 43 22 34Z" fill="#d7d5c8"/>
+    <path d="M20 25Q20 17 42 17Q63 8 83 15Q96 16 98 23Q78 34 31 32Z" fill="#fff7e0" stroke="none"/>
+    <path d="M28 19Q40 18 46 15M54 14Q70 10 83 16" fill="none" stroke="#fffdf3"/>
+    <path d="M24 33Q47 40 68 37L93 30L92 44Q78 51 64 51Q41 51 25 44Z" fill="#547d96"/>
+    <path d="M27 35Q47 42 66 39L65 48Q44 49 28 42Z" fill="#8fb7c9" stroke="none"/>
+    <path d="M69 39L90 33L89 43Q80 48 68 49Z" fill="#739fb7" stroke="none"/>
+    <path d="M28 42Q45 49 64 47M68 38L67 49" fill="none" stroke="#ccdfdf" stroke-width=".8"/>
+    <path d="M66 47Q81 48 93 42L108 47Q103 54 80 55L64 50Z" fill="#45677f"/>
+    <path d="M72 49Q89 52 104 47M81 53Q94 53 102 50" fill="none" stroke="#a3c3d0" stroke-width=".8"/>
+    <g transform="matrix(.82 -.15 0 1 80 39)">
+      <path d="M0-4V6M-4-1H4M-5 2Q0 10 5 2" fill="none" stroke="#fff0c9" stroke-width="1.6"/>
+    </g>
+    <path d="M26 42q-4 7-11 10l4 3q9-7 10-12" fill="#668ea7"/>
   `),
   hat(`
     <path d="M12 34Q14 20 37 14Q61-1 84 15Q101 18 103 30Q99 40 85 44L29 47Q14 44 12 34Z" fill="#9e7151"/>
@@ -49,15 +56,21 @@ export const tailoredHats: EquipmentArt[] = [
     <path d="M65 10l1-6q3-2 5 0l-1 6" fill="#896144"/>
     <path d="M80 42l5-1v4l-5 1Z" fill="#dec08b"/>
   `),
+  // The front peak and jewel sit over the right-facing forehead. The broader
+  // left wall and compressed right points give the crown the same perspective.
   hat(`
-    <path d="M29 25L39 31L44 20L53 30L57 11L64 30L73 20L77 31L87 24L82 46Q57 55 34 46Z" fill="#a9823e"/>
-    <path d="M32 29L40 35L45 25L54 35L57 18L62 35L72 25L76 35L84 28L79 43Q58 49 37 43Z" fill="#e3c473" stroke="none"/>
-    <path d="M36 38Q57 44 81 37L79 44Q57 51 37 44Z" fill="#b9a8cc"/>
-    <path d="M35 45Q57 53 81 45" fill="none" stroke="#f9e6a6" stroke-width="2"/>
-    <path d="M56 35l5 4-3 7-5-5Z" fill="#6a9e91"/>
-    <path d="M56 37l3 2-3 2Z" fill="#d5eedb" stroke="none"/>
-    <circle cx="44" cy="40" r="1.3" fill="#f8e8af" stroke="none"/>
-    <circle cx="72" cy="40" r="1.3" fill="#f8e8af" stroke="none"/>
+    <path d="M32 31L39 20L49 28L58 17L66 29L80 23L86 33Q61 42 32 31Z" fill="#a78b52"/>
+    <path d="M29 25L40 33L48 20L59 34L73 12L79 32L88 23L86 45Q69 56 35 45Z" fill="#a9823e"/>
+    <path d="M32 29L41 37L48 25L60 39L72 20L77 37L85 28L83 43Q68 51 38 42Z" fill="#e3c473" stroke="none"/>
+    <path d="M32 29L41 37L48 25L50 30L42 40L38 42L35 41Z" fill="#c5a158" stroke="none"/>
+    <path d="M37 37Q52 44 67 42L84 36L83 44Q65 53 37 44Z" fill="#a898be"/>
+    <path d="M40 39Q53 45 66 44L65 48Q51 49 40 43Z" fill="#c5b7d4" stroke="none"/>
+    <path d="M35 44Q63 56 85 44" fill="none" stroke="#f9e6a6" stroke-width="2"/>
+    <path d="M72 36L77 39L75 46L69 43Z" fill="#6a9e91"/>
+    <path d="M72 38L75 40L71 42Z" fill="#d5eedb" stroke="none"/>
+    <path d="M65 33L72 18L75 29" fill="none" stroke="#f9e6a6" stroke-width=".8"/>
+    <ellipse cx="50" cy="43" rx="1.6" ry="1.3" fill="#f8e8af" stroke="none"/>
+    <ellipse cx="82" cy="40" rx=".8" ry="1.3" fill="#f8e8af" stroke="none"/>
   `),
 ];
 
