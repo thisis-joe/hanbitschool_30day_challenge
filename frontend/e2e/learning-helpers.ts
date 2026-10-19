@@ -307,6 +307,12 @@ export async function start(
   mode: LearningSessionView['mode'],
   day: number | null,
 ) {
+  const rounds = page.getByRole('button', { name: '회차별 학습 보기' });
+  if (new URL(page.url()).pathname === '/student/learning') {
+    await rounds.waitFor({ state: 'visible' });
+    if ((await rounds.getAttribute('aria-expanded')) === 'false' && !(await control.isVisible()))
+      await rounds.click();
+  }
   const response = page.waitForResponse(
     (res) =>
       new URL(res.url()).pathname === `${root}/sessions` && res.request().method() === 'POST',
