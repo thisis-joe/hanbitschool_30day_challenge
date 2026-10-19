@@ -84,6 +84,13 @@
 .learning-page h1:focus {
   outline: none;
 }
+.game-learning-session h1:focus,
+.game-learning-result h1:focus {
+  width: fit-content;
+  outline: 2px solid #486e5a;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
 .learning-session-meta,
 .learning-question-header {
   display: flex;

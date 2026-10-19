@@ -265,6 +265,9 @@ function StatisticsWorkspace({
             <button onClick={() => void questions.refetch()}>다시 시도</button>
           </div>
         ) : null}
+        {selectedList.data ? (
+          <p className="stats-scroll-hint">표를 좌우로 밀어 나머지 항목을 확인하세요.</p>
+        ) : null}
         {tab === 'students' && students.data ? (
           <div
             className="stats-table-scroll"
@@ -381,20 +384,22 @@ function StatisticsWorkspace({
           <div className="stats-pagination" aria-label="목록 페이지">
             <button
               className="secondary"
+              aria-label="이전 페이지"
               disabled={page === 0}
               onClick={() => change({ page: String(page - 1) }, false)}
             >
-              이전 페이지
+              이전
             </button>
             <span>
               {page + 1} / {Math.max(1, Math.ceil(pagination.total / pagination.size))} 페이지
             </span>
             <button
               className="secondary"
+              aria-label="다음 페이지"
               disabled={(page + 1) * pagination.size >= pagination.total}
               onClick={() => change({ page: String(page + 1) }, false)}
             >
-              다음 페이지
+              다음
             </button>
           </div>
         ) : null}

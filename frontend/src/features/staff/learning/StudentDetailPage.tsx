@@ -221,6 +221,7 @@ function StudentWorkspace({
                 </select>
               </label>
             </div>
+            <p className="stats-scroll-hint">표를 좌우로 밀어 나머지 항목을 확인하세요.</p>
             <div
               className="stats-table-scroll"
               tabIndex={0}
@@ -280,22 +281,24 @@ function StudentWorkspace({
             {data.answers.items.length === 0 ? <p>선택한 조건의 문항이 없습니다.</p> : null}
             <div className="stats-pagination" aria-label="답변 페이지">
               <button
+                aria-label="이전 페이지"
                 className="secondary"
                 disabled={query.page === 0}
                 onClick={() => change('page', String(query.page - 1))}
               >
-                이전 페이지
+                이전
               </button>
               <span>
                 {query.page + 1} / {Math.max(1, Math.ceil(data.answers.total / data.answers.size))}{' '}
                 페이지
               </span>
               <button
+                aria-label="다음 페이지"
                 className="secondary"
                 disabled={(query.page + 1) * data.answers.size >= data.answers.total}
                 onClick={() => change('page', String(query.page + 1))}
               >
-                다음 페이지
+                다음
               </button>
             </div>
           </section>
