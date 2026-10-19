@@ -270,6 +270,7 @@ export function LearningResultPage() {
               {giftItem ? (
                 <RewardCard
                   owner={accountId}
+                  acquisitionId={`${gift.itemId}:${gift.acquiredAt}`}
                   contentVersion={savedAppearance?.contentVersion ?? ''}
                   preview={
                     savedAppearance ? (

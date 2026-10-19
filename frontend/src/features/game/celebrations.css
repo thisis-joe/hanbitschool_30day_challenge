@@ -1,0 +1,320 @@
+/* Finite, local celebrations: transform/opacity only, with no input interception. */
+.game-xp-reward {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 26px 0 22px;
+  padding: 20px 24px;
+  border: 2px solid #ac8736;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at 15% 30%, #fff5b8, transparent 60%), #fff9e7;
+  box-shadow:
+    0 4px 0 #d3b86b,
+    inset 0 0 0 3px #fffdf3;
+  color: #473c24;
+}
+.game-xp-emblem {
+  position: relative;
+  flex: 0 0 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+}
+.game-xp-star {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 2px solid #9b7026;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff0a3 10%, #efc55f 55%, #d79839);
+  box-shadow:
+    inset 0 0 0 3px #fff0b9,
+    0 4px 0 #a77e31;
+  color: #76501b;
+  font-size: 36px;
+  text-shadow: 0 2px #fff2b0;
+}
+.game-xp-copy {
+  min-width: 0;
+}
+.game-xp-eyebrow {
+  display: block;
+  color: #6b5426;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.game-xp-amount {
+  display: block;
+  font-size: clamp(1.7rem, 5vw, 2.3rem);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: #715018;
+}
+.game-xp-amount small {
+  display: inline;
+  margin: 0;
+  color: inherit;
+  font-size: 0.5em;
+}
+.game-xp-copy p {
+  margin: 7px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.game-xp-total {
+  display: grid;
+  gap: 6px;
+  margin-left: auto;
+  padding-left: 20px;
+  border-left: 1px solid #cfbb83;
+  white-space: nowrap;
+}
+.game-xp-total b {
+  font-size: 1rem;
+  color: #355a46;
+}
+.game-xp-total span {
+  font-size: 0.75rem;
+}
+.game-xp-float {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: -10px;
+  white-space: nowrap;
+  color: #675016;
+  font-size: 1rem;
+  font-weight: 900;
+  text-shadow:
+    0 1px #fff,
+    1px 0 #fff,
+    -1px 0 #fff,
+    0 -1px #fff;
+  animation: game-xp-float 1900ms 150ms both cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.game-xp-reward[data-celebrating='true'] .game-xp-star {
+  animation: game-prize-pop 700ms both cubic-bezier(0.16, 1, 0.3, 1);
+}
+.game-xp-reward[data-celebrating='true'] .game-xp-amount {
+  animation: game-prize-pop 650ms 120ms both cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: left center;
+}
+.game-celebration-burst {
+  position: absolute;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  left: 50%;
+  top: 45%;
+  pointer-events: none;
+}
+.game-celebration-halo {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  left: -115px;
+  top: -115px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 12deg, #f2bd423d 0deg 12deg, transparent 12deg 30deg);
+  mask-image: radial-gradient(circle, transparent 8%, #000 22%, transparent 70%);
+  animation: game-prize-rays 2200ms ease-out both;
+}
+.game-celebration-ring {
+  position: absolute;
+  inset: -36px;
+  border: 2px solid #dfb247;
+  border-radius: 50%;
+  box-shadow:
+    0 0 16px #f9d56c70,
+    inset 0 0 10px #fff2aa80;
+  animation: game-prize-ring 1300ms 80ms ease-out both;
+}
+.game-celebration-ring-late {
+  animation-delay: 350ms;
+  border-color: #92b898;
+}
+.game-celebration-particle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  left: -5px;
+  top: -5px;
+  background: #cf9a32;
+  clip-path: polygon(50% 0, 62% 35%, 100% 50%, 62% 65%, 50% 100%, 38% 65%, 0 50%, 38% 35%);
+  animation: game-prize-particle 1800ms var(--spark-delay) both cubic-bezier(0.15, 0.7, 0.3, 1);
+}
+.game-celebration-particle:nth-child(3n) {
+  background: #5f9477;
+  width: 7px;
+  height: 7px;
+}
+.game-celebration-particle:nth-child(4n) {
+  background: #b38bb7;
+  clip-path: none;
+  width: 5px;
+  height: 8px;
+}
+.game-item-acquired {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid #ad8732;
+  border-radius: 6px;
+  color: #60471c;
+  background: #ffed9f;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.game-reward-card[data-revealing='true'] .game-item-acquired {
+  animation: game-prize-pop 600ms both;
+}
+.game-reward-card[data-revealing='true'] .game-reward-art > .game-equipment-icon {
+  animation: game-item-emerge 1500ms both cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 0 12px #ecc359);
+}
+.game-reward-card[data-revealing='true'] .game-treasure-chest {
+  animation: game-chest-open 700ms both;
+  transform-origin: center bottom;
+}
+@keyframes game-prize-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes game-xp-float {
+  0% {
+    transform: translate(-50%, 15px) scale(0.7);
+    opacity: 0;
+  }
+  20%,
+  65% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -48px) scale(1.08);
+    opacity: 0;
+  }
+}
+@keyframes game-prize-ring {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+@keyframes game-prize-rays {
+  0% {
+    transform: scale(0.3) rotate(-20deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3) rotate(35deg);
+    opacity: 0;
+  }
+}
+@keyframes game-prize-particle {
+  0% {
+    transform: translate(0, 0) scale(0.3);
+    opacity: 0;
+  }
+  15%,
+  55% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--spark-x), var(--spark-y)) rotate(var(--spark-turn)) scale(0.35);
+    opacity: 0;
+  }
+}
+@keyframes game-item-emerge {
+  0% {
+    transform: translateY(45px) scale(0.3);
+    opacity: 0;
+  }
+  35% {
+    transform: translateY(-12px) scale(1.12);
+    opacity: 1;
+  }
+  65% {
+    transform: translateY(3px) scale(0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes game-chest-open {
+  0%,
+  40% {
+    transform: rotate(-4deg);
+  }
+  20%,
+  60% {
+    transform: rotate(4deg);
+  }
+  80% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (max-width: 540px) {
+  .game-xp-reward {
+    padding: 16px 12px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .game-xp-emblem {
+    flex-basis: 48px;
+  }
+  .game-xp-star {
+    width: 46px;
+    height: 46px;
+    font-size: 30px;
+    border-radius: 14px;
+  }
+  .game-xp-total {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: space-between;
+    border-left: 0;
+    border-top: 1px solid #cfbb83;
+    padding: 10px 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-celebration-burst,
+  .game-xp-float {
+    display: none;
+  }
+  .game-xp-reward[data-celebrating='true'] .game-xp-star,
+  .game-xp-reward[data-celebrating='true'] .game-xp-amount,
+  .game-reward-card[data-revealing='true'] .game-item-acquired,
+  .game-reward-card[data-revealing='true'] .game-reward-art > .game-equipment-icon,
+  .game-reward-card[data-revealing='true'] .game-treasure-chest {
+    animation: none;
+  }
+}
