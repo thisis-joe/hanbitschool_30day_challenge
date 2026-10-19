@@ -1,0 +1,184 @@
+.game-learning-page .game-learning-scene.game-answer-scene,
+.game-learning-scene.game-answer-scene {
+  height: 304px;
+  margin-block: 18px 8px;
+}
+.game-answer-track {
+  position: absolute;
+  bottom: 54px;
+  left: 15%;
+  right: 15%;
+  height: 20px;
+  background: #ead0a7b8;
+  border-block: 3px solid #8c785b66;
+  border-radius: 50%;
+}
+.game-answer-destination {
+  position: absolute;
+  bottom: 20px;
+  width: 76px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 3px solid #314a3d;
+  border-radius: 50%;
+  background: #f6ffe1;
+  color: #263d35;
+  box-shadow: 0 5px 0 #314a3d;
+  transform: translateX(-50%);
+}
+.game-answer-destination b {
+  font-size: 1.65rem;
+}
+.game-answer-destination span {
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.game-answer-o {
+  left: 22%;
+}
+.game-answer-x {
+  left: 78%;
+  background: #ffedc6;
+}
+.game-answer-destination[data-selected='true'] {
+  outline: 4px solid #fff5b3;
+  outline-offset: 3px;
+}
+.game-answer-traveler {
+  position: absolute;
+  left: 50%;
+  bottom: 46px;
+  width: 154px;
+  transform: translateX(-50%);
+  transition: left 750ms linear;
+  z-index: 1;
+}
+.game-answer-scene[data-choice='O'] .game-answer-traveler {
+  left: 22%;
+}
+.game-answer-scene[data-choice='X'] .game-answer-traveler {
+  left: 78%;
+}
+.game-answer-scene[data-animate='false'] .game-answer-traveler {
+  transition: none;
+}
+.game-answer-facing {
+  transform-origin: center;
+}
+.game-answer-scene[data-choice='O'][data-phase='walking'] .game-answer-facing {
+  transform: scaleX(-1);
+}
+.game-answer-traveler .game-avatar-articulated {
+  display: block;
+  width: 154px;
+  aspect-ratio: 176 / 216;
+  filter: none;
+}
+.game-answer-shadow {
+  position: absolute;
+  bottom: 12px;
+  left: 34%;
+  width: 34%;
+  height: 9px;
+  border-radius: 50%;
+  background: #263d354a;
+}
+.game-answer-message {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  width: max-content;
+  max-width: calc(100% - 20px);
+  border: 2px solid #34483b;
+  border-radius: 12px;
+  background: #fffdeff2;
+  color: #263d35;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  z-index: 2;
+}
+.game-answer-scene[data-phase='correct'] .game-answer-message {
+  background: #f5eda9;
+}
+.game-answer-progress {
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  margin: 0;
+  padding: 2px 6px;
+  background: #fffdeff0;
+  border-radius: 5px;
+  color: #263d35;
+  font-size: 0.65rem;
+}
+.game-answer-sparkles {
+  position: absolute;
+  top: 40%;
+  left: 10%;
+  font-size: 27px;
+  color: #fff1a0;
+  text-shadow: 1px 2px #80602d;
+}
+.game-answer-sparkles::after {
+  content: '✦';
+  position: absolute;
+  left: 105px;
+  top: -32px;
+  font-size: 20px;
+}
+.game-answer-scene[data-animate='true'] .game-answer-sparkles {
+  animation: answer-sparkle 600ms ease-in-out 2;
+}
+@keyframes answer-sparkle {
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+@media (max-width: 480px) {
+  .game-learning-page .game-learning-scene.game-answer-scene,
+  .game-learning-scene.game-answer-scene {
+    height: 250px;
+  }
+  .game-answer-traveler,
+  .game-answer-traveler .game-avatar-articulated {
+    width: 124px;
+  }
+  .game-answer-message {
+    font-size: 0.75rem;
+  }
+  .game-answer-destination {
+    width: 64px;
+    height: 46px;
+  }
+  .game-answer-sparkles::after {
+    left: 85px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-answer-traveler {
+    transition: none;
+  }
+  .game-answer-scene[data-animate='true'] .game-answer-sparkles {
+    animation: none;
+  }
+}
+
+.game-answer-traveler .game-avatar-motion-fallback {
+  display: block;
+  width: 112px;
+  margin: 23px auto 12px;
+}
+@media (max-width: 480px) {
+  .game-answer-traveler .game-avatar-motion-fallback {
+    width: 90px;
+    margin: 18px auto 10px;
+  }
+}

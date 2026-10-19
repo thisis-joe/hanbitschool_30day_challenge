@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" /><title>
+    답변 캐릭터 동작 검수
+  </title>
+  <style>
+    body {
+      margin: 24px;
+      background: #fffdf3;
+      color: #263d35;
+      font: 15px sans-serif;
+    }
+    main {
+      max-width: 700px;
+      margin: auto;
+    }
+    #poses {
+      overflow-x: auto;
+      display: grid;
+      grid-template-columns: repeat(6, 176px);
+      gap: 10px;
+    }
+    #poses canvas {
+      width: 176px;
+      background: #dbe6cf;
+      image-rendering: pixelated;
+    }
+    button,
+    select {
+      min-height: 48px;
+      margin: 4px;
+      font: inherit;
+    }
+    figure {
+      margin: 0;
+    }
+    figcaption {
+      font-size: 12px;
+    }
+  </style>
+  <body>
+    <main>
+      <h1>선택한 자리에서 기뻐하고, 다시 도전해요</h1>
+      <div id="root"></div>
+    </main>
+    <h2>9명 · 걷기 / 양팔 들기 / 점프 / 풀이 죽기</h2>
+    <div id="poses"></div>
+    <script type="module" src="./answer-motion.tsx"></script>
+  </body>
+</html>
