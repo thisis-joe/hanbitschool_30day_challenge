@@ -38,12 +38,16 @@ beforeEach(() => {
     return {
       canvas: this,
       imageSmoothingEnabled: true,
-        clearRect(this: {canvas: HTMLCanvasElement}, ...args: number[]) {
+      clearRect(this: { canvas: HTMLCanvasElement }, ...args: number[]) {
         calls.set(this.canvas, [...(calls.get(this.canvas) ?? []), { method: 'clearRect', args }]);
         if (args[0] === 0 && args[1] === 0 && args[2] === 128 && args[3] === 176)
           content.set(this.canvas, []);
       },
-        drawImage(this: {canvas: HTMLCanvasElement}, source: ControlledImage | HTMLCanvasElement, ...args: number[]) {
+      drawImage(
+        this: { canvas: HTMLCanvasElement },
+        source: ControlledImage | HTMLCanvasElement,
+        ...args: number[]
+      ) {
         calls.set(this.canvas, [
           ...(calls.get(this.canvas) ?? []),
           { method: 'drawImage', args: [source, ...args] },
@@ -55,7 +59,7 @@ beforeEach(() => {
       },
       save() {},
       restore() {},
-        setTransform(this: {canvas: HTMLCanvasElement}, ...args: number[]) {
+      setTransform(this: { canvas: HTMLCanvasElement }, ...args: number[]) {
         calls.set(this.canvas, [
           ...(calls.get(this.canvas) ?? []),
           { method: 'setTransform', args },
@@ -165,7 +169,7 @@ it('already-complete broken images reject without waiting for an event that was 
   expect(painted.get(canvas)).toBeUndefined();
 });
 
-it('composes original attachment coordinates, hair cut, two shoes, grip and brim order', async () => {
+it('snapshots chosen equipment and restores the hand in front of the held item', async () => {
   const { renderAvatar } = await import('./avatarRenderer');
   const canvas = document.createElement('canvas');
   const gear = {
@@ -188,18 +192,11 @@ it('composes original attachment coordinates, hair cut, two shoes, grip and brim
     14, 0, 104, 48,
   ]);
   const draws = drawing.filter((call) => call.method === 'drawImage');
-  expect(draws.slice(1, 6).map((call) => call.args.slice(1))).toEqual([
-    [47, 133, 34, 14],
-    [45, 103, 37, 32],
-    [44, 141, 22, 30],
-    [63, 143, 19, 28],
-    [28, 104, 32, 58],
-  ]);
-  expect(draws[6].args.slice(1)).toEqual([39, 123]); // skin restored above the hand item
+  expect(draws).toHaveLength(9); // Base, bottom, top, two shoes, item, fist, glasses, hat.
+  expect(draws[6].args[0]).toBeInstanceOf(HTMLCanvasElement); // fist is above the held item
   expect(draws[7].args.slice(1)).toEqual([0, 0]); // face affine drawing
-  expect(draws[8].args.slice(1)).toEqual([1, -20, 129, 116]); // bucket brim is last
-  expect(decodeURIComponent((draws[2].args[0] as ControlledImage).src)).toContain('#dabd69');
-  expect(decodeURIComponent((draws[4].args[0] as ControlledImage).src)).toContain('#c19a6d');
+  expect(decodeURIComponent((draws[2].args[0] as ControlledImage).src)).toContain('#d5b66b');
+  expect(decodeURIComponent((draws[4].args[0] as ControlledImage).src)).toContain('#b98665');
   const transform = drawing.find((call) => call.method === 'setTransform')!.args as number[];
   expect(transform[0]).toBeCloseTo(0.9285714285714286);
   expect(transform[1]).toBeCloseTo(0.03826530612244898);

@@ -7,7 +7,7 @@ it('resolves all thirty canonical item IDs while rejecting untrusted values', ()
     for (let value = 1; value <= 5; value++) {
       const art = equipmentArt(`${slot}-${value}`);
       expect(art).not.toBeNull();
-      expect(equipmentSvg(art!)).toContain('shape-rendering="crispEdges"');
+      expect(equipmentSvg(art!)).toContain(`shape-rendering="${art!.rendering ?? 'crispEdges'}"`);
     }
   }
   for (const value of [
