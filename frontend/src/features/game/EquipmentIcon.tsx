@@ -38,7 +38,7 @@ export function EquipmentIcon({ itemId, slot }: { itemId: string | null; slot?: 
       className="game-equipment-icon"
       viewBox="0 0 96 96"
       aria-hidden="true"
-      shapeRendering="crispEdges"
+      shapeRendering={art.rendering ?? 'crispEdges'}
     >
       <g
         transform={`translate(${x} ${y}) scale(${scale})`}
