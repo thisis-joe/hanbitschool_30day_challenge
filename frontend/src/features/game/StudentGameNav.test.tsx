@@ -25,3 +25,16 @@ it('headerKeepsAccountAndLogoutAccess', async () => {
   );
   expect(screen.getByRole('button', { name: '로그아웃' })).toBeEnabled();
 });
+
+it.each([
+  ['/student/character', '꾸미기'],
+  ['/student/learning/sessions/example', '오늘'],
+  ['/student/learning/sessions/example/result', '오늘'],
+])('keeps the current section visible on %s', async (path, label) => {
+  const { StudentGameNav } = await import('./StudentGameNav');
+  renderPage(<StudentGameNav />, path);
+  expect(screen.getByRole('link', { name: label })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+});
