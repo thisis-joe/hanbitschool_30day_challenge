@@ -55,3 +55,31 @@ it('keeps reward celebrations scoped to owner and content version', () => {
     'true',
   );
 });
+
+it('reveals a confirmed gift even when inventory arrives already owned, once per acquisition', () => {
+  const client = new QueryClient();
+  client.setQueryData(meKey, student);
+  const ui = (
+    <QueryClientProvider client={client}>
+      <RewardCard
+        owner={student.accountId}
+        contentVersion="v1"
+        item={gameView.items[0]}
+        owned
+        acquisitionId="face-1:2026-10-19T10:00:00Z"
+      />
+    </QueryClientProvider>
+  );
+  const view = render(ui);
+  expect(screen.getByRole('region', { name: '여행 선물' })).toHaveAttribute(
+    'data-revealing',
+    'true',
+  );
+  expect(screen.getByText('아이템 획득!')).toBeVisible();
+  view.unmount();
+  render(ui);
+  expect(screen.getByRole('region', { name: '여행 선물' })).not.toHaveAttribute(
+    'data-revealing',
+    'true',
+  );
+});

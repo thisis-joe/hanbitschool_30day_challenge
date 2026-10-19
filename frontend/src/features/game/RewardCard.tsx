@@ -3,6 +3,8 @@ import { GameAvatar } from './GameAvatar';
 import { useSeenTransition } from './useSeenTransition';
 import type { GameItem, GameView } from './types';
 import type { ReactNode } from 'react';
+import { CelebrationBurst } from './CelebrationBurst';
+import './celebrations.css';
 
 export function RewardCard({
   item,
@@ -14,6 +16,7 @@ export function RewardCard({
   contentVersion,
   appearance,
   preview,
+  acquisitionId,
 }: {
   item: GameItem;
   owned: boolean;
@@ -24,10 +27,26 @@ export function RewardCard({
   contentVersion: string;
   appearance?: GameView;
   preview?: ReactNode;
+  /** A server-confirmed grant, including its acquisition time; never inferred from ownership. */
+  acquisitionId?: string;
 }) {
-  const revealing = useSeenTransition(owner, contentVersion, 'rewards', {
-    [item.itemId]: owned,
-  }).includes(item.itemId);
+  const transitioned = useSeenTransition(
+    owner,
+    contentVersion,
+    'rewards',
+    {
+      [item.itemId]: owned,
+    },
+    { durationMs: 2400 },
+  ).includes(item.itemId);
+  const acquired = useSeenTransition(
+    owner,
+    contentVersion,
+    'item-awards',
+    acquisitionId && owned ? { [acquisitionId]: true } : {},
+    { celebrateInitial: true, durationMs: 2400 },
+  ).includes(acquisitionId ?? '');
+  const revealing = transitioned || acquired;
   return (
     <section
       className={`game-reward-card${owned ? '' : ' game-reward-locked'}`}
@@ -35,6 +54,7 @@ export function RewardCard({
       data-revealing={revealing || undefined}
     >
       <div className="game-treasure-stage" role="img" aria-label={item.name}>
+        {revealing ? <CelebrationBurst key={acquisitionId ?? item.itemId} /> : null}
         <div className="game-reward-art" aria-hidden="true">
           <EquipmentIcon itemId={item.itemId} slot={item.slot} />
           <img className="game-treasure-chest" src="/game/reward-chest.svg" alt="" />
@@ -46,6 +66,11 @@ export function RewardCard({
         </span>
       </div>
       <div className="game-reward-copy">
+        {owned ? (
+          <p className="game-item-acquired" role={revealing ? 'status' : undefined}>
+            {revealing ? '아이템 획득!' : '획득 완료'}
+          </p>
+        ) : null}
         <p className="learning-eyebrow">{owned ? '모은 여행 선물' : '다음 여행 선물'}</p>
         <h2>{item.name}</h2>
         <p>{owned ? '보유한 장비예요.' : `${item.rewardDay}회차 첫 통과로 받아요.`}</p>

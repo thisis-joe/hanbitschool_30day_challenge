@@ -12,6 +12,7 @@ export function useSeenTransition(
   contentVersion: string,
   surface: string,
   observations: Seen,
+  { celebrateInitial = false, durationMs = 900 } = {},
 ) {
   const client = useQueryClient();
   const identity = JSON.stringify([owner, contentVersion, surface]);
@@ -39,7 +40,11 @@ export function useSeenTransition(
     const key = ['cosmetic-seen', owner, contentVersion, surface];
     const current = JSON.parse(snapshot) as Seen;
     const previous = client.getQueryData<Seen>(key);
-    const newlySeen = Object.keys(current).filter((id) => current[id] && previous?.[id] === false);
+    const newlySeen = Object.keys(current).filter(
+      (id) =>
+        current[id] &&
+        (previous?.[id] === false || (celebrateInitial && previous?.[id] === undefined)),
+    );
     const merged = { ...previous };
     // Preserve prior true observations even when a later stale snapshot is false.
     for (const id of Object.keys(current)) merged[id] = !!previous?.[id] || current[id];
@@ -51,13 +56,13 @@ export function useSeenTransition(
     return client.getQueryCache().subscribe((change) => {
       if (change.type === 'removed' && change.query.queryKey[0] === 'cosmetic-seen') setEvent(null);
     });
-  }, [client, owner, contentVersion, surface, identity, snapshot, epoch]);
+  }, [client, owner, contentVersion, surface, identity, snapshot, epoch, celebrateInitial]);
 
   useEffect(() => {
     if (!event) return;
-    const timer = window.setTimeout(() => setEvent(null), 900);
+    const timer = window.setTimeout(() => setEvent(null), durationMs);
     return () => window.clearTimeout(timer);
-  }, [event]);
+  }, [event, durationMs]);
 
   const account = client.getQueryData<AccountMe | null>(meKey);
   return event?.identity === identity && event.epoch === epoch && account?.accountId === owner

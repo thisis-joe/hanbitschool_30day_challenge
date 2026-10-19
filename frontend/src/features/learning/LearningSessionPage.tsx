@@ -8,6 +8,7 @@ import { useDeadlineCountdown } from './useDeadlineCountdown';
 import { QuestionFeedbackActions } from './QuestionFeedbackActions';
 import { useGame, useJourney } from '../game/queries';
 import { LearningGameScene } from '../game/LearningGameScene';
+import { ExperienceReward } from '../game/ExperienceReward';
 
 const outcomes = {
   CORRECT: '정답이에요',
@@ -200,6 +201,11 @@ export function LearningSessionPage() {
               <h1 ref={heading} tabIndex={-1}>
                 {outcomes[feedback.outcome]}
               </h1>
+              <ExperienceReward
+                owner={accountId}
+                contentVersion={view.contentVersion}
+                answer={feedback}
+              />
               {question?.questionId === feedback.questionId ? (
                 <p className="learning-source">{question.text}</p>
               ) : null}
@@ -207,7 +213,6 @@ export function LearningSessionPage() {
                 정답은 {feedback.correctChoice === 'O' ? 'O · 사실' : 'X · 해석'}
               </p>
               <p className="learning-explanation">{feedback.explanation}</p>
-              <p>이번 답변으로 받은 경험치: {feedback.xpAwarded} XP</p>
               <QuestionFeedbackActions questionId={feedback.questionId} result={feedback} />
               {view.state === 'COMPLETED' ? (
                 <Link
