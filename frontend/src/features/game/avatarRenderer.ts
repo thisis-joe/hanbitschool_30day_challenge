@@ -145,8 +145,20 @@ const ANCHORS: Anchor[] = [
   },
 ];
 
-export function avatarAnchor(characterId: CharacterId): Anchor {
-  return ANCHORS[CHARACTER_IDS.indexOf(characterId)];
+const MOTION_GRIPS: Point[] = [
+  [47, 139],
+  [54, 138],
+  [51, 137],
+  [45, 138],
+  [63, 142],
+  [54, 144],
+  [48, 140],
+  [55, 138],
+  [49, 139],
+];
+export function avatarAnchor(characterId: CharacterId): Anchor & { grip: Point } {
+  const index = CHARACTER_IDS.indexOf(characterId);
+  return { ...ANCHORS[index], grip: MOTION_GRIPS[index] };
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
