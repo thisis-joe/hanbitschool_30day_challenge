@@ -992,3 +992,49 @@ it('missingSessionOffersASafeHomeLink', async () => {
     '/student/learning',
   );
 });
+
+it.each(['FIRST', 'REPLAY', 'REVIEW'] as const)(
+  'answer scene walks immediately and waits for canonical scoring in %s mode',
+  async (mode) => {
+    const release = deferred<void>();
+    const sent = deferred<void>();
+    let view: LearningSessionView = { ...activeSession, mode };
+    const payloads: unknown[] = [];
+    server.use(
+      http.get('*/api/student/learning/sessions/:id', () => json(view)),
+      http.post('*/api/student/learning/sessions/:id/answers', async ({ request }) => {
+        payloads.push(await request.json());
+        sent.resolve();
+        await release.promise;
+        view = {
+          ...answeredSession,
+          mode,
+          lastAnswer: { ...answerResult, outcome: 'WRONG', correctChoice: 'O' },
+        };
+        return HttpResponse.json(view.lastAnswer);
+      }),
+    );
+    setup();
+    try {
+      await userEvent.click(await screen.findByRole('button', { name: 'X · 해석' }));
+      await sent.promise;
+      const scene = screen.getByRole('region', { name: '학습 여행 장면' });
+      expect(scene).toHaveAttribute('data-choice', 'X');
+      expect(scene).toHaveAttribute('data-phase', 'walking');
+      expect(payloads).toHaveLength(1);
+      expect(payloads[0]).toMatchObject({
+        choice: 'X',
+        questionId: activeSession.question!.questionId,
+      });
+      expect(screen.getByRole('button', { name: 'O · 사실' })).toBeDisabled();
+      await waitFor(() => expect(scene).toHaveAttribute('data-phase', 'waiting'));
+      await act(async () => release.resolve());
+      await screen.findByRole('heading', { name: '오답이에요' });
+      expect(scene).toHaveAttribute('data-choice', 'X');
+      expect(scene).toHaveAttribute('data-phase', 'wrong');
+      expect(payloads).toHaveLength(1);
+    } finally {
+      await act(async () => release.resolve());
+    }
+  },
+);

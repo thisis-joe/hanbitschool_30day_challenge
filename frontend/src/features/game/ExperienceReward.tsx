@@ -14,10 +14,12 @@ export function ExperienceReward({
   owner,
   contentVersion,
   answer,
+  deferCinematic = false,
 }: {
   owner: string | undefined;
   contentVersion: string;
   answer: AnswerResult;
+  deferCinematic?: boolean;
 }) {
   const event = answer.attemptAnswerId;
   const card = useRef<HTMLDivElement>(null);
@@ -25,7 +27,7 @@ export function ExperienceReward({
     owner,
     contentVersion,
     'xp-awards',
-    answer.xpAwarded > 0 ? { [event]: true } : {},
+    answer.xpAwarded > 0 && !deferCinematic ? { [event]: true } : {},
     { celebrateInitial: true, durationMs: acquisitionDuration.xp + inlineAcquisitionDuration },
   ).includes(event);
   const identity = JSON.stringify([owner, contentVersion, event]);
