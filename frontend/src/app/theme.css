@@ -334,6 +334,30 @@ main {
   font-size: 0.9rem;
   color: #743722;
 }
+.form-success {
+  padding: 12px 16px;
+  border: 2px solid #53734d;
+  border-radius: 10px;
+  background: #edf3e3;
+  font-size: 0.9rem;
+}
+.form-panel h1:focus {
+  outline: none;
+}
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.form-panel .form-actions button[type='submit'] {
+  width: auto;
+  margin: 0;
+  flex: 1;
+}
+.form-actions > .button,
+.form-actions > button {
+  padding-inline: 12px;
+}
 .secondary {
   background: var(--paper);
   border-color: var(--line);
@@ -369,6 +393,7 @@ main {
 .account-details dd {
   font-weight: 700;
   margin: 4px 0 0;
+  overflow-wrap: anywhere;
 }
 .actions {
   display: flex;

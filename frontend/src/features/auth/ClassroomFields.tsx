@@ -23,10 +23,11 @@ export function ClassroomFields({
       <select
         id="school"
         value={value.schoolId}
+        disabled={schools.isPending}
         required
         onChange={(e) => onChange({ schoolId: e.target.value, gradeLabel: '', classNumber: 0 })}
       >
-        <option value="">학교 선택</option>
+        <option value="">{schools.isPending ? '학교 불러오는 중…' : '학교 선택'}</option>
         {schools.data?.map((s) => (
           <option key={s.id} value={s.id}>
             {s.name}
@@ -71,6 +72,12 @@ export function ClassroomFields({
           </select>
         </div>
       </div>
+      {schools.isSuccess && schools.data.length === 0 ? (
+        <p role="status">등록된 학교가 없어요. 선생님께 학교 등록을 확인해 주세요.</p>
+      ) : null}
+      {value.schoolId && classes.isSuccess && classes.data.length === 0 ? (
+        <p role="status">아직 등록된 학급이 없어요. 선생님께 학급을 확인해 주세요.</p>
+      ) : null}
       {error ? (
         <div role="alert">
           {errorMessage(error)}{' '}

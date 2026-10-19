@@ -8,7 +8,8 @@ import { HttpError } from '../../lib/http';
 import type { ClassroomSelection } from './types';
 export function StudentLoginPage() {
   const location = useLocation();
-  const saved = location.state as (ClassroomSelection & { studentNumber?: number }) | null;
+  const saved = location.state as
+    (ClassroomSelection & { studentNumber?: number; registered?: boolean }) | null;
   const [selection, setSelection] = useState<ClassroomSelection>({
     schoolId: saved?.schoolId ?? '',
     gradeLabel: saved?.gradeLabel ?? '',
@@ -20,6 +21,11 @@ export function StudentLoginPage() {
   const submit = useSubmission();
   return (
     <AuthFrame title="학생 로그인" description="학교와 우리 반을 선택하고 로그인해 주세요.">
+      {saved?.registered === true ? (
+        <p className="form-success" role="status">
+          가입이 완료되었어요. 방금 정한 비밀번호로 로그인해 주세요.
+        </p>
+      ) : null}
       <form
         onSubmit={(e) => {
           e.preventDefault();

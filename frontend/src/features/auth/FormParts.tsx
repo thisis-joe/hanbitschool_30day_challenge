@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { errorMessage } from '../../lib/http';
 export function useSubmission() {
@@ -37,6 +37,10 @@ export function AuthFrame({
   description: string;
   children: ReactNode;
 }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+  }, [title]);
   return (
     <div className="auth-frame">
       <aside className="intro">
@@ -57,7 +61,9 @@ export function AuthFrame({
         </p>
       </aside>
       <section className="form-panel">
-        <h1>{title}</h1>
+        <h1 ref={heading} tabIndex={-1}>
+          {title}
+        </h1>
         <p className="description">{description}</p>
         {children}
       </section>

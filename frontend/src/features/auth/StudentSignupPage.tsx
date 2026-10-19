@@ -30,7 +30,10 @@ export function StudentSignupPage() {
               password: String(data.get('password')),
               classCode,
             });
-            navigate('/login', { replace: true, state: { ...selection, studentNumber } });
+            navigate('/login', {
+              replace: true,
+              state: { ...selection, studentNumber, registered: true },
+            });
           });
         }}
       >
