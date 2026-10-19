@@ -10,11 +10,15 @@ export function AnswerGameScene({
   journey,
   choice,
   outcome,
+  answerId,
+  onReactionComplete,
 }: {
   appearance: GameView | undefined;
   journey?: JourneyView;
   choice?: AnswerChoice;
   outcome?: AnswerOutcome;
+  answerId?: string;
+  onReactionComplete?: (answerId: string) => void;
 }) {
   const [travel, setTravel] = useState({ choice, arrived: true, animate: false });
   if (travel.choice !== choice) setTravel({ choice, arrived: !choice, animate: !!choice });
@@ -45,6 +49,12 @@ export function AnswerGameScene({
         : phase === 'wrong' || phase === 'timeout'
           ? 'sad'
           : 'idle';
+  useEffect(() => {
+    if (!answerId || !outcome || !travel.arrived || !onReactionComplete) return;
+    const duration = travel.animate ? (outcome === 'CORRECT' ? 1200 : 450) : 0;
+    const timer = window.setTimeout(() => onReactionComplete(answerId), duration);
+    return () => window.clearTimeout(timer);
+  }, [answerId, outcome, travel.arrived, travel.animate, onReactionComplete]);
   const position = journey?.journeyPosition ?? 0;
   const region = position < 50 ? 'forest' : position < 100 ? 'village' : 'beach';
   const messages = {

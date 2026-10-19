@@ -59,3 +59,28 @@ it('keeps the XP reward readable without animation for reduced motion', () => {
   expect(screen.getByText('이번 답변으로 받은 경험치: 100 XP')).toBeVisible();
   expect(screen.queryByRole('dialog')).toBeNull();
 });
+
+it('keeps XP readable while the character reacts and begins the cinematic only after release', () => {
+  vi.useFakeTimers();
+  const client = new QueryClient();
+  client.setQueryData(meKey, student);
+  const ui = (deferCinematic: boolean) => (
+    <QueryClientProvider client={client}>
+      <ExperienceReward
+        owner={student.accountId}
+        contentVersion="v1"
+        answer={answerResult}
+        deferCinematic={deferCinematic}
+      />
+    </QueryClientProvider>
+  );
+  const view = render(ui(true));
+  expect(screen.getByText('이번 답변으로 받은 경험치: 100 XP')).toBeVisible();
+  expect(screen.queryByRole('dialog')).toBeNull();
+  act(() => vi.advanceTimersByTime(6000));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  view.rerender(ui(false));
+  expect(screen.getByRole('dialog', { name: '경험치 획득 연출' })).toBeVisible();
+  act(() => vi.advanceTimersByTime(5200));
+  expect(screen.queryByRole('dialog')).toBeNull();
+});

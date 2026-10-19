@@ -75,3 +75,24 @@ it('a new question resets the destination and cancels the previous arrival timer
   act(() => vi.advanceTimersByTime(750));
   expect(scene()).toHaveAttribute('data-phase', 'correct');
 });
+
+it('releases the reward cinematic only after walking and the complete character reaction', () => {
+  const complete = vi.fn();
+  const view = render(<AnswerGameScene appearance={gameView} onReactionComplete={complete} />);
+  view.rerender(
+    <AnswerGameScene
+      appearance={gameView}
+      choice="O"
+      outcome="CORRECT"
+      answerId="answer-1"
+      onReactionComplete={complete}
+    />,
+  );
+  act(() => vi.advanceTimersByTime(750));
+  expect(scene()).toHaveAttribute('data-phase', 'correct');
+  expect(complete).not.toHaveBeenCalled();
+  act(() => vi.advanceTimersByTime(1199));
+  expect(complete).not.toHaveBeenCalled();
+  act(() => vi.advanceTimersByTime(1));
+  expect(complete).toHaveBeenCalledExactlyOnceWith('answer-1');
+});

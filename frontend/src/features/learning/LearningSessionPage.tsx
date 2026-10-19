@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useCurrentAccount } from '../auth/queries';
 import { errorMessage, HttpError } from '../../lib/http';
@@ -26,6 +26,7 @@ export function LearningSessionPage() {
   const game = useGame();
   const journey = useJourney();
   const heading = useRef<HTMLHeadingElement>(null);
+  const [completedReaction, setCompletedReaction] = useState<string>();
   const accountId = account.data?.role === 'STUDENT' ? account.data.accountId : undefined;
   const view = session.data;
   const question = view?.question;
@@ -181,6 +182,8 @@ export function LearningSessionPage() {
             journey={journey.data}
             outcome={feedback?.outcome}
             choice={confirmedChoice ?? pendingChoice}
+            answerId={feedback?.attemptAnswerId}
+            onReactionComplete={setCompletedReaction}
           />
           {active && question ? (
             <>
@@ -220,6 +223,7 @@ export function LearningSessionPage() {
                 owner={accountId}
                 contentVersion={view.contentVersion}
                 answer={feedback}
+                deferCinematic={completedReaction !== feedback.attemptAnswerId}
               />
               {question?.questionId === feedback.questionId ? (
                 <p className="learning-source">{question.text}</p>
