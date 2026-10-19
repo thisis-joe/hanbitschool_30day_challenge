@@ -85,7 +85,18 @@ export function ClassroomsPage() {
         </button>
       </div>
       {list.isPending ? <p role="status">학급을 불러오고 있습니다.</p> : null}
-      {list.isError ? <p role="alert">{errorMessage(list.error)}</p> : null}
+      {list.isError ? (
+        <div className="learning-error">
+          <p role="alert">{errorMessage(list.error)}</p>
+          <button
+            className="secondary"
+            disabled={list.isFetching}
+            onClick={() => void list.refetch()}
+          >
+            학급 다시 불러오기
+          </button>
+        </div>
+      ) : null}
       {list.data?.length === 0 ? (
         <p>학급이 없습니다. 새 학급을 만들어 학생을 초대해 주세요.</p>
       ) : null}
@@ -100,20 +111,23 @@ export function ClassroomsPage() {
                 <p>
                   시작일 {c.startDate} / 가입 학생 {c.studentCount}명
                 </p>
+              </div>
+              <div className="actions class-row-actions">
                 <Link
                   className="button secondary"
                   to={`/staff/classrooms/${encodeURIComponent(c.id)}/learning`}
                 >
                   학습 통계
                 </Link>
+                <button
+                  className="secondary"
+                  aria-expanded={selected === c.id}
+                  aria-controls={`roster-${c.id}`}
+                  onClick={() => setSelected(selected === c.id ? undefined : c.id)}
+                >
+                  {selected === c.id ? '명단 닫기' : '명단 보기'}
+                </button>
               </div>
-              <button
-                className="secondary"
-                aria-expanded={selected === c.id}
-                onClick={() => setSelected(selected === c.id ? undefined : c.id)}
-              >
-                명단 보기
-              </button>
             </div>
             {c.canManage && c.joinCode ? (
               <div className="join-code">
@@ -124,7 +138,11 @@ export function ClassroomsPage() {
                 <small>학생에게 이 코드와 학교·학년·반을 알려 주세요.</small>
               </div>
             ) : null}
-            {selected === c.id ? <ClassroomRoster classroomId={c.id} /> : null}
+            {selected === c.id ? (
+              <div id={`roster-${c.id}`}>
+                <ClassroomRoster classroomId={c.id} />
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>

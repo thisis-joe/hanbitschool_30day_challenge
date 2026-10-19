@@ -87,6 +87,26 @@
 body {
   margin: 0;
 }
+html {
+  scroll-padding-top: 88px;
+}
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 16px;
+  z-index: 200;
+  padding: 12px 18px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  transform: translateY(-160%);
+}
+.skip-link:focus {
+  transform: none;
+}
+main:focus {
+  outline: none;
+}
 a {
   color: inherit;
   text-underline-offset: 4px;
@@ -175,7 +195,8 @@ fieldset {
   margin: 0;
   padding: 0;
 }
-form button[type='submit'] {
+.form-panel button[type='submit'],
+.staff-grid button[type='submit'] {
   width: 100%;
   margin-top: 24px;
 }
@@ -188,6 +209,11 @@ form button[type='submit'] {
   gap: 20px;
   padding: 20px 32px;
   margin: auto;
+}
+.site-header nav a[aria-current='page'] {
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 .brand {
   text-decoration: none;
@@ -334,6 +360,7 @@ main {
   border-block: 2px solid var(--line);
   padding: 22px 0;
   margin: 32px 0;
+  flex-wrap: wrap;
 }
 .account-details dt {
   font-size: 0.85rem;
@@ -359,6 +386,7 @@ footer {
     padding: 16px 20px;
     gap: 12px;
     align-items: flex-start;
+    flex-wrap: wrap;
   }
   .brand {
     font-size: 1.15rem;
@@ -490,6 +518,13 @@ footer {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
+}
+.class-row-actions {
+  gap: 8px;
+}
+.class-row-actions > * {
+  padding-inline: 14px;
 }
 .class-title {
   font-size: 1.2rem;

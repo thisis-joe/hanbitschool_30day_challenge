@@ -124,8 +124,8 @@
   background: #eaf0eb;
 }
 .stats-filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) auto minmax(100px, 0.65fr) minmax(150px, 0.85fr);
   align-items: end;
   gap: 12px;
   margin-bottom: 20px;
@@ -136,10 +136,14 @@
   gap: 6px;
   font-size: 0.9rem;
   min-width: 0;
+  margin: 0;
 }
 .stats-search {
-  flex: 1;
-  min-width: 160px !important;
+  min-width: 0;
+}
+.stats-filters button[type='submit'] {
+  width: auto;
+  margin: 0;
 }
 .stats-filters input,
 .stats-filters select {
@@ -360,7 +364,21 @@
     font-size: 1.35rem;
   }
   .stats-filters label {
-    width: 100%;
+    width: auto;
+  }
+  .stats-filters {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .stats-filters .stats-search {
+    grid-column: 1 / -1;
+    padding-right: 80px;
+    grid-row: 1;
+  }
+  .stats-filters button[type='submit'] {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    width: 72px;
   }
   .stats-modal-backdrop {
     padding: 12px;
