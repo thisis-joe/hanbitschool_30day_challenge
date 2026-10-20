@@ -13,7 +13,18 @@ export function ClassroomRoster({ classroomId }: { classroomId: string }) {
     <section className="roster">
       <h3>가입 학생 명단</h3>
       {roster.isPending ? <p role="status">명단을 불러오고 있습니다.</p> : null}
-      {roster.isError ? <p role="alert">{errorMessage(roster.error)}</p> : null}
+      {roster.isError ? (
+        <>
+          <p role="alert">{errorMessage(roster.error)}</p>
+          <button
+            className="secondary"
+            disabled={roster.isFetching}
+            onClick={() => void roster.refetch()}
+          >
+            명단 다시 불러오기
+          </button>
+        </>
+      ) : null}
       {roster.data?.length === 0 ? <p>아직 가입한 학생이 없습니다.</p> : null}
       <ul className="plain-list">
         {roster.data?.map((s) => (

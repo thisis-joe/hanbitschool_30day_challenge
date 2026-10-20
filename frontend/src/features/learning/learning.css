@@ -22,15 +22,10 @@
   display: flex;
   flex-direction: column;
 }
-/* Keep the mounted traveler stable while placing the question above its scene. */
-.game-learning-page .learning-card > .game-learning-scene {
+/* Keep timed reading and answering together; scenery follows the task. */
+.game-learning-session .learning-card > .game-learning-scene {
   order: 1;
   flex-shrink: 0;
-}
-.game-learning-page .learning-card > .learning-choices,
-.game-learning-page .learning-card > .learning-feedback,
-.game-learning-page .learning-card > [role='status'] {
-  order: 2;
 }
 .game-learning-page .learning-choices button {
   background: #e2edcc;
@@ -87,8 +82,13 @@
   box-shadow: 0 6px 0 var(--shadow);
 }
 .learning-page h1:focus {
-  outline: 3px solid #486e5a;
-  outline-offset: 6px;
+  outline: none;
+}
+.game-learning-session h1:focus,
+.game-learning-result h1:focus {
+  width: fit-content;
+  outline: 2px solid #486e5a;
+  outline-offset: 4px;
   border-radius: 4px;
 }
 .learning-session-meta,
@@ -122,6 +122,12 @@
   background: #fff2b9;
   border-radius: 10px;
   font-variant-numeric: tabular-nums;
+}
+.learning-timer[data-urgent='true'] {
+  background: #fae5da;
+  border-color: #943e28;
+  color: #743722;
+  font-weight: 800;
 }
 .learning-source,
 .learning-explanation {
@@ -204,12 +210,22 @@
   margin: 8px 0 0;
   font-size: 1.45rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .learning-result-links {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   margin-top: 24px;
+}
+.learning-result-links > .button {
+  flex: 1;
+  padding-inline: 8px;
+}
+.learning-days-toggle {
+  width: 100%;
+  justify-content: space-between;
+  margin: 4px 0 24px;
 }
 .learning-recovery {
   margin-bottom: 20px;
@@ -264,6 +280,14 @@
 }
 .learning-filters {
   margin: 24px 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.learning-filters .button {
+  padding: 10px 4px;
+  font-size: 0.85rem;
+  text-align: center;
 }
 .learning-filters [aria-current='page'] {
   border: 3px solid var(--ink);
@@ -315,6 +339,69 @@
 .learning-selection {
   margin: 24px 0;
   justify-content: space-between;
+  position: sticky;
+  bottom: 12px;
+  z-index: 10;
+  padding: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow:
+    0 4px 0 var(--shadow),
+    0 -6px 20px #263d3512;
+}
+.learning-selection p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.learning-selection button {
+  padding-inline: 12px;
+  font-size: 0.9rem;
+}
+.learning-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.learning-list-toolbar p {
+  margin: 0;
+}
+.learning-question-list .learning-card {
+  padding: 20px;
+}
+.learning-question-status {
+  font-size: 0.85rem;
+  color: #526257;
+  margin: 6px 0;
+}
+.learning-question-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 8px;
+  margin-top: 16px;
+}
+.learning-question-actions .learning-feedback-tools {
+  margin: 0;
+}
+.learning-question-actions button {
+  padding-inline: 12px;
+  font-size: 0.85rem;
+}
+.learning-empty {
+  padding: 24px;
+  margin: 20px 0;
+  border: 2px dashed var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+}
+.learning-empty h2 {
+  font-size: 1.1rem;
+  margin: 0 0 8px;
+}
+.learning-empty p {
+  margin: 0 0 12px;
 }
 @media (max-width: 640px) {
   .learning-result-stats.learning-home-stats {
@@ -323,7 +410,7 @@
   .student-header {
     min-height: 76px;
     padding: 10px 16px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
   }
@@ -334,10 +421,10 @@
   .student-header nav {
     gap: 6px;
     flex-wrap: nowrap;
-    font-size: 0.72rem;
+    font-size: 0.82rem;
   }
   .student-header .nav-button {
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     padding-inline: 6px;
   }
   .game-learning-page .learning-card {
@@ -363,8 +450,8 @@
     margin: 0 0 12px;
   }
   .game-learning-page .game-learning-scene {
-    height: 190px;
-    margin: 0 0 14px;
+    height: 150px;
+    margin: 20px 0 0;
   }
   .game-learning-page .game-learning-traveler {
     left: calc(50% - 50px);
@@ -394,14 +481,32 @@
 }
 @media (max-width: 500px) {
   .learning-result-stats {
-    grid-template-columns: 1fr;
+    gap: 6px;
+    margin: 20px 0;
   }
-  .learning-result-links .button {
-    width: 100%;
+  .learning-result-stats div {
+    padding: 12px 6px;
+    border-width: 2px;
+    border-radius: 12px;
   }
-  .learning-filters .button,
+  .learning-result-stats dt {
+    font-size: 0.75rem;
+  }
+  .learning-result-stats dd {
+    font-size: 1.1rem;
+  }
+  .learning-question-list .learning-card {
+    padding: 16px;
+  }
+  .learning-selection {
+    gap: 8px;
+    bottom: 8px;
+  }
   .learning-selection button {
-    width: 100%;
+    flex: 1;
+  }
+  .learning-select {
+    font-size: 0.8rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {

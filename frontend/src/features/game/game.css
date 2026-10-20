@@ -342,6 +342,10 @@
   font-weight: 900;
   pointer-events: none;
 }
+.game-page-nav {
+  justify-content: flex-start;
+  gap: 10px;
+}
 .game-page-nav a {
   min-width: 48px;
   min-height: 48px;
@@ -357,7 +361,7 @@
     padding: 24px;
   }
   .game-camp .game-camp-copy {
-    grid-row: 2;
+    grid-row: 1;
     gap: 12px;
     padding: 20px;
   }
@@ -371,24 +375,34 @@
     min-height: 52px;
   }
   .game-camp-scene {
-    grid-row: 1;
-    min-height: 300px;
+    grid-row: 2;
+    min-height: 210px;
     border-left: 0;
-    border-bottom: 3px solid var(--ink);
+    border-top: 3px solid var(--ink);
   }
   .game-camp-scene > .game-avatar {
     left: 21%;
-    width: 150px;
+    width: 124px;
     bottom: 21%;
   }
   .game-character-studio {
     grid-template-columns: minmax(0, 1fr);
   }
   .game-character-portrait {
-    min-height: 340px;
+    min-height: 200px;
+    padding: 14px;
+    gap: 6px;
   }
   .game-character-portrait .game-avatar {
-    width: 160px;
+    width: 104px;
+  }
+  .game-character-card {
+    padding: 20px 16px;
+  }
+  .game-character-portrait > .game-tag {
+    top: 10px;
+    left: 10px;
+    font-size: 0.75rem;
   }
   .game-character-grid {
     gap: 12px;

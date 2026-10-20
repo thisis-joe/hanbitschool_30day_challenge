@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AppRoutes } from './router';
 import { useCurrentAccount, useAcceptAccount, replaceAccountCache } from '../features/auth/queries';
@@ -27,6 +27,9 @@ export function App() {
   const staff = me && me.role !== 'STUDENT';
   return (
     <>
+      <a className="skip-link" href="#main-content">
+        본문으로 바로가기
+      </a>
       <header className={`site-header${me?.role === 'STUDENT' ? ' student-header' : ''}`}>
         <Link className="brand" to="/">
           한빛학교<span>배움터</span>
@@ -34,18 +37,18 @@ export function App() {
         <nav aria-label="주 메뉴">
           {me?.role === 'STUDENT' ? (
             <>
-              <Link to="/student/account">내 정보</Link>
+              <NavLink to="/student/account">내 정보</NavLink>
             </>
           ) : null}
           {staff && !me.mustChangePassword ? (
             <>
-              <Link to="/staff/classrooms">학급</Link>
-              {me.role === 'ADMIN' ? <Link to="/admin/teachers">교사 계정</Link> : null}
+              <NavLink to="/staff/classrooms">학급</NavLink>
+              {me.role === 'ADMIN' ? <NavLink to="/admin/teachers">교사 계정</NavLink> : null}
             </>
           ) : null}
           {me ? (
             <>
-              <Link to="/account/password">비밀번호 변경</Link>
+              <NavLink to="/account/password">비밀번호 변경</NavLink>
               <button
                 className="nav-button"
                 disabled={submit.pending}
@@ -66,7 +69,7 @@ export function App() {
         </nav>
       </header>
       {me?.role === 'STUDENT' ? <StudentGameNav /> : null}
-      <main id="main-content">
+      <main id="main-content" tabIndex={-1}>
         <FormError message={submit.error} />
         <AppRoutes />
       </main>

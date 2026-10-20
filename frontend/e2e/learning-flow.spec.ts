@@ -23,6 +23,7 @@ test('studentCanPassFiveQuestionsAndRestoreTheSavedResult', async ({ page }) => 
   expect(before.passedDayCount).toBe(0);
   expect(before.firstAnswerCount).toBe(0);
   expect(before.totalXp).toBe(0);
+  await page.getByRole('button', { name: '회차별 학습 보기' }).click();
   await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: '3회차 시작하기', exact: true })).toBeDisabled();
   await layoutAndTargets(page);
@@ -321,7 +322,7 @@ test('privateQueueBookmarkAndConsentRemainIndependent', async ({ page }) => {
   );
   await expect(
     page.getByRole('button', { name: '선택한 문제 복습하기', exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0); // No queued questions: show the active-session recovery, without a dead action.
   await page.getByRole('link', { name: '진행 중인 학습 이어풀기', exact: true }).click();
   await finishDay(page, await advance(page, replay.sessionId), [true, true, true, true]);
   await resultPage(page, replay.sessionId, '회차 통과');
@@ -371,9 +372,9 @@ test('privateQueueBookmarkAndConsentRemainIndependent', async ({ page }) => {
   expect((await personal(page, 'REVIEW_QUEUE')).map((q) => q.questionId)).toEqual([1]);
   expect((await personal(page, 'BOOKMARKED')).length).toBe(0);
   await row.getByRole('button', { name: '다시 볼 목록에서 제거', exact: true }).click();
-  await expect(page.getByText('이 목록에 아직 문제가 없어요.', { exact: true })).toBeVisible();
+  await expect(page.getByText('다시 볼 문제가 없어요.', { exact: true })).toBeVisible();
   expect((await personal(page, 'MASTERED')).find((q) => q.questionId === 1)?.mastered).toBe(true);
   await expect(
     page.getByRole('button', { name: '선택한 문제 복습하기', exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
 });

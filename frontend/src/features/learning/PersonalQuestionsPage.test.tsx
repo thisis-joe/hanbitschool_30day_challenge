@@ -66,7 +66,7 @@ it('listShowsLoadingEmptyAndRetryableError', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('연결');
   server.use(http.get('*/api/student/learning/questions', () => HttpResponse.json([])));
   await userEvent.click(screen.getByRole('button', { name: '목록 다시 불러오기' }));
-  expect(await screen.findByText('이 목록에 아직 문제가 없어요.')).toBeVisible();
+  expect(await screen.findByText('다시 볼 문제가 없어요.')).toBeVisible();
 });
 it('reviewSelectionIncludesOnlyActiveQueuedQuestionsInVisibleOrder', async () => {
   let command: unknown;
@@ -136,7 +136,7 @@ it('queueRemovalWaitsForConfirmationAndDoesNotClearOnCorrectResponse', async () 
   expect(screen.getByText(personalQuestion.text)).toBeVisible();
   expect(screen.getByRole('button', { name: '다시 볼 목록에서 제거' })).toBeDisabled();
   release.resolve();
-  expect(await screen.findByText('이 목록에 아직 문제가 없어요.')).toBeVisible();
+  expect(await screen.findByText('다시 볼 문제가 없어요.')).toBeVisible();
   expect(deletes).toBe(1);
 });
 it('reviewStartConflictRecoversActualActiveSession', async () => {

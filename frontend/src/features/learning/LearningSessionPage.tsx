@@ -136,7 +136,7 @@ export function LearningSessionPage() {
   const activeSession = status.data?.activeSession;
 
   return (
-    <section className="learning-page game-learning-page">
+    <section className="learning-page game-learning-page game-learning-session">
       {error ? (
         <div className="learning-error">
           <p role="alert">{error}</p>
@@ -191,7 +191,11 @@ export function LearningSessionPage() {
                 <h1 ref={heading} tabIndex={-1}>
                   문항 {question.position} / {view.questionCount}
                 </h1>
-                <time className="learning-timer" dateTime={question.deadlineAt}>
+                <time
+                  className="learning-timer"
+                  data-urgent={seconds <= 5 || undefined}
+                  dateTime={question.deadlineAt}
+                >
                   남은 시간 {seconds}초
                 </time>
               </div>

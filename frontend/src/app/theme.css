@@ -87,6 +87,26 @@
 body {
   margin: 0;
 }
+html {
+  scroll-padding-top: 88px;
+}
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 16px;
+  z-index: 200;
+  padding: 12px 18px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 8px;
+  transform: translateY(-160%);
+}
+.skip-link:focus {
+  transform: none;
+}
+main:focus {
+  outline: none;
+}
 a {
   color: inherit;
   text-underline-offset: 4px;
@@ -175,7 +195,8 @@ fieldset {
   margin: 0;
   padding: 0;
 }
-form button[type='submit'] {
+.form-panel button[type='submit'],
+.staff-grid button[type='submit'] {
   width: 100%;
   margin-top: 24px;
 }
@@ -188,6 +209,11 @@ form button[type='submit'] {
   gap: 20px;
   padding: 20px 32px;
   margin: auto;
+}
+.site-header nav a[aria-current='page'] {
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
 }
 .brand {
   text-decoration: none;
@@ -308,6 +334,30 @@ main {
   font-size: 0.9rem;
   color: #743722;
 }
+.form-success {
+  padding: 12px 16px;
+  border: 2px solid #53734d;
+  border-radius: 10px;
+  background: #edf3e3;
+  font-size: 0.9rem;
+}
+.form-panel h1:focus {
+  outline: none;
+}
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.form-panel .form-actions button[type='submit'] {
+  width: auto;
+  margin: 0;
+  flex: 1;
+}
+.form-actions > .button,
+.form-actions > button {
+  padding-inline: 12px;
+}
 .secondary {
   background: var(--paper);
   border-color: var(--line);
@@ -334,6 +384,7 @@ main {
   border-block: 2px solid var(--line);
   padding: 22px 0;
   margin: 32px 0;
+  flex-wrap: wrap;
 }
 .account-details dt {
   font-size: 0.85rem;
@@ -342,6 +393,7 @@ main {
 .account-details dd {
   font-weight: 700;
   margin: 4px 0 0;
+  overflow-wrap: anywhere;
 }
 .actions {
   display: flex;
@@ -359,6 +411,7 @@ footer {
     padding: 16px 20px;
     gap: 12px;
     align-items: flex-start;
+    flex-wrap: wrap;
   }
   .brand {
     font-size: 1.15rem;
@@ -490,6 +543,13 @@ footer {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
+}
+.class-row-actions {
+  gap: 8px;
+}
+.class-row-actions > * {
+  padding-inline: 14px;
 }
 .class-title {
   font-size: 1.2rem;

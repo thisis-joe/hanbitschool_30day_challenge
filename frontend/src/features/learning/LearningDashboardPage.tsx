@@ -38,11 +38,13 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
   const mounted = useRef(false);
   const activeCheck = useRef<HomeCheck | null>(null);
   const [checking, setChecking] = useState<HomeCheck | null>(null);
+  const [showDays, setShowDays] = useState(false);
   useEffect(() => {
     mounted.current = true;
     const reset = () => {
       activeCheck.current = null;
       setChecking(null);
+      setShowDays(false);
     };
     reset();
     const unsubscribe = subscribePendingCommandCleanup(reset);
@@ -327,52 +329,69 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
           </button>
         </div>
       ) : null}
+      {view && !exploration ? (
+        <button
+          className="secondary learning-days-toggle"
+          aria-expanded={showDays}
+          aria-controls="learning-days"
+          onClick={() => setShowDays(!showDays)}
+        >
+          <span>회차별 학습 보기</span>
+          <span aria-hidden="true">{showDays ? '−' : '+'}</span>
+        </button>
+      ) : null}
       {view && (!exploration || map) ? (
-        <ol className="learning-day-grid" aria-label="회차별 학습">
-          {(exploration ? map!.days.map((entry) => entry.dayNumber) : days).map((number) => {
-            const mapped = exploration
-              ? map!.days.find((entry) => entry.dayNumber === number)
-              : undefined;
-            const passed = mapped ? mapped.state === 'PASSED' : number <= view.passedDayCount;
-            const dateLocked = mapped
-              ? mapped.availability === 'LOCKED_DATE'
-              : number > view.calendarCap;
-            const sequenceLocked = mapped
-              ? !['PASSED', 'AVAILABLE', 'LOCKED_DATE'].includes(mapped.availability)
-              : !passed && number !== view.earliestUnpassedDay;
-            const actionLocked =
-              !passed && !['START_FIRST', 'START_REPLAY'].includes(view.nextAction);
-            return (
-              <li
-                className="learning-day-card"
-                key={number}
-                id={`journey-day-${number}`}
-                tabIndex={-1}
-              >
-                <h2>{number}회차</h2>
-                <p>
-                  {passed
-                    ? '통과'
-                    : dateLocked
-                      ? '학습 날짜를 기다려 주세요'
-                      : sequenceLocked
-                        ? '이전 회차를 먼저 통과해 주세요'
-                        : '도전할 준비가 되었어요'}
-                </p>
-                <button
-                  className="secondary"
-                  aria-label={`${number}회차 ${passed ? '다시 풀기' : '시작하기'}`}
-                  disabled={
-                    blocked || !!view.activeSession || dateLocked || sequenceLocked || actionLocked
-                  }
-                  onClick={() => void startDay(number, passed ? 'REPLAY' : 'FIRST')}
+        <div id="learning-days" hidden={!exploration && !showDays}>
+          <ol className="learning-day-grid" aria-label="회차별 학습">
+            {(exploration ? map!.days.map((entry) => entry.dayNumber) : days).map((number) => {
+              const mapped = exploration
+                ? map!.days.find((entry) => entry.dayNumber === number)
+                : undefined;
+              const passed = mapped ? mapped.state === 'PASSED' : number <= view.passedDayCount;
+              const dateLocked = mapped
+                ? mapped.availability === 'LOCKED_DATE'
+                : number > view.calendarCap;
+              const sequenceLocked = mapped
+                ? !['PASSED', 'AVAILABLE', 'LOCKED_DATE'].includes(mapped.availability)
+                : !passed && number !== view.earliestUnpassedDay;
+              const actionLocked =
+                !passed && !['START_FIRST', 'START_REPLAY'].includes(view.nextAction);
+              return (
+                <li
+                  className="learning-day-card"
+                  key={number}
+                  id={`journey-day-${number}`}
+                  tabIndex={-1}
                 >
-                  {passed ? '다시 풀기' : '시작하기'}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
+                  <h2>{number}회차</h2>
+                  <p>
+                    {passed
+                      ? '통과'
+                      : dateLocked
+                        ? '학습 날짜를 기다려 주세요'
+                        : sequenceLocked
+                          ? '이전 회차를 먼저 통과해 주세요'
+                          : '도전할 준비가 되었어요'}
+                  </p>
+                  <button
+                    className="secondary"
+                    aria-label={`${number}회차 ${passed ? '다시 풀기' : '시작하기'}`}
+                    disabled={
+                      blocked ||
+                      !!view.activeSession ||
+                      dateLocked ||
+                      sequenceLocked ||
+                      actionLocked
+                    }
+                    onClick={() => void startDay(number, passed ? 'REPLAY' : 'FIRST')}
+                  >
+                    {passed ? '다시 풀기' : '시작하기'}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       ) : null}
       <Link
         className="button secondary learning-recovery"

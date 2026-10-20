@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { changePassword } from './api';
 import { accountPath, useAcceptAccount, useCurrentAccount } from './queries';
 import { AuthFrame, FormError, useSubmission } from './FormParts';
@@ -54,7 +54,9 @@ export function AccountPasswordPage() {
             type="password"
             autoComplete="new-password"
             required
+            aria-describedby="new-password-help"
           />
+          <small id="new-password-help">8자 이상으로 입력해 주세요.</small>
           <label htmlFor="confirmation">새 비밀번호 확인</label>
           <input
             id="confirmation"
@@ -64,7 +66,14 @@ export function AccountPasswordPage() {
             required
           />
           <FormError message={submit.error} />
-          <button type="submit">{submit.pending ? '변경 중…' : '비밀번호 변경'}</button>
+          <div className="form-actions">
+            <button type="submit">{submit.pending ? '변경 중…' : '비밀번호 변경'}</button>
+            {me && (me.role === 'STUDENT' || !me.mustChangePassword) && !submit.pending ? (
+              <Link className="button secondary" to={accountPath(me)}>
+                취소
+              </Link>
+            ) : null}
+          </div>
         </fieldset>
       </form>
     </AuthFrame>

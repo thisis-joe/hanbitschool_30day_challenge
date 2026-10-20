@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { meKey, useCurrentAccount } from '../auth/queries';
 import type { AccountMe } from '../auth/types';
 import { errorMessage } from '../../lib/http';
+import { useRouteHeadingFocus } from '../../lib/useRouteHeadingFocus';
 import { removeReviewQueue } from './api';
 import { getPendingCommandEpoch, subscribePendingCommandCleanup } from './pendingCommands';
 import { useLearningStatus, usePersonalQuestions } from './queries';
@@ -27,9 +28,12 @@ export function PersonalQuestionsPage() {
   const filter: PersonalQuestionFilter =
     value === 'MASTERED' || value === 'BOOKMARKED' ? value : 'REVIEW_QUEUE';
   const { data: account } = useCurrentAccount();
+  const heading = useRouteHeadingFocus(account?.accountId, !!account);
   return (
     <section className="learning-page game-personal-page">
-      <h1>나의 문제</h1>
+      <h1 ref={heading} tabIndex={-1}>
+        나의 문제
+      </h1>
       <p>다시 보고 싶은 문제와 별표한 문제를 관리해요.</p>
       <nav className="learning-filters" aria-label="개인 문제 필터">
         {(Object.keys(filters) as PersonalQuestionFilter[]).map((key) => (
@@ -93,6 +97,8 @@ function QuestionList({
   const selectedIds = rows
     .filter((row) => row.inReviewQueue && selected.includes(row.questionId))
     .map((row) => row.questionId);
+  const reviewIds = rows.filter((row) => row.inReviewQueue).map((row) => row.questionId);
+  const allSelected = reviewIds.length > 0 && selectedIds.length === reviewIds.length;
   const blocked =
     actions.busy ||
     !!actions.pendingCommand ||
@@ -200,7 +206,45 @@ function QuestionList({
           진행 중인 학습 이어풀기
         </Link>
       ) : null}
-      {questions.isSuccess && !rows.length ? <p>이 목록에 아직 문제가 없어요.</p> : null}
+      {questions.isSuccess && !rows.length ? (
+        <div className="learning-empty">
+          <h2>
+            {filter === 'BOOKMARKED'
+              ? '아직 별표한 문제가 없어요.'
+              : filter === 'MASTERED'
+                ? '아직 복습을 완료한 문제가 없어요.'
+                : '다시 볼 문제가 없어요.'}
+          </h2>
+          <p>
+            {filter === 'BOOKMARKED'
+              ? '학습 해설이나 나의 문제에서 ☆ 별표를 누르면 여기에 모여요.'
+              : filter === 'MASTERED'
+                ? '다시 볼 문제를 선택해 복습하면 완료한 문제를 여기서 볼 수 있어요.'
+                : '학습을 시작해 보세요. 다시 살펴볼 문제는 여기에 모아 둘게요.'}
+          </p>
+          {filter === 'MASTERED' ? (
+            <Link to="/student/questions?filter=REVIEW_QUEUE" className="button secondary">
+              다시 볼 문제로
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+      {rows.length ? (
+        <div className="learning-list-toolbar">
+          <p>
+            {filters[filter]} <strong>{rows.length}개</strong>
+          </p>
+          {reviewIds.length ? (
+            <button
+              className="secondary"
+              disabled={blocked || removing !== undefined}
+              onClick={() => setSelected(allSelected ? [] : reviewIds)}
+            >
+              {allSelected ? '전체 해제' : '전체 선택'}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {rows.length ? (
         <ul className="learning-question-list" aria-label="개인 문제 목록">
           {rows.map((row) => (
@@ -213,6 +257,7 @@ function QuestionList({
                   <label className="learning-select">
                     <input
                       type="checkbox"
+                      aria-label="복습할 문제 선택"
                       checked={selected.includes(row.questionId)}
                       disabled={checking || actions.busy || removing !== undefined}
                       onChange={(event) =>
@@ -223,42 +268,49 @@ function QuestionList({
                         )
                       }
                     />
-                    복습할 문제 선택
+                    복습 선택
                   </label>
                 ) : null}
               </div>
               <p className="learning-personal-text">{row.text}</p>
-              <p>
+              <p className="learning-question-status">
                 최근 결과:{' '}
                 {row.lastOutcome === null ? '미답변' : lastOutcomeLabels[row.lastOutcome]}
               </p>
-              <p>
+              <p className="learning-question-status">
                 {row.mastered ? '복습 완료' : '복습 미완료'}
                 {row.inReviewQueue ? ' · 다시 볼 목록에 있어요' : ''}
               </p>
-              <QuestionFeedbackActions questionId={row.questionId} result={null} />
-              {row.inReviewQueue ? (
-                <button
-                  className="secondary"
-                  disabled={removing !== undefined || actions.busy || checking || questions.isError}
-                  onClick={() => void remove(row.questionId)}
-                >
-                  다시 볼 목록에서 제거
-                </button>
-              ) : null}
+              <div className="learning-question-actions">
+                <QuestionFeedbackActions questionId={row.questionId} result={null} />
+                {row.inReviewQueue ? (
+                  <button
+                    className="secondary"
+                    aria-label="다시 볼 목록에서 제거"
+                    disabled={
+                      removing !== undefined || actions.busy || checking || questions.isError
+                    }
+                    onClick={() => void remove(row.questionId)}
+                  >
+                    목록에서 빼기
+                  </button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
       ) : null}
-      <div className="learning-selection">
-        <p>선택한 문제 {selectedIds.length}개</p>
-        <button
-          disabled={blocked || removing !== undefined || !!active || !selectedIds.length}
-          onClick={() => void startReview()}
-        >
-          선택한 문제 복습하기
-        </button>
-      </div>
+      {reviewIds.length ? (
+        <div className="learning-selection">
+          <p aria-live="polite">선택한 문제 {selectedIds.length}개</p>
+          <button
+            disabled={blocked || removing !== undefined || !!active || !selectedIds.length}
+            onClick={() => void startReview()}
+          >
+            선택한 문제 복습하기
+          </button>
+        </div>
+      ) : null}
       {checking || actions.busy ? <p role="status">최신 복습 상태를 확인하고 있어요</p> : null}
       {actions.pendingCommand ? (
         <div className="learning-pending">

@@ -219,6 +219,7 @@ it('thirtyDayCardsDistinguishPassedSequenceAndDateLocks', async () => {
     ),
   );
   renderHome();
+  await userEvent.click(await screen.findByRole('button', { name: '회차별 학습 보기' }));
   const list = await screen.findByRole('list', { name: '회차별 학습' });
   const cards = within(list).getAllByRole('listitem');
   expect(cards).toHaveLength(30);
@@ -241,6 +242,7 @@ it('activeSessionBlocksStartingAnotherTarget', async () => {
     }),
   );
   renderHome();
+  await userEvent.click(await screen.findByRole('button', { name: '회차별 학습 보기' }));
   const list = await screen.findByRole('list', { name: '회차별 학습' });
   for (const button of within(list).getAllByRole('button')) expect(button).toBeDisabled();
   await userEvent.click(within(list).getAllByRole('button')[0]);

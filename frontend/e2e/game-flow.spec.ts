@@ -151,6 +151,7 @@ test('completionWaitsForRelatedStatusThenHomeReplayNeedsNoRetry', async ({ page 
     await page.unroute('**/api/student/learning/status');
   }
   await page.goto('/student/learning');
+  await page.getByRole('button', { name: '회차별 학습 보기' }).click();
   await expect(page.getByRole('button', { name: '1회차 다시 풀기', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: '같은 요청 다시 확인', exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => Object.keys(sessionStorage).some((key) =>

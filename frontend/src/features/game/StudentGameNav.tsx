@@ -1,10 +1,12 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import './game.css';
 
 export function StudentGameNav() {
+  const { pathname } = useLocation();
+  const dressing = pathname === '/student/closet' || pathname === '/student/character';
   return (
     <nav className="game-student-nav" aria-label="학생 여행 메뉴">
-      <NavLink to="/student/learning" end>
+      <NavLink to="/student/learning">
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -28,7 +30,11 @@ export function StudentGameNav() {
         </svg>
         탐험
       </NavLink>
-      <NavLink to="/student/closet">
+      <Link
+        to="/student/closet"
+        className={dressing ? 'active' : undefined}
+        aria-current={dressing ? 'page' : undefined}
+      >
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -39,7 +45,7 @@ export function StudentGameNav() {
           <path d="M9 6a3 3 0 1 1 4 3v3l8 6v3H3v-3l10-6" />
         </svg>
         꾸미기
-      </NavLink>
+      </Link>
       <NavLink to="/student/questions?filter=REVIEW_QUEUE">
         <svg
           viewBox="0 0 24 24"
