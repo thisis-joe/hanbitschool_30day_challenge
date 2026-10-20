@@ -95,62 +95,72 @@ async function learningScenario(page: Page) {
   return { saves: () => saves, game: () => game };
 }
 
-for (const width of [1280, 390]) {
-  test(`XP and item acquisition remain actionable at ${width}px`, async ({ page }) => {
+for (const width of [1280, 390, 320]) {
+  test(`cinematic rewards hand off to actionable cards at ${width}px`, async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
-    await page.setViewportSize({ width, height: 960 });
+    await page.setViewportSize({ width, height: width === 320 ? 568 : 960 });
     const scenario = await learningScenario(page);
     await page.goto(`/student/learning/sessions/${sessionId}`);
     await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
+    const xpScene = page.getByRole('dialog', { name: '경험치 획득 연출' });
+    await expect(xpScene).toBeVisible();
+    expect(await xpScene.boundingBox()).toEqual({
+      x: 0,
+      y: 0,
+      width,
+      height: width === 320 ? 568 : 960,
+    });
+    const skip = page.getByRole('button', { name: '연출 건너뛰기' });
+    await expect(skip).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(skip).toBeFocused();
     const xp = page.locator('.game-xp-reward');
-    await expect(xp).toHaveAttribute('data-celebrating', 'true');
-    await expect(xp).toContainText('+100');
+    await expect(xp).not.toHaveAttribute('data-celebrating', 'true');
     const output = evidenceOutput();
     if (output) {
-      await xp.scrollIntoViewIfNeeded();
-      await xp.evaluate((el) =>
-        el.getAnimations({ subtree: true }).forEach((a) => {
-          a.pause();
-          a.currentTime = 500;
-        }),
-      );
-      await page.screenshot({ path: output.file(`xp-${width}.png`) });
+      await page.waitForTimeout(900);
+      await page.screenshot({ path: output.file(`xp-cinematic-${width}.png`) });
     }
-    // The finish action works immediately while the XP burst is playing.
+    if (width !== 1280) await skip.click();
+    await expect(xpScene).toHaveCount(0);
+    await expect(xp).toBeFocused();
+    await expect(xp).toHaveAttribute('data-celebrating', 'true');
+    await expect(xp).toContainText('+100');
     await page.getByRole('link', { name: '완료하기', exact: true }).click();
-    const reward = page.getByRole('region', { name: '여행 선물', exact: true });
-    await expect(reward).toHaveAttribute('data-revealing', 'true');
-    await expect(reward.getByText('아이템 획득!')).toBeVisible();
+    const itemScene = page.getByRole('dialog', { name: '아이템 획득 연출' });
+    await expect(itemScene).toBeVisible();
+    await expect(itemScene.getByText('풀잎가방')).toBeVisible();
+    const reward = page.getByRole('region', {
+      name: '여행 선물',
+      exact: true,
+      includeHidden: true,
+    });
+    await expect(reward).not.toHaveAttribute('data-revealing', 'true');
     if (output) {
-      await reward.scrollIntoViewIfNeeded();
-      await reward.evaluate((el) =>
-        el.getAnimations({ subtree: true }).forEach((a) => {
-          a.pause();
-          a.currentTime = 500;
-        }),
-      );
-      await page.screenshot({ path: output.file(`item-${width}.png`) });
+      await page.waitForTimeout(1600);
+      await page.screenshot({ path: output.file(`item-cinematic-${width}.png`) });
     }
-    const wear = page.getByRole('button', { name: '지금 착용하기', exact: true });
-    if (width === 1280) {
-      await wear.focus();
-      await page.keyboard.press('Enter');
-    } else await wear.click();
+    if (width !== 1280) await page.keyboard.press('Escape');
+    await expect(itemScene).toHaveCount(0);
+    await expect(reward).toBeFocused();
+    await expect(reward).toBeInViewport();
+    await expect(reward).toHaveAttribute('data-revealing', 'true');
+    await page.getByRole('button', { name: '지금 착용하기', exact: true }).click();
     await expect.poll(scenario.saves).toBe(1);
     expect(scenario.game().equippedBySlot.hand).toBe('hand-2');
-    await expect(reward).not.toHaveAttribute('data-revealing', 'true');
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('');
     expect(errors).toEqual([]);
-    // A SPA revisit must not replay this same acquisition.
     await page.getByRole('link', { name: '오늘', exact: true }).click();
     await page.goBack();
     await expect(page.getByRole('region', { name: '여행 선물', exact: true })).not.toHaveAttribute(
       'data-revealing',
       'true',
     );
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 }
 
@@ -159,6 +169,7 @@ test('reduced motion shows the awards without animated effects', async ({ page }
   await learningScenario(page);
   await page.goto(`/student/learning/sessions/${sessionId}`);
   await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByText('이번 답변으로 받은 경험치: 100 XP')).toBeVisible();
   await expect(page.locator('.game-celebration-burst')).toHaveCount(0);
   await page.getByRole('link', { name: '완료하기', exact: true }).click();
@@ -169,4 +180,19 @@ test('reduced motion shows the awards without animated effects', async ({ page }
       .locator('.game-reward-card')
       .evaluate((el) => el.getAnimations({ subtree: true }).length),
   ).toBe(0);
+});
+
+test('changing motion preferences closes the active cinematic and restores input', async ({
+  page,
+}) => {
+  await learningScenario(page);
+  await page.goto(`/student/learning/sessions/${sessionId}`);
+  await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.game-xp-reward')).toBeFocused();
+  await page.getByRole('link', { name: '완료하기', exact: true }).click();
+  await expect(page.getByRole('button', { name: '지금 착용하기', exact: true })).toBeEnabled();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });

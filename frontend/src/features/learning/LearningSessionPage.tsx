@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useCurrentAccount } from '../auth/queries';
 import { errorMessage, HttpError } from '../../lib/http';
@@ -7,7 +7,7 @@ import { useLearningActions } from './useLearningActions';
 import { useDeadlineCountdown } from './useDeadlineCountdown';
 import { QuestionFeedbackActions } from './QuestionFeedbackActions';
 import { useGame, useJourney } from '../game/queries';
-import { LearningGameScene } from '../game/LearningGameScene';
+import { AnswerGameScene } from '../game/AnswerGameScene';
 import { ExperienceReward } from '../game/ExperienceReward';
 
 const outcomes = {
@@ -26,6 +26,7 @@ export function LearningSessionPage() {
   const game = useGame();
   const journey = useJourney();
   const heading = useRef<HTMLHeadingElement>(null);
+  const [completedReaction, setCompletedReaction] = useState<string>();
   const accountId = account.data?.role === 'STUDENT' ? account.data.accountId : undefined;
   const view = session.data;
   const question = view?.question;
@@ -111,6 +112,20 @@ export function LearningSessionPage() {
 
   const feedback = !active ? view?.lastAnswer : null;
   const pending = actions.pendingCommand;
+  const pendingChoice =
+    pending?.kind === 'ANSWER' &&
+    pending.sessionId === sessionId &&
+    pending.command.questionId === question?.questionId
+      ? pending.command.choice
+      : undefined;
+  const confirmedChoice =
+    feedback?.outcome === 'CORRECT'
+      ? feedback.correctChoice
+      : feedback?.outcome === 'WRONG'
+        ? feedback.correctChoice === 'O'
+          ? 'X'
+          : 'O'
+        : undefined;
   const blocked = actions.busy || !!pending || session.isError;
   const retryLabel =
     pending?.kind === 'ANSWER'
@@ -161,11 +176,14 @@ export function LearningSessionPage() {
             value={view.answeredCount}
             max={view.questionCount}
           />
-          <LearningGameScene
-            key={accountId}
+          <AnswerGameScene
+            key={`${accountId}:${sessionId}:${question?.questionId ?? feedback?.questionId}`}
             appearance={game.data}
             journey={journey.data}
             outcome={feedback?.outcome}
+            choice={confirmedChoice ?? pendingChoice}
+            answerId={feedback?.attemptAnswerId}
+            onReactionComplete={setCompletedReaction}
           />
           {active && question ? (
             <>
@@ -209,6 +227,7 @@ export function LearningSessionPage() {
                 owner={accountId}
                 contentVersion={view.contentVersion}
                 answer={feedback}
+                deferCinematic={completedReaction !== feedback.attemptAnswerId}
               />
               {question?.questionId === feedback.questionId ? (
                 <p className="learning-source">{question.text}</p>
