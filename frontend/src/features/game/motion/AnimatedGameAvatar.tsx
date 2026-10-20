@@ -3,7 +3,7 @@ import { CHARACTER_NAMES, emptyEquipment } from '../types';
 import type { CharacterId, Equipment } from '../types';
 import { buildAvatarRig, paintAvatarPose } from './rig';
 import type { AvatarRig } from './rig';
-import { samplePose } from './poses';
+import { samplePose, MOTION_MS } from './poses';
 import type { AvatarMotion } from './poses';
 import { GameAvatar } from '../GameAvatar';
 import '../game.css';
@@ -55,8 +55,8 @@ export function AnimatedGameAvatar({
       canvas.current.dataset.ready = 'true';
       const running =
         motion === 'walk' ||
-        (motion === 'happy' && elapsed < 1200) ||
-        (motion === 'sad' && elapsed < 450);
+        (motion === 'happy' && elapsed < MOTION_MS.happy) ||
+        (motion === 'sad' && elapsed < MOTION_MS.sad);
       if (!reduced && running) frame = requestAnimationFrame(paint);
     };
     const refresh = () => {

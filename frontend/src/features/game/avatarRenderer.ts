@@ -171,6 +171,25 @@ export function avatarAnchor(characterId: CharacterId): Anchor & { grip: Point }
   return { ...ANCHORS[index], grip: MOTION_GRIPS[index] };
 }
 
+/** Shared placement for the static renderer and the articulated head layer. */
+export function avatarHatPlacement(characterId: CharacterId, value: number) {
+  const index = CHARACTER_IDS.indexOf(characterId),
+    fit = HAT_FITS[index];
+  const crown = value === 5,
+    sx = crown ? 0.94 : fit.sx * 0.96,
+    sy = crown ? 0.82 : 1.18;
+  const seat = crown ? ANCHORS[index].head[1] : fit.seat;
+  return {
+    x: fit.cx - 56 * sx,
+    y: seat - 42 * sy,
+    width: 112 * sx,
+    height: 64 * sy,
+    scalp: HAT_SCALP_BOUNDS[index],
+    scalpBottom: fit.seat - 5,
+    crown,
+  };
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   const cached = imageCache.get(src);
   if (cached) return cached;
@@ -354,12 +373,8 @@ export async function renderAvatar(
     }
   }
   if (gear.hat) {
-    const fit = HAT_FITS[index],
-      crown = gear.hat === 5;
-    const sx = crown ? 0.94 : fit.sx * 0.96,
-      sy = crown ? 0.82 : 1.18;
-    const seat = crown ? a.head[1] : fit.seat;
-    draw('hat', gear.hat, fit.cx - 56 * sx, seat - 42 * sy, 112 * sx, 64 * sy);
+    const fit = avatarHatPlacement(characterId, gear.hat);
+    draw('hat', gear.hat, fit.x, fit.y, fit.width, fit.height);
   }
   if (!current()) return;
   const visible = context(canvas);
