@@ -14,7 +14,7 @@ it.each(['O', 'X'] as const)(
     view.rerender(<AnswerGameScene appearance={gameView} choice={choice} outcome="CORRECT" />);
     expect(scene()).toHaveAttribute('data-choice', choice);
     expect(scene()).toHaveAttribute('data-phase', 'walking');
-    act(() => vi.advanceTimersByTime(750));
+    act(() => vi.advanceTimersByTime(480));
     expect(scene()).toHaveAttribute('data-phase', 'correct');
     expect(screen.getByText('정답! 정말 잘했어요')).toBeVisible();
   },
@@ -23,7 +23,7 @@ it.each(['O', 'X'] as const)(
 it('waits at the chosen position for the server, then slumps on a wrong answer', () => {
   const view = render(<AnswerGameScene appearance={gameView} />);
   view.rerender(<AnswerGameScene appearance={gameView} choice="X" />);
-  act(() => vi.advanceTimersByTime(750));
+  act(() => vi.advanceTimersByTime(480));
   expect(scene()).toHaveAttribute('data-phase', 'waiting');
   view.rerender(<AnswerGameScene appearance={gameView} choice="X" outcome="WRONG" />);
   expect(scene()).toHaveAttribute('data-phase', 'wrong');
@@ -46,7 +46,7 @@ it('a timeout without a choice stays at the center and a rejected choice resets 
   const view = render(<AnswerGameScene appearance={gameView} />);
   view.rerender(<AnswerGameScene appearance={gameView} choice="X" />);
   view.rerender(<AnswerGameScene appearance={gameView} />);
-  act(() => vi.advanceTimersByTime(750));
+  act(() => vi.advanceTimersByTime(480));
   expect(scene()).toHaveAttribute('data-phase', 'idle');
   expect(scene()).not.toHaveAttribute('data-choice');
   view.rerender(<AnswerGameScene appearance={gameView} outcome="TIMED_OUT" />);
@@ -57,7 +57,7 @@ it('a timeout without a choice stays at the center and a rejected choice resets 
 it('missing cosmetic data does not prevent reaching the answer result', () => {
   const view = render(<AnswerGameScene appearance={undefined} />);
   view.rerender(<AnswerGameScene appearance={undefined} choice="O" outcome="WRONG" />);
-  act(() => vi.advanceTimersByTime(750));
+  act(() => vi.advanceTimersByTime(480));
   expect(scene()).toHaveAttribute('data-phase', 'wrong');
   expect(screen.getByText('괜찮아요, 다시 도전해요')).toBeVisible();
 });
@@ -72,7 +72,7 @@ it('a new question resets the destination and cancels the previous arrival timer
   expect(scene()).not.toHaveAttribute('data-choice');
   view.rerender(<AnswerGameScene key="q2" appearance={gameView} choice="O" outcome="CORRECT" />);
   expect(scene()).toHaveAttribute('data-phase', 'walking');
-  act(() => vi.advanceTimersByTime(750));
+  act(() => vi.advanceTimersByTime(480));
   expect(scene()).toHaveAttribute('data-phase', 'correct');
 });
 
@@ -88,10 +88,10 @@ it('releases the reward cinematic only after walking and the complete character 
       onReactionComplete={complete}
     />,
   );
-  act(() => vi.advanceTimersByTime(750));
+  act(() => vi.advanceTimersByTime(480));
   expect(scene()).toHaveAttribute('data-phase', 'correct');
   expect(complete).not.toHaveBeenCalled();
-  act(() => vi.advanceTimersByTime(1199));
+  act(() => vi.advanceTimersByTime(899));
   expect(complete).not.toHaveBeenCalled();
   act(() => vi.advanceTimersByTime(1));
   expect(complete).toHaveBeenCalledExactlyOnceWith('answer-1');

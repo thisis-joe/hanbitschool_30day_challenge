@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { MOTION_MS } from './motion/poses';
 import { AnimatedGameAvatar } from './motion/AnimatedGameAvatar';
 import type { GameView, JourneyView } from './types';
 import type { AnswerChoice, AnswerOutcome } from '../learning/types';
 import './answer-scene.css';
 
-const WALK_MS = 750;
+const WALK_MS = MOTION_MS.walk;
 export function AnswerGameScene({
   appearance,
   journey,
@@ -51,7 +52,7 @@ export function AnswerGameScene({
           : 'idle';
   useEffect(() => {
     if (!answerId || !outcome || !travel.arrived || !onReactionComplete) return;
-    const duration = travel.animate ? (outcome === 'CORRECT' ? 1200 : 450) : 0;
+    const duration = travel.animate ? (outcome === 'CORRECT' ? MOTION_MS.happy : MOTION_MS.sad) : 0;
     const timer = window.setTimeout(() => onReactionComplete(answerId), duration);
     return () => window.clearTimeout(timer);
   }, [answerId, outcome, travel.arrived, travel.animate, onReactionComplete]);
@@ -69,6 +70,7 @@ export function AnswerGameScene({
     <section
       className={`game-learning-scene game-answer-scene game-scene-${region}`}
       aria-label="학습 여행 장면"
+      style={{ '--answer-walk-duration': `${WALK_MS}ms` } as import('react').CSSProperties}
       data-choice={choice}
       data-phase={phase}
       data-animate={String(travel.animate)}
