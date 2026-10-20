@@ -28,7 +28,7 @@ export function ExperienceReward({
     contentVersion,
     'xp-awards',
     answer.xpAwarded > 0 && !deferCinematic ? { [event]: true } : {},
-    { celebrateInitial: true, durationMs: acquisitionDuration.xp + inlineAcquisitionDuration },
+    { celebrateInitial: true, durationMs: acquisitionDuration.xp + inlineAcquisitionDuration.xp },
   ).includes(event);
   const identity = JSON.stringify([owner, contentVersion, event]);
   const sequence = useAcquisitionSequence(active, identity);

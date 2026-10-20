@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-// Fixed trajectories keep rerenders stable. All motion ends within 2.4 seconds.
+// Fixed trajectories keep rerenders stable. XP uses the faster stagger while items keep theirs.
 const particles = Array.from({ length: 18 }, (_, i) => {
   const angle = (i / 18) * Math.PI * 2;
   const radius = 68 + (i % 3) * 20;
@@ -8,6 +8,7 @@ const particles = Array.from({ length: 18 }, (_, i) => {
     '--spark-x': `${Math.cos(angle) * radius}px`,
     '--spark-y': `${Math.sin(angle) * radius * 0.72}px`,
     '--spark-delay': `${(i % 5) * 65}ms`,
+    '--spark-delay-xp': `${(i % 5) * 32.5}ms`,
     '--spark-turn': `${i % 2 ? 100 : -80}deg`,
   } as CSSProperties;
 });

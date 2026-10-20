@@ -25,12 +25,21 @@ it('celebrates each confirmed XP award once, stays finite and retains the awarde
     </QueryClientProvider>
   );
   const view = render(ui());
-  expect(screen.getByRole('dialog', { name: '경험치 획득 연출' })).toBeVisible();
+  const scene = screen.getByRole('dialog', { name: '경험치 획득 연출' });
+  expect(scene).toBeVisible();
+  expect(scene).toHaveFocus();
+  expect(screen.queryByRole('button', { name: '연출 건너뛰기' })).toBeNull();
+  fireEvent(scene, new Event('cancel', { cancelable: true }));
+  expect(scene).toBeVisible();
   expect(screen.getByRole('status')).not.toHaveAttribute('data-celebrating', 'true');
-  act(() => vi.advanceTimersByTime(2700));
+  act(() => vi.advanceTimersByTime(1299));
+  expect(scene).toBeVisible();
+  act(() => vi.advanceTimersByTime(1));
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByRole('status')).toHaveAttribute('data-celebrating', 'true');
-  act(() => vi.advanceTimersByTime(2500));
+  act(() => vi.advanceTimersByTime(1199));
+  expect(screen.getByRole('status')).toHaveAttribute('data-celebrating', 'true');
+  act(() => vi.advanceTimersByTime(1));
   expect(screen.getByRole('status')).not.toHaveAttribute('data-celebrating', 'true');
   expect(screen.getByText('이번 답변으로 받은 경험치: 100 XP')).toBeVisible();
   view.unmount();
@@ -38,7 +47,7 @@ it('celebrates each confirmed XP award once, stays finite and retains the awarde
   expect(screen.getByRole('status')).not.toHaveAttribute('data-celebrating', 'true');
   again.rerender(ui('next-answer'));
   expect(screen.getByRole('dialog', { name: '경험치 획득 연출' })).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: '연출 건너뛰기' }));
+  act(() => vi.advanceTimersByTime(1300));
   expect(screen.queryByRole('dialog')).toBeNull();
   expect(screen.getByRole('status')).toHaveFocus();
   again.rerender(ui('review-answer', 0));
@@ -81,6 +90,6 @@ it('keeps XP readable while the character reacts and begins the cinematic only a
   expect(screen.queryByRole('dialog')).toBeNull();
   view.rerender(ui(false));
   expect(screen.getByRole('dialog', { name: '경험치 획득 연출' })).toBeVisible();
-  act(() => vi.advanceTimersByTime(5200));
+  act(() => vi.advanceTimersByTime(2500));
   expect(screen.queryByRole('dialog')).toBeNull();
 });
