@@ -25,3 +25,27 @@ it('reduced motion keeps the expressive final poses without moving or jumping', 
     expect(sad.expression).toBe('sad');
   }
 });
+
+it('plants one foot while the other steps, then settles before arrival', () => {
+  const first = samplePose('walk', 60),
+    second = samplePose('walk', 180);
+  expect(first.nearFootLift).toBeGreaterThan(5);
+  expect(first.farFootLift).toBe(0);
+  expect(second.farFootLift).toBeGreaterThan(5);
+  expect(second.nearFootLift).toBe(0);
+  expect(first.nearStep * second.nearStep).toBeLessThan(0);
+  expect(samplePose('walk', 480)).toEqual(samplePose('idle', 0));
+});
+
+it('compresses the knees before taking off and after landing, with no teleport between phases', () => {
+  expect(samplePose('happy', 90).drop).toBeGreaterThan(4);
+  expect(samplePose('happy', 255).lift).toBeGreaterThan(20);
+  expect(samplePose('happy', 255).nearFootLift).toBeGreaterThan(4);
+  expect(samplePose('happy', 450).drop).toBeGreaterThan(3);
+  for (const boundary of [100, 410, 520, 770, 900]) {
+    const before = samplePose('happy', boundary - 0.01),
+      after = samplePose('happy', boundary);
+    for (const key of ['lift', 'drop', 'nearArm', 'farArm', 'head', 'hair'] as const)
+      expect(Math.abs(before[key] - after[key]), `${key} at ${boundary} ms`).toBeLessThan(0.1);
+  }
+});

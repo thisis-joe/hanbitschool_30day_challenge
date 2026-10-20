@@ -53,7 +53,7 @@
   bottom: 46px;
   width: 154px;
   transform: translateX(-50%);
-  transition: left 750ms linear;
+  transition: left var(--answer-walk-duration, 480ms) cubic-bezier(0.25, 0.1, 0.35, 1);
   z-index: 1;
 }
 .game-answer-scene[data-choice='O'] .game-answer-traveler {

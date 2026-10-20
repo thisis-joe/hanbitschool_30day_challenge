@@ -11,3 +11,5 @@ dist/
 test-results/
 playwright-report/
 *.log
+.DS_Store
+.pnpm-store/
