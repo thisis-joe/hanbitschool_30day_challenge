@@ -25,6 +25,10 @@
   --burst-at: 880ms;
   --reveal-at: 1000ms;
 }
+.acquisition-xp {
+  --burst-at: 90ms;
+  --reveal-at: 90ms;
+}
 .acquisition-atmosphere {
   position: absolute;
   inset: -20%;
@@ -285,6 +289,36 @@
   margin-top: 12px;
   font-size: clamp(11px, 2vmin, 14px);
   color: #d2ddde;
+}
+.acquisition-xp .acquisition-aura {
+  animation-duration: 1450ms;
+}
+.acquisition-xp .acquisition-rays {
+  animation-duration: 1600ms;
+}
+.acquisition-xp .acquisition-orbit {
+  animation-duration: 1650ms;
+}
+.acquisition-xp .acquisition-flash {
+  animation-duration: 425ms;
+}
+.acquisition-xp .acquisition-shockwave {
+  animation-duration: 800ms;
+}
+.acquisition-xp .acquisition-shockwave-late {
+  animation-delay: calc(var(--burst-at) + 120ms);
+}
+.acquisition-xp .acquisition-spark {
+  animation-duration: 1350ms;
+  animation-delay: calc(var(--burst-at) + var(--flight-delay-xp));
+}
+.acquisition-xp .acquisition-xp-medal {
+  animation-duration: 550ms;
+  animation-delay: 60ms;
+}
+.acquisition-xp .acquisition-caption {
+  animation-duration: 325ms;
+  animation-delay: calc(var(--reveal-at) + 90ms);
 }
 .acquisition-cinematic .acquisition-skip {
   position: absolute;

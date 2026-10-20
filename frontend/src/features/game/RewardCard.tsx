@@ -45,14 +45,14 @@ export function RewardCard({
     {
       [item.itemId]: owned,
     },
-    { durationMs: acquisitionDuration.item + inlineAcquisitionDuration },
+    { durationMs: acquisitionDuration.item + inlineAcquisitionDuration.item },
   ).includes(item.itemId);
   const acquired = useSeenTransition(
     owner,
     contentVersion,
     'item-awards',
     acquisitionId && owned ? { [acquisitionId]: true } : {},
-    { celebrateInitial: true, durationMs: acquisitionDuration.item + inlineAcquisitionDuration },
+    { celebrateInitial: true, durationMs: acquisitionDuration.item + inlineAcquisitionDuration.item },
   ).includes(acquisitionId ?? '');
   const identity = JSON.stringify([owner, contentVersion, acquisitionId ?? item.itemId]);
   const sequence = useAcquisitionSequence(transitioned || acquired, identity);

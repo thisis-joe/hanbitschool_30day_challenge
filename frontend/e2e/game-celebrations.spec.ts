@@ -111,18 +111,22 @@ for (const width of [1280, 390, 320]) {
       width,
       height: width === 320 ? 568 : 960,
     });
-    const skip = page.getByRole('button', { name: '연출 건너뛰기' });
-    await expect(skip).toBeFocused();
+    await expect(xpScene).toBeFocused();
+    await expect(xpScene.getByRole('button', { name: '연출 건너뛰기' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(xpScene).toBeVisible();
     await page.keyboard.press('Tab');
-    await expect(skip).toBeFocused();
+    await expect(xpScene).toBeFocused();
+    expect(await xpScene.evaluate((element) => getComputedStyle(element).animationDuration)).toBe(
+      '1.3s',
+    );
     const xp = page.locator('.game-xp-reward');
     await expect(xp).not.toHaveAttribute('data-celebrating', 'true');
     const output = evidenceOutput();
     if (output) {
-      await page.waitForTimeout(900);
+      await page.waitForTimeout(450);
       await page.screenshot({ path: output.file(`xp-cinematic-${width}.png`) });
     }
-    if (width !== 1280) await skip.click();
     await expect(xpScene).toHaveCount(0);
     await expect(xp).toBeFocused();
     await expect(xp).toHaveAttribute('data-celebrating', 'true');

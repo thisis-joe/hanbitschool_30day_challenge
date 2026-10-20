@@ -12,6 +12,7 @@ const sparks = Array.from({ length: 64 }, (_, i) => {
     '--flight-x': `${Math.cos(angle) * radius}vmin`,
     '--flight-y': `${Math.sin(angle) * radius}vmin`,
     '--flight-delay': `${(i % 8) * 42}ms`,
+    '--flight-delay-xp': `${(i % 8) * 21}ms`,
     '--flight-turn': `${(i % 2 ? 1 : -1) * (90 + i * 11)}deg`,
     '--spark-size': `${4 + (i % 4) * 3}px`,
   } as CSSProperties;
@@ -96,6 +97,7 @@ export function AcquisitionCinematic({
     // Older browsers can still present the finite overlay without the dialog API.
     if (node.showModal) node.showModal();
     else node.setAttribute('open', '');
+    if (prize.kind === 'xp') node.focus();
     const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const preferenceChanged = () => {
       if (motion?.matches) onComplete();
@@ -109,23 +111,24 @@ export function AcquisitionCinematic({
       document.documentElement.style.overflow = previousOverflow;
       if (destination?.isConnected) destination.focus();
     };
-  }, [duration, onComplete, returnFocus]);
+  }, [duration, onComplete, prize.kind, returnFocus]);
 
   return createPortal(
     <dialog
       ref={dialog}
+      tabIndex={-1}
       className={`acquisition-cinematic acquisition-${prize.kind}`}
       aria-label={prize.kind === 'item' ? '아이템 획득 연출' : '경험치 획득 연출'}
       style={{ '--cinema-duration': `${duration}ms` } as CSSProperties}
       onCancel={(event) => {
         event.preventDefault();
-        onComplete();
+        if (prize.kind === 'item') onComplete();
       }}
       onKeyDown={(event) => {
-        // This short cinematic has one action; keep Tab/Shift+Tab on that action.
         if (event.key === 'Tab') {
           event.preventDefault();
-          event.currentTarget.querySelector('button')?.focus();
+          if (prize.kind === 'item') event.currentTarget.querySelector('button')?.focus();
+          else event.currentTarget.focus();
         }
       }}
     >
@@ -181,9 +184,11 @@ export function AcquisitionCinematic({
             : `LEVEL ${prize.level} · 한 걸음 더 성장했어요`}
         </p>
       </div>
-      <button className="acquisition-skip" onClick={onComplete} autoFocus>
-        연출 건너뛰기 <span aria-hidden="true">→</span>
-      </button>
+      {prize.kind === 'item' ? (
+        <button className="acquisition-skip" onClick={onComplete} autoFocus>
+          연출 건너뛰기 <span aria-hidden="true">→</span>
+        </button>
+      ) : null}
     </dialog>,
     document.body,
   );
