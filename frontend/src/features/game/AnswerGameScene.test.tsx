@@ -2,6 +2,10 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AnswerGameScene } from './AnswerGameScene';
 import { gameView } from '../../test/gameFixtures';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { meKey } from '../auth/queries';
+import { student } from '../../test/server';
+import { answerResult } from '../../test/learningFixtures';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -76,23 +80,35 @@ it('a new question resets the destination and cancels the previous arrival timer
   expect(scene()).toHaveAttribute('data-phase', 'correct');
 });
 
-it('releases the reward cinematic only after walking and the complete character reaction', () => {
-  const complete = vi.fn();
-  const view = render(<AnswerGameScene appearance={gameView} onReactionComplete={complete} />);
-  view.rerender(
-    <AnswerGameScene
-      appearance={gameView}
-      choice="O"
-      outcome="CORRECT"
-      answerId="answer-1"
-      onReactionComplete={complete}
-    />,
-  );
-  act(() => vi.advanceTimersByTime(480));
-  expect(scene()).toHaveAttribute('data-phase', 'correct');
-  expect(complete).not.toHaveBeenCalled();
-  act(() => vi.advanceTimersByTime(899));
-  expect(complete).not.toHaveBeenCalled();
-  act(() => vi.advanceTimersByTime(1));
-  expect(complete).toHaveBeenCalledExactlyOnceWith('answer-1');
-});
+it.each(['O', 'X'] as const)(
+  'celebrates XP around the character only on arrival at %s',
+  (choice) => {
+    const client = new QueryClient();
+    client.setQueryData(meKey, student);
+    const experience = { owner: student.accountId, contentVersion: 'v1', answer: answerResult };
+    const ui = (answered: boolean) => (
+      <QueryClientProvider client={client}>
+        <AnswerGameScene
+          appearance={gameView}
+          choice={answered ? choice : undefined}
+          outcome={answered ? 'CORRECT' : undefined}
+          answerId={answered ? answerResult.attemptAnswerId : undefined}
+          experience={answered ? experience : undefined}
+        />
+      </QueryClientProvider>
+    );
+    const view = render(ui(false));
+    view.rerender(ui(true));
+    act(() => vi.advanceTimersByTime(479));
+    expect(view.container.querySelector('.game-character-xp')).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(scene()).toHaveAttribute('data-phase', 'correct');
+    expect(view.container.querySelector('.game-answer-traveler .game-character-xp')).toBeVisible();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    act(() => vi.advanceTimersByTime(2200));
+    expect(view.container.querySelector('.game-character-xp')).toBeNull();
+    view.unmount();
+    const restored = render(ui(true));
+    expect(restored.container.querySelector('.game-character-xp')).toBeNull();
+  },
+);

@@ -525,11 +525,44 @@ it.each([
   expect(await screen.findByRole('heading', { name: label })).toHaveFocus();
   expect(screen.queryByText(/정답은/)).not.toBeInTheDocument();
   expect(screen.getByText('테스트용 설명입니다.')).toBeVisible();
-  expect(screen.getByText('이번 답변으로 받은 경험치: 1 XP')).toBeVisible();
+  expect(screen.getByRole('status', { name: '이번 답변으로 받은 경험치: 1 XP' })).toBeVisible();
   // Canonical feedback publishes before the existing learning cache refresh settles.
   await waitFor(() => expect(screen.queryByText('답변을 확인하고 있어요')).toBeNull());
   expect(screen.getByRole('button', { name: '다음 문제' })).toBeEnabled();
   expect(screen.queryByRole('button', { name: 'X · 해석' })).not.toBeInTheDocument();
+});
+
+it('confirmedTimeoutReturnsToCenterWhileRelatedReadsAreStillPending', async () => {
+  const release = deferred<void>();
+  const entered = deferred<void>();
+  let view = activeSession;
+  const answer = { ...answerResult, outcome: 'TIMED_OUT' as const };
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () => json(view)),
+    http.post('*/api/student/learning/sessions/:id/answers', () => {
+      view = { ...answeredSession, lastAnswer: answer };
+      return HttpResponse.json(answer);
+    }),
+    http.get('*/api/student/learning/status', async () => {
+      if (view.state === 'AWAITING_ADVANCE') {
+        entered.resolve();
+        await release.promise;
+      }
+      return HttpResponse.json({ ...learningStatus, activeSession: view });
+    }),
+  );
+  setup();
+  try {
+    await userEvent.click(await screen.findByRole('button', { name: 'O · 사실' }));
+    await entered.promise;
+    expect(await screen.findByRole('heading', { name: '시간이 초과되었어요' })).toBeVisible();
+    expect(readPendingCommand('student-a')?.kind).toBe('ANSWER');
+    expect(screen.getByRole('region', { name: '학습 여행 장면' })).not.toHaveAttribute(
+      'data-choice',
+    );
+  } finally {
+    await act(async () => release.resolve());
+  }
 });
 
 // Expiry may only read until the server changes phase; it must never write timeout or advance.

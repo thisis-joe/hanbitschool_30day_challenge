@@ -365,7 +365,10 @@ export async function answer(
   ).toBeVisible();
   await protectedText(page.locator('.learning-explanation'), result.explanation);
   await expect(
-    page.getByText(`이번 답변으로 받은 경험치: ${result.xpAwarded} XP`, { exact: true }),
+    page.getByRole('status', {
+      name: `이번 답변으로 받은 경험치: ${result.xpAwarded} XP`,
+      exact: true,
+    }),
   ).toBeVisible();
   return result;
 }

@@ -182,8 +182,13 @@ for (const width of [320, 390, 768, 1280]) {
       ratio: 1,
     });
     const source = (await page.locator('.learning-source').boundingBox())!;
-    const choices = (await page.locator('.learning-choices').boundingBox())!;
-    expect(choices.y - source.y - source.height).toBeLessThan(100);
+    const choices = (await page
+      .getByRole('button', { name: 'O · 사실', exact: true })
+      .boundingBox())!;
+    const scene = (await page.getByRole('region', { name: '학습 여행 장면' }).boundingBox())!;
+    expect(source.y).toBeGreaterThan(scene.y);
+    expect(choices.y).toBeGreaterThan(source.y + source.height);
+    expect(choices.y + choices.height).toBeLessThan(scene.y + scene.height);
     await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
     await page.getByRole('link', { name: '완료하기', exact: true }).click();
     await sameRow(

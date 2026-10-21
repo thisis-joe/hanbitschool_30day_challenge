@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useCurrentAccount } from '../auth/queries';
 import { errorMessage, HttpError } from '../../lib/http';
@@ -9,6 +9,7 @@ import { QuestionFeedbackActions } from './QuestionFeedbackActions';
 import { useGame, useJourney } from '../game/queries';
 import { AnswerGameScene } from '../game/AnswerGameScene';
 import { ExperienceReward } from '../game/ExperienceReward';
+import './learning-scene.css';
 
 const outcomes = {
   CORRECT: '정답이에요!',
@@ -26,7 +27,6 @@ export function LearningSessionPage() {
   const game = useGame();
   const journey = useJourney();
   const heading = useRef<HTMLHeadingElement>(null);
-  const [completedReaction, setCompletedReaction] = useState<string>();
   const accountId = account.data?.role === 'STUDENT' ? account.data.accountId : undefined;
   const view = session.data;
   const question = view?.question;
@@ -159,115 +159,106 @@ export function LearningSessionPage() {
         </Link>
       ) : null}
       {view ? (
-        <div className="learning-card">
-          <div className="learning-session-meta">
-            <p className="learning-eyebrow">
-              {view.mode === 'REVIEW'
-                ? '선택 복습'
-                : `${view.dayNumber}회차${view.mode === 'REPLAY' ? ' · 다시 풀기' : ''}`}
-            </p>
-            <p>
-              답변 {view.answeredCount} / {view.questionCount}
-            </p>
-          </div>
-          <progress
-            className="learning-progress"
-            aria-label="문항 진행"
-            value={view.answeredCount}
-            max={view.questionCount}
-          />
+        <div className="learning-scene-shell">
           <AnswerGameScene
             key={`${accountId}:${sessionId}:${question?.questionId ?? feedback?.questionId}`}
             appearance={game.data}
             journey={journey.data}
             outcome={feedback?.outcome}
-            choice={confirmedChoice ?? pendingChoice}
+            choice={feedback ? confirmedChoice : pendingChoice}
             answerId={feedback?.attemptAnswerId}
-            onReactionComplete={setCompletedReaction}
-          />
-          {active && question ? (
-            <>
-              <div className="learning-question-header">
-                <h1 ref={heading} tabIndex={-1}>
-                  문항 {question.position} / {view.questionCount}
-                </h1>
-                <time
-                  className="learning-timer"
-                  data-urgent={seconds <= 5 || undefined}
-                  dateTime={question.deadlineAt}
-                >
-                  남은 시간 {seconds}초
-                </time>
-              </div>
-              <p className="learning-source">{question.text}</p>
-              <p className="learning-description">문장을 읽고 사실인지 해석인지 골라 주세요.</p>
-              <div className="learning-choices" aria-label="사실 또는 해석 선택">
-                <button
-                  disabled={blocked || expired}
-                  onClick={() => void actions.answer(view.sessionId, question.questionId, 'O')}
-                >
-                  O · 사실
-                </button>
-                <button
-                  className="secondary"
-                  disabled={blocked || expired}
-                  onClick={() => void actions.answer(view.sessionId, question.questionId, 'X')}
-                >
-                  X · 해석
-                </button>
-              </div>
-              {waitingForServer ? <p role="status">서버에서 답변을 확인하고 있어요</p> : null}
-            </>
-          ) : feedback ? (
-            <div className="learning-feedback" data-outcome={feedback.outcome}>
-              <h1 ref={heading} tabIndex={-1}>
-                {outcomes[feedback.outcome]}
-              </h1>
-              <ExperienceReward
-                owner={accountId}
-                contentVersion={view.contentVersion}
-                answer={feedback}
-                deferCinematic={completedReaction !== feedback.attemptAnswerId}
-              />
-              {question?.questionId === feedback.questionId ? (
-                <p className="learning-source">{question.text}</p>
-              ) : null}
-              <p className="learning-explanation">{feedback.explanation}</p>
-              <QuestionFeedbackActions questionId={feedback.questionId} result={feedback} />
-              <div className="learning-feedback-navigation">
-                {view.state === 'COMPLETED' ? (
-                  <Link
-                    className="button learning-completion"
-                    to={`/student/learning/sessions/${view.sessionId}/result`}
-                    aria-disabled={blocked}
-                    onClick={(event) => {
-                      if (blocked) event.preventDefault();
-                    }}
-                  >
-                    완료하기
-                  </Link>
-                ) : (
-                  <button
-                    className="learning-next"
-                    disabled={blocked}
-                    onClick={() => void actions.advance(view.sessionId)}
-                  >
-                    <span>다음 문제</span>
-                    <svg viewBox="0 0 80 80" aria-hidden="true" focusable="false">
-                      <path
-                        className="learning-next-shadow"
-                        d="M18 9 62 34Q66 36 62 39L18 63Q13 66 13 60V12Q13 6 18 9Z"
-                        transform="translate(0 4)"
-                      />
-                      <path d="M18 9 62 34Q66 36 62 39L18 63Q13 66 13 60V12Q13 6 18 9Z" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+            experience={
+              feedback
+                ? { owner: accountId, contentVersion: view.contentVersion, answer: feedback }
+                : undefined
+            }
+            onChoose={
+              active && question
+                ? (choice) => void actions.answer(view.sessionId, question.questionId, choice)
+                : undefined
+            }
+            choicesDisabled={blocked || expired}
+          >
+            <div className="learning-session-meta">
+              <p className="learning-eyebrow">
+                {view.mode === 'REVIEW'
+                  ? '선택 복습'
+                  : `${view.dayNumber}회차${view.mode === 'REPLAY' ? ' · 다시 풀기' : ''}`}
+              </p>
+              <p>
+                답변 {view.answeredCount} / {view.questionCount}
+              </p>
             </div>
-          ) : (
-            <p role="alert">현재 문항을 확인할 수 없어요. 최신 상태를 다시 불러와 주세요.</p>
-          )}
+            <progress
+              className="learning-progress"
+              aria-label="문항 진행"
+              value={view.answeredCount}
+              max={view.questionCount}
+            />
+            {active && question ? (
+              <>
+                <div className="learning-question-header">
+                  <h1 ref={heading} tabIndex={-1}>
+                    문항 {question.position} / {view.questionCount}
+                  </h1>
+                  <time
+                    className="learning-timer"
+                    data-urgent={seconds <= 5 || undefined}
+                    dateTime={question.deadlineAt}
+                  >
+                    남은 시간 {seconds}초
+                  </time>
+                </div>
+                <div className="learning-reading-panel">
+                  <p className="learning-source">{question.text}</p>
+                </div>
+                <p className="learning-description">문장을 읽고 사실인지 해석인지 골라 주세요.</p>
+                {waitingForServer ? <p role="status">서버에서 답변을 확인하고 있어요</p> : null}
+              </>
+            ) : feedback ? (
+              <div className="learning-feedback" data-outcome={feedback.outcome}>
+                <div className="learning-feedback-header">
+                  <h1 ref={heading} tabIndex={-1}>
+                    {outcomes[feedback.outcome]}
+                  </h1>
+                  <ExperienceReward answer={feedback} />
+                </div>
+                <div className="learning-reading-panel">
+                  {question?.questionId === feedback.questionId ? (
+                    <p className="learning-source">{question.text}</p>
+                  ) : null}
+                  <p className="learning-explanation">{feedback.explanation}</p>
+                </div>
+                <QuestionFeedbackActions questionId={feedback.questionId} result={feedback} />
+                <div className="learning-feedback-navigation">
+                  {view.state === 'COMPLETED' ? (
+                    <Link
+                      className="button learning-completion"
+                      to={`/student/learning/sessions/${view.sessionId}/result`}
+                      aria-disabled={blocked}
+                      onClick={(event) => {
+                        if (blocked) event.preventDefault();
+                      }}
+                    >
+                      <span>완료하기</span>
+                      <NextArrow />
+                    </Link>
+                  ) : (
+                    <button
+                      className="learning-next"
+                      disabled={blocked}
+                      onClick={() => void actions.advance(view.sessionId)}
+                    >
+                      <span>다음 문제</span>
+                      <NextArrow />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p role="alert">현재 문항을 확인할 수 없어요. 최신 상태를 다시 불러와 주세요.</p>
+            )}
+          </AnswerGameScene>
         </div>
       ) : null}
       {actions.busy ? (
@@ -294,5 +285,18 @@ export function LearningSessionPage() {
         </Link>
       </div>
     </section>
+  );
+}
+
+function NextArrow() {
+  return (
+    <svg viewBox="0 0 80 80" aria-hidden="true" focusable="false">
+      <path
+        className="learning-next-shadow"
+        d="M18 9 62 34Q66 36 62 39L18 63Q13 66 13 60V12Q13 6 18 9Z"
+        transform="translate(0 4)"
+      />
+      <path d="M18 9 62 34Q66 36 62 39L18 63Q13 66 13 60V12Q13 6 18 9Z" />
+    </svg>
   );
 }

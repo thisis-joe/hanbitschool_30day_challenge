@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { CharacterExperienceEffect, type CharacterExperience } from './CharacterExperienceEffect';
 import { MOTION_MS } from './motion/poses';
 import { AnimatedGameAvatar } from './motion/AnimatedGameAvatar';
 import type { GameView, JourneyView } from './types';
@@ -12,15 +13,22 @@ export function AnswerGameScene({
   choice,
   outcome,
   answerId,
-  onReactionComplete,
+  experience,
+  children,
+  onChoose,
+  choicesDisabled = false,
 }: {
   appearance: GameView | undefined;
   journey?: JourneyView;
   choice?: AnswerChoice;
   outcome?: AnswerOutcome;
   answerId?: string;
-  onReactionComplete?: (answerId: string) => void;
+  experience?: CharacterExperience;
+  children?: ReactNode;
+  onChoose?: (choice: AnswerChoice) => void;
+  choicesDisabled?: boolean;
 }) {
+  const [initialAnswerId] = useState(answerId);
   const [travel, setTravel] = useState({ choice, arrived: true, animate: false });
   if (travel.choice !== choice) setTravel({ choice, arrived: !choice, animate: !!choice });
   useEffect(() => {
@@ -50,12 +58,6 @@ export function AnswerGameScene({
         : phase === 'wrong' || phase === 'timeout'
           ? 'sad'
           : 'idle';
-  useEffect(() => {
-    if (!answerId || !outcome || !travel.arrived || !onReactionComplete) return;
-    const duration = travel.animate ? (outcome === 'CORRECT' ? MOTION_MS.happy : MOTION_MS.sad) : 0;
-    const timer = window.setTimeout(() => onReactionComplete(answerId), duration);
-    return () => window.clearTimeout(timer);
-  }, [answerId, outcome, travel.arrived, travel.animate, onReactionComplete]);
   const position = journey?.journeyPosition ?? 0;
   const region = position < 50 ? 'forest' : position < 100 ? 'village' : 'beach';
   const messages = {
@@ -68,29 +70,51 @@ export function AnswerGameScene({
   };
   return (
     <section
-      className={`game-learning-scene game-answer-scene game-scene-${region}`}
+      className={`game-learning-scene game-answer-scene game-scene-${region}${children ? ' game-answer-immersive' : ''}`}
       aria-label="학습 여행 장면"
       style={{ '--answer-walk-duration': `${WALK_MS}ms` } as import('react').CSSProperties}
       data-choice={choice}
       data-phase={phase}
       data-animate={String(travel.animate)}
     >
+      {children ? <div className="game-answer-content">{children}</div> : null}
+      {children ? <div className="game-answer-clearing" aria-hidden="true" /> : null}
       <div className="game-answer-track" aria-hidden="true" />
       <div
-        className="game-answer-destination game-answer-o"
-        data-selected={choice === 'O'}
-        aria-hidden="true"
+        className={onChoose ? 'learning-choices' : undefined}
+        role={onChoose ? 'group' : undefined}
+        aria-label={onChoose ? '사실 또는 해석 선택' : undefined}
       >
-        <b>O</b>
-        <span>사실</span>
-      </div>
-      <div
-        className="game-answer-destination game-answer-x"
-        data-selected={choice === 'X'}
-        aria-hidden="true"
-      >
-        <b>X</b>
-        <span>해석</span>
+        {(['O', 'X'] as const).map((destination) => {
+          const label = destination === 'O' ? '사실' : '해석';
+          const content = (
+            <>
+              <b>{destination}</b>
+              <span>{label}</span>
+            </>
+          );
+          const className = `game-answer-destination game-answer-${destination.toLowerCase()}`;
+          return onChoose ? (
+            <button
+              key={destination}
+              className={className}
+              aria-label={`${destination} · ${label}`}
+              disabled={choicesDisabled}
+              onClick={() => onChoose(destination)}
+            >
+              {content}
+            </button>
+          ) : (
+            <div
+              key={destination}
+              className={className}
+              data-selected={choice === destination}
+              aria-hidden="true"
+            >
+              {content}
+            </div>
+          );
+        })}
       </div>
       <div className="game-answer-traveler">
         <span className="game-answer-shadow" aria-hidden="true" />
@@ -102,15 +126,18 @@ export function AnswerGameScene({
             animate={travel.animate}
           />
         </div>
-        {phase === 'correct' ? (
-          <span className="game-answer-sparkles" aria-hidden="true">
-            ✦
-          </span>
+        {experience ? (
+          <CharacterExperienceEffect
+            {...experience}
+            ready={travel.arrived && !!answerId && answerId !== initialAnswerId}
+          />
         ) : null}
       </div>
-      <p className="game-answer-message" role="status">
-        {messages[phase]}
-      </p>
+      {!children || !appearance || phase === 'walking' || phase === 'waiting' ? (
+        <p className="game-answer-message" role="status">
+          {messages[phase]}
+        </p>
+      ) : null}
       {journey ? (
         <p className="game-answer-progress">여행 {journey.firstAnswerCount} / 150문항</p>
       ) : null}
