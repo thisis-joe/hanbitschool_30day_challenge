@@ -18,6 +18,34 @@ import { clearAllPendingCommands } from '../../learning/pendingCommands';
 vi.mock('../../game/avatarRenderer', () => ({ renderAvatar: async () => undefined }));
 const path = '/staff/classrooms/class-a/learning';
 
+it('keepsClassSummaryVisibleWhileStudentSearchLoads', async () => {
+  teacherLearningHandlers();
+  const pending = deferred<typeof overview>();
+  let requested = false;
+  server.use(
+    http.get('*/api/staff/classrooms/:id/learning/students', async ({ request }) => {
+      if (new URL(request.url).searchParams.get('search') === '검색') {
+        requested = true;
+        return HttpResponse.json(await pending.promise);
+      }
+      return HttpResponse.json(overview);
+    }),
+  );
+  renderPage(<AppRoutes />, path);
+  const summary = await screen.findByRole('region', { name: '학급 요약' });
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText('이름·번호 검색'), '검색');
+  await user.click(screen.getByRole('button', { name: '검색' }));
+  await waitFor(() => expect(requested).toBe(true));
+  try {
+    expect(summary).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('목록을 갱신하고 있습니다');
+  } finally {
+    pending.resolve(overview);
+  }
+  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+});
+
 it('showsServerSummaryWithoutRecomputingFromCurrentPage', async () => {
   teacherLearningHandlers();
   renderPage(<AppRoutes />, path + '?search=학생');

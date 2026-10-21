@@ -256,6 +256,9 @@ function StatisticsWorkspace({
             </>
           )}
         </form>
+        {selectedList.isPlaceholderData ? (
+          <p role="status">목록을 갱신하고 있습니다. 잠시 이전 결과를 표시합니다.</p>
+        ) : null}
         {tab === 'questions' && questions.isPending ? (
           <p role="status">문항을 불러오고 있습니다.</p>
         ) : null}
@@ -274,6 +277,7 @@ function StatisticsWorkspace({
             tabIndex={0}
             role="region"
             aria-label="학생 학습 표 가로 스크롤"
+            aria-busy={students.isFetching}
           >
             <table aria-label="학생 학습 현황">
               <caption>
@@ -331,6 +335,7 @@ function StatisticsWorkspace({
             tabIndex={0}
             role="region"
             aria-label="문항 분석 표 가로 스크롤"
+            aria-busy={questions.isFetching}
           >
             <table aria-label="문항 분석">
               <caption>
@@ -385,18 +390,19 @@ function StatisticsWorkspace({
             <button
               className="secondary"
               aria-label="이전 페이지"
-              disabled={page === 0}
+              disabled={selectedList.isFetching || page === 0}
               onClick={() => change({ page: String(page - 1) }, false)}
             >
               이전
             </button>
             <span>
-              {page + 1} / {Math.max(1, Math.ceil(pagination.total / pagination.size))} 페이지
+              {pagination.page + 1} / {Math.max(1, Math.ceil(pagination.total / pagination.size))}{' '}
+              페이지
             </span>
             <button
               className="secondary"
               aria-label="다음 페이지"
-              disabled={(page + 1) * pagination.size >= pagination.total}
+              disabled={selectedList.isFetching || (page + 1) * pagination.size >= pagination.total}
               onClick={() => change({ page: String(page + 1) }, false)}
             >
               다음

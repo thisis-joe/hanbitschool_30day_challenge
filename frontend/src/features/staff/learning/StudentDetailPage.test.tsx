@@ -5,9 +5,42 @@ import { http, HttpResponse } from 'msw';
 import { AppRoutes } from '../../../app/router';
 import { renderPage } from '../../../test/render';
 import { server } from '../../../test/server';
-import { studentDetail, teacherLearningHandlers } from '../../../test/teacherLearningFixtures';
+import {
+  deferred,
+  studentDetail,
+  teacherLearningHandlers,
+} from '../../../test/teacherLearningFixtures';
 vi.mock('../../game/avatarRenderer', () => ({ renderAvatar: async () => undefined }));
 const path = '/staff/classrooms/class-a/learning';
+it('keepsAnswerControlsAndFocusWhileAChangedFilterLoads', async () => {
+  teacherLearningHandlers();
+  const pending = deferred<typeof studentDetail>();
+  let requested = false;
+  server.use(
+    http.get('*/api/staff/classrooms/:id/learning/students/:studentId', async ({ request }) => {
+      if (new URL(request.url).searchParams.get('filter') === 'ALL') {
+        requested = true;
+        return HttpResponse.json(await pending.promise);
+      }
+      return HttpResponse.json(studentDetail);
+    }),
+  );
+  renderPage(<AppRoutes />, path + '/students/student-a');
+  const filter = await screen.findByLabelText('답변 필터');
+  await userEvent.setup().selectOptions(filter, 'ALL');
+  await waitFor(() => expect(requested).toBe(true));
+  try {
+    expect(screen.getByLabelText('답변 필터')).toBe(filter);
+    expect(filter).toHaveFocus();
+    expect(screen.getByRole('region', { name: '학생 요약' })).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('답변 목록을 갱신하고 있습니다');
+    expect(screen.getByRole('button', { name: '다음 페이지' })).toBeDisabled();
+  } finally {
+    pending.resolve(studentDetail);
+  }
+  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+  expect(screen.getByRole('button', { name: '다음 페이지' })).toBeEnabled();
+});
 it('detailNavigationPreservesListUrlButUsesWholeClassOrder', async () => {
   teacherLearningHandlers();
   const u = userEvent.setup();
