@@ -205,6 +205,9 @@
   .game-answer-immersive .game-answer-clearing {
     min-height: 240px;
   }
+  .game-answer-immersive .game-character-xp-amount {
+    top: 40%;
+  }
   .game-answer-immersive .game-answer-traveler,
   .game-answer-immersive .game-answer-traveler .game-avatar-articulated {
     width: 144px;
