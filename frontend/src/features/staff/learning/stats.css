@@ -205,6 +205,15 @@
   height: 58px;
   flex: none;
 }
+.stats-student-detail {
+  display: block;
+  margin-top: 4px;
+  font-weight: 400;
+}
+#statistics-list,
+#student-answers {
+  scroll-margin-top: 20px;
+}
 .stats-question-text {
   max-width: 340px;
   width: 100%;

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentAccount } from '../../auth/queries';
 import { GameAvatar } from '../../game/GameAvatar';
@@ -66,6 +66,7 @@ function StudentWorkspace({
   };
   const classroom = useTeacherClassroom(classroomId);
   const detail = useTeacherStudent(classroomId, studentId, query);
+  const answerHeading = useRef<HTMLHeadingElement>(null);
   const questionId = numberParam(params.get('question'), 0, 150) || null;
   const change = (key: string, value: string) => {
     setParams(
@@ -102,6 +103,7 @@ function StudentWorkspace({
               : '학급'}{' '}
             · 학생 학습 상세
           </p>
+          <a href="#student-answers">답변 문항 바로가기 ↓</a>
           {data ? (
             <div className="stats-student-heading">
               <GameAvatar characterId={data.student.characterId} />
@@ -173,7 +175,10 @@ function StudentWorkspace({
                     className={`stats-day stats-day-${day.state.toLowerCase()}`}
                     aria-pressed={query.day === day.dayNumber}
                     aria-describedby={`stats-day-${day.dayNumber}`}
-                    onClick={() => change('day', String(day.dayNumber))}
+                    onClick={() => {
+                      change('day', String(day.dayNumber));
+                      answerHeading.current?.focus();
+                    }}
                   >
                     <strong>{day.dayNumber}회차</strong>
                     <span>{dayLabels[day.state]}</span>
@@ -190,7 +195,9 @@ function StudentWorkspace({
             </div>
           </section>
           <section className="stats-card">
-            <h2>첫 답변 문항</h2>
+            <h2 id="student-answers" ref={answerHeading} tabIndex={-1}>
+              첫 답변 문항
+            </h2>
             <div className="stats-filters">
               <label>
                 답변 회차

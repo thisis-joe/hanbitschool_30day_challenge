@@ -56,6 +56,9 @@ it('showsServerSummaryWithoutRecomputingFromCurrentPage', async () => {
   expect(screen.getByRole('heading', { name: /1학년 2반/ })).toBeVisible();
   expect(within(region).queryByRole('meter', { name: /해석\(X\) 정답률/ })).not.toBeInTheDocument();
   expect(await screen.findByRole('img', { name: '보라' })).toBeVisible();
+  expect(
+    within(screen.getByRole('rowheader')).getByRole('link', { name: /학생 상세/ }),
+  ).toHaveAttribute('href', path + '/students/student-a');
 });
 it.each([
   { enrolled: 4, threshold: 3 },

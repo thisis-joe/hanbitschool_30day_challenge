@@ -94,6 +94,7 @@ it('dayGridUsesCurrentServerStateAndAnswerFilterResetsPage', async () => {
   await userEvent.setup().click(day);
   await waitFor(() => expect(query?.get('day')).toBe('1'));
   expect(query?.get('page')).toBe('0');
+  expect(screen.getByRole('heading', { name: '첫 답변 문항' })).toHaveFocus();
   await userEvent.setup().selectOptions(screen.getByLabelText('답변 필터'), 'UNANSWERED');
   await waitFor(() => expect(query?.get('filter')).toBe('UNANSWERED'));
   expect(query?.get('page')).toBe('0');
