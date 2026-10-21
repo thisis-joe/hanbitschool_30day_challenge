@@ -48,6 +48,13 @@ export function useTeacherStudents(classroomId: string, query: StudentListQuery)
   return useQuery({
     queryKey: teacherLearningKeys.students(owner.accountId, classroomId, query),
     queryFn: ({ signal }) => getTeacherStudents(classroomId, query, signal),
+    placeholderData: (previous, previousQuery) =>
+      owner.enabled &&
+      previousQuery &&
+      previousQuery.queryKey[1] === owner.accountId &&
+      previousQuery.queryKey[2] === classroomId
+        ? previous
+        : undefined,
     enabled: owner.enabled && !!classroomId,
     retry: false,
   });
@@ -57,6 +64,14 @@ export function useTeacherStudent(classroomId: string, studentId: string, query:
   return useQuery({
     queryKey: teacherLearningKeys.student(owner.accountId, classroomId, studentId, query),
     queryFn: ({ signal }) => getTeacherStudent(classroomId, studentId, query, signal),
+    placeholderData: (previous, previousQuery) =>
+      owner.enabled &&
+      previousQuery &&
+      previousQuery.queryKey[1] === owner.accountId &&
+      previousQuery.queryKey[2] === classroomId &&
+      previousQuery.queryKey[4] === studentId
+        ? previous
+        : undefined,
     enabled: owner.enabled && !!classroomId && !!studentId,
     retry: false,
   });
@@ -66,6 +81,13 @@ export function useTeacherQuestions(classroomId: string, query: QuestionListQuer
   return useQuery({
     queryKey: teacherLearningKeys.questions(owner.accountId, classroomId, query),
     queryFn: ({ signal }) => getTeacherQuestions(classroomId, query, signal),
+    placeholderData: (previous, previousQuery) =>
+      owner.enabled &&
+      previousQuery &&
+      previousQuery.queryKey[1] === owner.accountId &&
+      previousQuery.queryKey[2] === classroomId
+        ? previous
+        : undefined,
     enabled: owner.enabled && !!classroomId && active,
     retry: false,
   });

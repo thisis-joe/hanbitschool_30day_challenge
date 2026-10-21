@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentAccount } from '../../auth/queries';
 import { GameAvatar } from '../../game/GameAvatar';
@@ -66,6 +66,7 @@ function StudentWorkspace({
   };
   const classroom = useTeacherClassroom(classroomId);
   const detail = useTeacherStudent(classroomId, studentId, query);
+  const answerHeading = useRef<HTMLHeadingElement>(null);
   const questionId = numberParam(params.get('question'), 0, 150) || null;
   const change = (key: string, value: string) => {
     setParams(
@@ -102,6 +103,7 @@ function StudentWorkspace({
               : '학급'}{' '}
             · 학생 학습 상세
           </p>
+          <a href="#student-answers">답변 문항 바로가기 ↓</a>
           {data ? (
             <div className="stats-student-heading">
               <GameAvatar characterId={data.student.characterId} />
@@ -173,7 +175,11 @@ function StudentWorkspace({
                     className={`stats-day stats-day-${day.state.toLowerCase()}`}
                     aria-pressed={query.day === day.dayNumber}
                     aria-describedby={`stats-day-${day.dayNumber}`}
-                    onClick={() => change('day', String(day.dayNumber))}
+                    onClick={() => {
+                      change('day', String(day.dayNumber));
+                      answerHeading.current?.focus({ preventScroll: true });
+                      answerHeading.current?.scrollIntoView({ block: 'start' });
+                    }}
                   >
                     <strong>{day.dayNumber}회차</strong>
                     <span>{dayLabels[day.state]}</span>
@@ -190,7 +196,9 @@ function StudentWorkspace({
             </div>
           </section>
           <section className="stats-card">
-            <h2>첫 답변 문항</h2>
+            <h2 id="student-answers" ref={answerHeading} tabIndex={-1}>
+              첫 답변 문항
+            </h2>
             <div className="stats-filters">
               <label>
                 답변 회차
@@ -221,12 +229,16 @@ function StudentWorkspace({
                 </select>
               </label>
             </div>
+            {detail.isPlaceholderData ? (
+              <p role="status">답변 목록을 갱신하고 있습니다. 잠시 이전 결과를 표시합니다.</p>
+            ) : null}
             <p className="stats-scroll-hint">표를 좌우로 밀어 나머지 항목을 확인하세요.</p>
             <div
               className="stats-table-scroll"
               tabIndex={0}
               role="region"
               aria-label="학생 문항 표 가로 스크롤"
+              aria-busy={detail.isFetching}
             >
               <table aria-label="학생 첫 답변">
                 <caption>
@@ -283,19 +295,21 @@ function StudentWorkspace({
               <button
                 aria-label="이전 페이지"
                 className="secondary"
-                disabled={query.page === 0}
+                disabled={detail.isFetching || query.page === 0}
                 onClick={() => change('page', String(query.page - 1))}
               >
                 이전
               </button>
               <span>
-                {query.page + 1} / {Math.max(1, Math.ceil(data.answers.total / data.answers.size))}{' '}
-                페이지
+                {data.answers.page + 1} /{' '}
+                {Math.max(1, Math.ceil(data.answers.total / data.answers.size))} 페이지
               </span>
               <button
                 aria-label="다음 페이지"
                 className="secondary"
-                disabled={(query.page + 1) * data.answers.size >= data.answers.total}
+                disabled={
+                  detail.isFetching || (query.page + 1) * data.answers.size >= data.answers.total
+                }
                 onClick={() => change('page', String(query.page + 1))}
               >
                 다음

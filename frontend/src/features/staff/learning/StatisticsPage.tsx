@@ -103,6 +103,7 @@ function StatisticsWorkspace({
               : '학급 학습 통계'}
           </h1>
           <p>첫 답변을 기준으로 학급 전체 학습과 복습 개선을 확인합니다.</p>
+          <a href="#statistics-list">학생·문항 목록 바로가기 ↓</a>
         </div>
         <span className="stats-readonly">교사용 조회</span>
       </header>
@@ -151,7 +152,7 @@ function StatisticsWorkspace({
           </section>
         </>
       ) : null}
-      <nav className="stats-tabs" aria-label="통계 종류">
+      <nav id="statistics-list" tabIndex={-1} className="stats-tabs" aria-label="통계 종류">
         <button
           aria-pressed={tab === 'students'}
           onClick={() =>
@@ -256,6 +257,9 @@ function StatisticsWorkspace({
             </>
           )}
         </form>
+        {selectedList.isPlaceholderData ? (
+          <p role="status">목록을 갱신하고 있습니다. 잠시 이전 결과를 표시합니다.</p>
+        ) : null}
         {tab === 'questions' && questions.isPending ? (
           <p role="status">문항을 불러오고 있습니다.</p>
         ) : null}
@@ -274,6 +278,7 @@ function StatisticsWorkspace({
             tabIndex={0}
             role="region"
             aria-label="학생 학습 표 가로 스크롤"
+            aria-busy={students.isFetching}
           >
             <table aria-label="학생 학습 현황">
               <caption>
@@ -287,27 +292,14 @@ function StatisticsWorkspace({
                   <th scope="col">통과 회차</th>
                   <th scope="col">첫 정답률</th>
                   <th scope="col">미개선 오답</th>
-                  <th scope="col">상세</th>
                 </tr>
               </thead>
               <tbody>
                 {students.data.students.items.map((row) => (
                   <tr key={row.accountId}>
                     <th scope="row">
-                      <div className="stats-student">
-                        <GameAvatar characterId={row.characterId} />
-                        <span>
-                          {row.studentNumber}번 <span>{row.name}</span>
-                        </span>
-                      </div>
-                    </th>
-                    <td>{studentStatusLabel[row.status]}</td>
-                    <td>{row.answered} / 150</td>
-                    <td>{row.passedDayCount} / 30</td>
-                    <td>{rate(row.accuracy)}</td>
-                    <td>{row.pendingWrong}개</td>
-                    <td>
                       <Link
+                        className="stats-student"
                         aria-label={`${row.studentNumber}번 ${row.name} 학생 상세`}
                         to={`/staff/classrooms/${encodeURIComponent(classroomId)}/learning/students/${encodeURIComponent(row.accountId)}`}
                         state={{
@@ -316,9 +308,18 @@ function StatisticsWorkspace({
                           classroomId,
                         }}
                       >
-                        학생 상세
+                        <GameAvatar characterId={row.characterId} />
+                        <span>
+                          {row.studentNumber}번 <span>{row.name}</span>
+                          <small className="stats-student-detail">학습 상세 →</small>
+                        </span>
                       </Link>
-                    </td>
+                    </th>
+                    <td>{studentStatusLabel[row.status]}</td>
+                    <td>{row.answered} / 150</td>
+                    <td>{row.passedDayCount} / 30</td>
+                    <td>{rate(row.accuracy)}</td>
+                    <td>{row.pendingWrong}개</td>
                   </tr>
                 ))}
               </tbody>
@@ -331,6 +332,7 @@ function StatisticsWorkspace({
             tabIndex={0}
             role="region"
             aria-label="문항 분석 표 가로 스크롤"
+            aria-busy={questions.isFetching}
           >
             <table aria-label="문항 분석">
               <caption>
@@ -385,18 +387,19 @@ function StatisticsWorkspace({
             <button
               className="secondary"
               aria-label="이전 페이지"
-              disabled={page === 0}
+              disabled={selectedList.isFetching || page === 0}
               onClick={() => change({ page: String(page - 1) }, false)}
             >
               이전
             </button>
             <span>
-              {page + 1} / {Math.max(1, Math.ceil(pagination.total / pagination.size))} 페이지
+              {pagination.page + 1} / {Math.max(1, Math.ceil(pagination.total / pagination.size))}{' '}
+              페이지
             </span>
             <button
               className="secondary"
               aria-label="다음 페이지"
-              disabled={(page + 1) * pagination.size >= pagination.total}
+              disabled={selectedList.isFetching || (page + 1) * pagination.size >= pagination.total}
               onClick={() => change({ page: String(page + 1) }, false)}
             >
               다음
