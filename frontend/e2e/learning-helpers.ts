@@ -361,7 +361,7 @@ export async function answer(
   expect(result.correctChoice).toBe(right);
   expect(result.explanation.length).toBeGreaterThan(0);
   await expect(
-    page.getByRole('heading', { name: correct ? '정답이에요' : '오답이에요', exact: true }),
+    page.getByRole('heading', { name: correct ? '정답이에요!' : '오답이에요', exact: true }),
   ).toBeVisible();
   await protectedText(page.locator('.learning-explanation'), result.explanation);
   await expect(
@@ -462,7 +462,7 @@ export async function captureSanitizedResultProof(page: Page) {
       path: output.file(`result-${width}.png`),
       animations: 'disabled',
       style:
-        '.student-header, .game-student-nav, .learning-eyebrow, .learning-source, .learning-explanation, .learning-correct-choice, .learning-personal-text { visibility: hidden !important; }',
+        '.student-header, .game-student-nav, .learning-eyebrow, .learning-source, .learning-explanation, .learning-personal-text { visibility: hidden !important; }',
     });
   }
 }

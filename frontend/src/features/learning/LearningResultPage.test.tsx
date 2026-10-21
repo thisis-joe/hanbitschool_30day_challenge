@@ -635,7 +635,7 @@ it('completedSessionRestoresWithoutAFinishMutation', async () => {
     }),
   );
   const page = setup(`/student/learning/sessions/${sessionId}`);
-  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '정답이에요!' })).toBeVisible();
   expect(screen.queryByRole('button', { name: '다음 문제' })).not.toBeInTheDocument();
   const finish = screen.getByRole('link', { name: '완료하기' });
   expect(finish).toHaveAttribute('href', `/student/learning/sessions/${sessionId}/result`);

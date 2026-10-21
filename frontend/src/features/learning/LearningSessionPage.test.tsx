@@ -79,7 +79,7 @@ it.each(['FIRST', 'REVIEW'] as const)(
       await userEvent.keyboard('{Enter}');
       expect(screen.getByRole('link', { name: '완료하기' })).toBe(completion);
       expect(completion).toHaveAttribute('aria-disabled', 'true');
-      expect(screen.getByRole('heading', { name: '정답이에요' })).toBeVisible();
+      expect(screen.getByRole('heading', { name: '정답이에요!' })).toBeVisible();
       expect(readPendingCommand('student-a')?.kind).toBe('ANSWER');
       await act(async () => release.resolve());
       await waitFor(() => expect(completion).toHaveAttribute('aria-disabled', 'false'));
@@ -132,7 +132,7 @@ it('preAnswerInitialCosmeticReadsCannotPublishStaleMapAfterCanonicalAnswer', asy
       expect(mapReads).toBe(1);
     });
     await userEvent.click(screen.getByRole('button', { name: 'O · 사실' }));
-    await screen.findByRole('heading', { name: '정답이에요' });
+    await screen.findByRole('heading', { name: '정답이에요!' });
     await waitFor(() => expect(screen.getByRole('button', { name: '다음 문제' })).toBeEnabled());
     await waitFor(() =>
       expect(client.getQueryData(gameKeys.journey('student-a'))).toMatchObject({
@@ -206,7 +206,7 @@ it('heldCosmeticRefreshDoesNotKeepCanonicalFeedbackOrNextPending', async () => {
     await screen.findByRole('button', { name: 'O · 사실' });
     await waitFor(() => expect(client.isFetching({ queryKey: ['game'] })).toBe(0));
     await userEvent.click(screen.getByRole('button', { name: 'O · 사실' }));
-    await screen.findByRole('heading', { name: '정답이에요' });
+    await screen.findByRole('heading', { name: '정답이에요!' });
     await waitFor(() => expect(held).toHaveLength(2));
     await learningEntered.promise;
     expect(screen.getByRole('button', { name: '다음 문제' })).toBeDisabled();
@@ -256,7 +256,7 @@ it('gameReadFailureDoesNotBlockActiveLearning', async () => {
   );
   expect(screen.getByRole('button', { name: 'X · 해석' })).toBeEnabled();
   await userEvent.click(choice);
-  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '정답이에요!' })).toBeVisible();
   expect(writes).toBe(1);
 });
 
@@ -436,8 +436,8 @@ it('userQueuedCorrectAnswerRemainsExplicitlyRemovable', async () => {
   );
   const { client } = renderPage(<App />, `/student/learning/sessions/${sessionId}`);
   await userEvent.click(await screen.findByRole('button', { name: 'O · 사실' }));
-  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
-  await waitFor(() => expect(screen.getByRole('button', { name: '별표' })).toBeEnabled());
+  expect(await screen.findByRole('heading', { name: '정답이에요!' })).toBeVisible();
+  await waitFor(() => expect(screen.getByRole('button', { name: '즐겨찾기' })).toBeEnabled());
   expect(client.getQueryData(learningKeys.questions('student-a', 'REVIEW_QUEUE'))).toEqual([
     queuedQuestion,
   ]);
@@ -446,6 +446,46 @@ it('userQueuedCorrectAnswerRemainsExplicitlyRemovable', async () => {
   expect(await screen.findByRole('button', { name: '다시 볼 목록에서 제거' })).toBeEnabled();
   expect(screen.getByText('복습 완료 · 다시 볼 목록에 있어요')).toBeVisible();
   expect(deletes).toBe(0);
+});
+
+it('feedbackBookmarkAddsAndRemovesWithAnIconAndActionDescription', async () => {
+  let bookmarked = false;
+  const writes: string[] = [];
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () => json(answeredSession)),
+    http.get('*/api/student/learning/questions', ({ request }) =>
+      HttpResponse.json(
+        new URL(request.url).searchParams.get('filter') === 'BOOKMARKED' && bookmarked
+          ? [{ ...personalQuestion, bookmarked: true }]
+          : [],
+      ),
+    ),
+    http.put('*/api/student/learning/bookmarks/1', () => {
+      writes.push('add');
+      bookmarked = true;
+      return new HttpResponse(null, { status: 204 });
+    }),
+    http.delete('*/api/student/learning/bookmarks/1', () => {
+      writes.push('remove');
+      bookmarked = false;
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+  setup();
+  const bookmark = await screen.findByRole('button', { name: '즐겨찾기' });
+  await waitFor(() => expect(bookmark).toBeEnabled());
+  expect(bookmark).toHaveAttribute('aria-pressed', 'false');
+  expect(bookmark).toHaveAccessibleDescription('즐겨찾기 추가');
+  expect(bookmark.textContent).toBe('');
+  await userEvent.click(bookmark);
+  await waitFor(() => expect(bookmark).toHaveAttribute('aria-pressed', 'true'));
+  expect(bookmark).toHaveAccessibleDescription('즐겨찾기 해제');
+  await waitFor(() => expect(bookmark).toBeEnabled());
+  bookmark.focus();
+  await userEvent.keyboard('{Enter}');
+  await waitFor(() => expect(bookmark).toHaveAttribute('aria-pressed', 'false'));
+  expect(bookmark).toHaveAccessibleDescription('즐겨찾기 추가');
+  expect(writes).toEqual(['add', 'remove']);
 });
 
 // Rendering lastAnswer in QUESTION_ACTIVE would reveal a previous question's result.
@@ -467,7 +507,7 @@ it('activeQuestionDoesNotRevealAnswerOrExplanation', async () => {
 
 // Client choice-based scoring would disagree with the server's WRONG/TIMED_OUT response.
 it.each([
-  ['CORRECT', '정답이에요'],
+  ['CORRECT', '정답이에요!'],
   ['WRONG', '오답이에요'],
   ['TIMED_OUT', '시간이 초과되었어요'],
 ] as const)('correctWrongAndTimeoutFeedbackUseServerResult: %s', async (outcome, label) => {
@@ -483,7 +523,7 @@ it.each([
   setup();
   await userEvent.click(await screen.findByRole('button', { name: 'O · 사실' }));
   expect(await screen.findByRole('heading', { name: label })).toHaveFocus();
-  expect(screen.getByText('정답은 X · 해석')).toBeVisible();
+  expect(screen.queryByText(/정답은/)).not.toBeInTheDocument();
   expect(screen.getByText('테스트용 설명입니다.')).toBeVisible();
   expect(screen.getByText('이번 답변으로 받은 경험치: 1 XP')).toBeVisible();
   // Canonical feedback publishes before the existing learning cache refresh settles.
@@ -629,7 +669,7 @@ it('reloadRestoresAnUncertainAnswerWithoutOfferingAnotherChoice', async () => {
   expect(await screen.findByRole('button', { name: 'O · 사실' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'X · 해석' })).toBeDisabled();
   await userEvent.click(screen.getByRole('button', { name: '같은 답변 다시 확인' }));
-  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '정답이에요!' })).toBeVisible();
   expect(bodies).toHaveLength(2);
   expect(bodies[1]).toEqual(bodies[0]);
   expect(bodies[0]).toMatchObject({ questionId: 1, choice: 'O' });
@@ -658,7 +698,7 @@ it('uncertainAnswerCanBeRetriedWhenTheReloadReadFails', async () => {
   setup();
   await screen.findByRole('alert');
   await userEvent.click(screen.getByRole('button', { name: '같은 답변 다시 확인' }));
-  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '정답이에요!' })).toBeVisible();
   expect(bodies).toEqual([{ requestId, questionId: 1, choice: 'O' }]);
 });
 
@@ -679,7 +719,7 @@ it('resumeKeepsTheOriginalDeadlineInQuestionAndFeedback', async () => {
     ),
   );
   const resumed = setup();
-  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '정답이에요!' })).toBeVisible();
   expect(screen.queryByText(/남은 시간/)).not.toBeInTheDocument();
   expect(
     resumed.client.getQueryData<LearningSessionView>(learningKeys.session('student-a', sessionId))
@@ -900,7 +940,7 @@ it('returningToThePageDoesNotCancelAnInFlightCanonicalAnswerRead', async () => {
   await act(async () => {
     release.resolve();
   });
-  expect(await screen.findByRole('heading', { name: '정답이에요' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '정답이에요!' })).toBeVisible();
   await waitFor(() => expect(screen.queryByText('답변을 확인하고 있어요')).not.toBeInTheDocument());
   expect(screen.queryByRole('button', { name: '같은 답변 다시 확인' })).not.toBeInTheDocument();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();

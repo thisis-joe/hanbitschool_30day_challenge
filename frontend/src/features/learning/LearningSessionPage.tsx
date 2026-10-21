@@ -11,7 +11,7 @@ import { AnswerGameScene } from '../game/AnswerGameScene';
 import { ExperienceReward } from '../game/ExperienceReward';
 
 const outcomes = {
-  CORRECT: '정답이에요',
+  CORRECT: '정답이에요!',
   WRONG: '오답이에요',
   TIMED_OUT: '시간이 초과되었어요',
 };
@@ -232,27 +232,38 @@ export function LearningSessionPage() {
               {question?.questionId === feedback.questionId ? (
                 <p className="learning-source">{question.text}</p>
               ) : null}
-              <p className="learning-correct-choice">
-                정답은 {feedback.correctChoice === 'O' ? 'O · 사실' : 'X · 해석'}
-              </p>
               <p className="learning-explanation">{feedback.explanation}</p>
               <QuestionFeedbackActions questionId={feedback.questionId} result={feedback} />
-              {view.state === 'COMPLETED' ? (
-                <Link
-                  className="button learning-completion"
-                  to={`/student/learning/sessions/${view.sessionId}/result`}
-                  aria-disabled={blocked}
-                  onClick={(event) => {
-                    if (blocked) event.preventDefault();
-                  }}
-                >
-                  완료하기
-                </Link>
-              ) : (
-                <button disabled={blocked} onClick={() => void actions.advance(view.sessionId)}>
-                  다음 문제
-                </button>
-              )}
+              <div className="learning-feedback-navigation">
+                {view.state === 'COMPLETED' ? (
+                  <Link
+                    className="button learning-completion"
+                    to={`/student/learning/sessions/${view.sessionId}/result`}
+                    aria-disabled={blocked}
+                    onClick={(event) => {
+                      if (blocked) event.preventDefault();
+                    }}
+                  >
+                    완료하기
+                  </Link>
+                ) : (
+                  <button
+                    className="learning-next"
+                    disabled={blocked}
+                    onClick={() => void actions.advance(view.sessionId)}
+                  >
+                    <span>다음 문제</span>
+                    <svg viewBox="0 0 80 80" aria-hidden="true" focusable="false">
+                      <path
+                        className="learning-next-shadow"
+                        d="M18 9 62 34Q66 36 62 39L18 63Q13 66 13 60V12Q13 6 18 9Z"
+                        transform="translate(0 4)"
+                      />
+                      <path d="M18 9 62 34Q66 36 62 39L18 63Q13 66 13 60V12Q13 6 18 9Z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <p role="alert">현재 문항을 확인할 수 없어요. 최신 상태를 다시 불러와 주세요.</p>

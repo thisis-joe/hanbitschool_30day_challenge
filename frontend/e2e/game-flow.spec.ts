@@ -353,7 +353,7 @@ test('firstPassGiftSavesWithoutFinishAndReplayPaysOnlyRepeatXp', async ({ page }
   expect(results.at(-1)?.dayState).toBe('PASSED');
   expect((await game(page)).inventory).toEqual(saved.inventory);
   expect((await status(page)).totalXp).toBe(5074);
-  const bookmark = page.getByRole('button', { name: '별표', exact: true });
+  const bookmark = page.getByRole('button', { name: '즐겨찾기', exact: true });
   await bookmark.click();
   await expect(bookmark).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/student/questions?filter=BOOKMARKED');

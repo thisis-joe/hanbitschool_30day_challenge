@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { meKey, useCurrentAccount } from '../auth/queries';
 import type { AccountMe } from '../auth/types';
@@ -24,6 +24,7 @@ export function QuestionFeedbackActions(props: Props) {
   );
 }
 function FeedbackTools({ questionId, result, accountId }: Props & { accountId: string }) {
+  const bookmarkTipId = useId();
   const queue = usePersonalQuestions('REVIEW_QUEUE');
   const mastered = usePersonalQuestions('MASTERED');
   const bookmarks = usePersonalQuestions('BOOKMARKED');
@@ -34,6 +35,7 @@ function FeedbackTools({ questionId, result, accountId }: Props & { accountId: s
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [dismissed, setDismissed] = useState(false);
+  const [bookmarkTipDismissed, setBookmarkTipDismissed] = useState(false);
   useEffect(() => {
     mounted.current = true;
     const abort = () => flight.current?.abort();
@@ -86,15 +88,47 @@ function FeedbackTools({ questionId, result, accountId }: Props & { accountId: s
   }
   return (
     <div className="learning-feedback-tools" role="group" aria-label={`문항 ${questionId} 관리`}>
-      <button
-        className="secondary"
-        aria-label="별표"
-        aria-pressed={bookmarked}
-        disabled={!ready || busy}
-        onClick={() => void write('STAR')}
-      >
-        {bookmarked ? '★ 별표' : '☆ 별표'}
-      </button>
+      {result ? (
+        <span
+          className="learning-bookmark"
+          onMouseEnter={() => setBookmarkTipDismissed(false)}
+          onFocus={() => setBookmarkTipDismissed(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setBookmarkTipDismissed(true);
+          }}
+        >
+          <button
+            className="learning-bookmark-toggle"
+            aria-label="즐겨찾기"
+            aria-describedby={bookmarkTipId}
+            aria-pressed={bookmarked}
+            disabled={!ready || busy}
+            onClick={() => void write('STAR')}
+          >
+            <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+              <path d="m20 3.5 5.1 10.4 11.5 1.7-8.3 8.1 2 11.5L20 29.8 9.7 35.2l2-11.5-8.3-8.1 11.5-1.7Z" />
+            </svg>
+          </button>
+          <span
+            className="learning-bookmark-tooltip"
+            id={bookmarkTipId}
+            role="tooltip"
+            hidden={bookmarkTipDismissed}
+          >
+            {bookmarked ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+          </span>
+        </span>
+      ) : (
+        <button
+          className="secondary"
+          aria-label="별표"
+          aria-pressed={bookmarked}
+          disabled={!ready || busy}
+          onClick={() => void write('STAR')}
+        >
+          {bookmarked ? '★ 별표' : '☆ 별표'}
+        </button>
+      )}
       {prompt ? (
         <div className="learning-consent">
           <p>다시 볼 문제로 추가할까요?</p>

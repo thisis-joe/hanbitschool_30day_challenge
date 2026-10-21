@@ -40,7 +40,7 @@ test('studentCanPassFiveQuestionsAndRestoreTheSavedResult', async ({ page }) => 
   await expect(page.locator('time')).not.toHaveAttribute('aria-live', /.+/);
   const one = await answer(page, first, true, true);
   expect(one.xpAwarded).toBe(564); // Catch-up first correct: 375 + 190 - 1.
-  await visibleFocus(page.getByRole('heading', { name: '정답이에요', exact: true }));
+  await visibleFocus(page.getByRole('heading', { name: '정답이에요!', exact: true }));
   await layoutAndTargets(page);
   const second = await advance(page, first.sessionId);
   const remaining = await finishDay(page, second, [true, true, true, true]);
@@ -175,7 +175,7 @@ test('questionAndFeedbackResumeKeepTheSameServerDeadline', async ({ page, browse
     expect(feedback.question?.deadlineAt).toBe(deadline);
     expect(feedback.lastAnswer?.attemptAnswerId).toBe(saved.attemptAnswerId);
     await page.reload();
-    await expect(page.getByRole('heading', { name: '정답이에요', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '정답이에요!', exact: true })).toBeVisible();
     expect((await session(page, first.sessionId)).question?.deadlineAt).toBe(deadline);
     await page.goto(`/student/learning/sessions/${first.sessionId}/result`);
     await expect(page).toHaveURL(new RegExp(`/sessions/${first.sessionId}$`));
