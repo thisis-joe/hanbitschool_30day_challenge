@@ -1,4 +1,25 @@
 @charset "UTF-8";
+@font-face {
+  font-family: 'NanumSquareRound';
+  src: url('/fonts/nanum-square-round/NanumSquareRoundOTFR.otf') format('opentype');
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'NanumSquareRound';
+  src: url('/fonts/nanum-square-round/NanumSquareRoundOTFB.otf') format('opentype');
+  font-weight: 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'NanumSquareRound';
+  src: url('/fonts/nanum-square-round/NanumSquareRoundOTFEB.otf') format('opentype');
+  font-weight: 800 900;
+  font-style: normal;
+  font-display: swap;
+}
 /* Paper tabs keep the student's four destinations visible at every width. */
 .game-student-nav {
   position: sticky;
@@ -75,7 +96,7 @@
   --ink: #263d35;
   --line: #435748;
   --shadow: #263d35;
-  font-family: '맑은 고딕', 'Apple SD Gothic Neo', sans-serif;
+  font-family: 'NanumSquareRound', sans-serif;
   color: var(--ink);
   background: var(--cream);
   font-synthesis: none;
@@ -113,7 +134,8 @@ a {
 }
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
   color: inherit;
 }

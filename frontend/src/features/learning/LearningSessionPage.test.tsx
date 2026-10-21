@@ -501,7 +501,8 @@ it('activeQuestionDoesNotRevealAnswerOrExplanation', async () => {
   expect(screen.getByText('테스트용 문항입니다.')).toBeVisible();
   expect(screen.queryByText('테스트용 설명입니다.')).not.toBeInTheDocument();
   expect(screen.queryByText(/정답은/)).not.toBeInTheDocument();
-  expect(screen.getByText('현재 문항의 제한시간은 계속 흘러요')).toBeVisible();
+  expect(screen.getByRole('progressbar', { name: '남은 시간' })).toBeVisible();
+  expect(screen.queryByRole('link', { name: '학습 홈으로' })).toBeNull();
   expect(screen.getByRole('heading', { name: /문항 1/ })).toHaveFocus();
 });
 
@@ -998,10 +999,7 @@ it.each(['CONTENT_VERSION_MISMATCH', 'IDEMPOTENCY_KEY_REUSED'])(
     await userEvent.click(await screen.findByRole('button', { name: 'O · 사실' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('최신 상태를 다시 확인해 주세요.');
     expect(screen.getByRole('button', { name: '최신 상태 다시 불러오기' })).toBeEnabled();
-    expect(screen.getAllByRole('link', { name: '학습 홈으로' })[0]).toHaveAttribute(
-      'href',
-      '/student/learning',
-    );
+    expect(screen.queryByRole('link', { name: '학습 홈으로' })).toBeNull();
     expect(posts).toBe(1);
   },
 );
