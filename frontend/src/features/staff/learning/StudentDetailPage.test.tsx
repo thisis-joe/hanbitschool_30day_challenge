@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { expect, it, vi } from 'vitest';
+import { beforeAll, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { AppRoutes } from '../../../app/router';
 import { renderPage } from '../../../test/render';
@@ -11,6 +11,9 @@ import {
   teacherLearningHandlers,
 } from '../../../test/teacherLearningFixtures';
 vi.mock('../../game/avatarRenderer', () => ({ renderAvatar: async () => undefined }));
+beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+});
 const path = '/staff/classrooms/class-a/learning';
 it('keepsAnswerControlsAndFocusWhileAChangedFilterLoads', async () => {
   teacherLearningHandlers();

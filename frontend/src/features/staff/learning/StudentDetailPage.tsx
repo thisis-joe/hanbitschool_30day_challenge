@@ -177,7 +177,8 @@ function StudentWorkspace({
                     aria-describedby={`stats-day-${day.dayNumber}`}
                     onClick={() => {
                       change('day', String(day.dayNumber));
-                      answerHeading.current?.focus();
+                      answerHeading.current?.focus({ preventScroll: true });
+                      answerHeading.current?.scrollIntoView({ block: 'start' });
                     }}
                   >
                     <strong>{day.dayNumber}회차</strong>
