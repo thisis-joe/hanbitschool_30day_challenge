@@ -294,12 +294,12 @@ test('empty lists explain the next step without a dead review action', async ({ 
   await expect(page.getByRole('button', { name: '선택한 문제 복습하기' })).toHaveCount(0);
 });
 
-test('home offers all rounds on demand', async ({ page }) => {
+test('home keeps learning focused without round cards', async ({ page }) => {
   await scenario(page);
   await page.goto('/student/learning');
-  await expect(page.getByRole('button', { name: '30회차 시작하기', exact: true })).toBeHidden();
-  await page.getByText('회차별 학습 보기', { exact: true }).click();
-  await expect(page.getByRole('button', { name: '30회차 시작하기', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '오늘 학습 시작', exact: true })).toBeVisible();
+  await expect(page.getByRole('list', { name: '회차별 학습' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '회차별 학습 보기' })).toHaveCount(0);
 });
 
 test('mobile wardrobe brings the preview into reach and returns to the chosen item', async ({

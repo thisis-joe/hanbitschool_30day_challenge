@@ -52,7 +52,7 @@ it('colors the complete five-session terrain only from its first server-confirme
   const { update } = mount(view);
   expect(terrain(1)).toHaveAttribute('data-revealed', 'true');
   expect(terrain(6)).toHaveAttribute('data-revealed', 'false');
-  expect(screen.getByRole('link', { name: '7회차 살펴보기' })).toHaveClass('game-map-locked');
+  expect(screen.getByLabelText('7회차 아직 열리지 않음')).toHaveClass('game-map-locked');
   update({
     ...view,
     days: view.days.map((day) =>
@@ -61,7 +61,7 @@ it('colors the complete five-session terrain only from its first server-confirme
   });
   expect(terrain(6)).toHaveAttribute('data-revealed', 'true');
   expect(terrain(11)).toHaveAttribute('data-revealed', 'false');
-  expect(screen.getByRole('link', { name: '7회차 살펴보기' })).toHaveClass('game-map-locked');
+  expect(screen.getByLabelText('7회차 아직 열리지 않음')).toHaveClass('game-map-locked');
 });
 
 // Equal height slices split the uneven original terrain and do not align the five-day route groups.

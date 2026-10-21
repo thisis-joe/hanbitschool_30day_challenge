@@ -564,3 +564,29 @@
     scroll-behavior: auto !important;
   }
 }
+
+.learning-replay-picker {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.learning-replay-picker summary {
+  cursor: pointer;
+  padding-block: 10px;
+}
+.learning-replay-picker > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-block: 12px;
+}
+.learning-replay-picker label {
+  margin: 0;
+}
+.learning-replay-picker select {
+  width: auto;
+  flex: 1;
+  max-width: 220px;
+}

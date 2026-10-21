@@ -122,3 +122,72 @@ test('time bar drains independently and only the last-five-second text blinks', 
   await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
   await expect(remaining).toHaveCount(0);
 });
+
+for (const width of [390, 1280]) {
+  test(`wardrobe supports arrows, touch, bounds and blur without saving at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const writes = await scenario(page);
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto('/student/closet');
+    const room = page.getByRole('group', { name: '캐릭터 움직이기' });
+    await room.locator('[data-ready="true"]').waitFor();
+    await room.scrollIntoViewIfNeeded();
+    await room.focus();
+    const actor = room.locator('.game-wardrobe-walker');
+    const original = (await actor.boundingBox())!;
+    await page.keyboard.down('ArrowRight');
+    await page.waitForTimeout(350);
+    await page.keyboard.up('ArrowRight');
+    expect((await actor.boundingBox())!.x).toBeGreaterThan(original.x + 25);
+    await expect(actor).toHaveAttribute('data-moving', 'false');
+    const area = (await room.boundingBox())!;
+    await page.touchscreen.tap(area.x + 35, area.y + area.height * 0.85);
+    await expect.poll(async () => (await actor.boundingBox())!.x).toBeLessThan(original.x);
+    await room.focus();
+    await page.keyboard.down('ArrowLeft');
+    await page.waitForTimeout(1500);
+    await page.keyboard.up('ArrowLeft');
+    expect((await actor.boundingBox())!.x).toBeGreaterThanOrEqual(area.x);
+    await page.keyboard.down('ArrowUp');
+    await page.waitForTimeout(250);
+    const up = (await actor.boundingBox())!;
+    expect(up.y).toBeLessThan(original.y);
+    await page.getByRole('button', { name: '얼굴 장비 보기' }).focus();
+    await page.keyboard.up('ArrowUp');
+    await expect(actor).toHaveAttribute('data-moving', 'false');
+    const stopped = (await actor.boundingBox())!;
+    await page.waitForTimeout(200);
+    expect((await actor.boundingBox())!.y).toBeCloseTo(stopped.y, 0);
+    expect(writes).toEqual([]);
+    expect(errors).toEqual([]);
+    await expect(page.locator('.game-wardrobe-grid .game-base-option')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '얼굴 기본 모습' })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    expect(
+      await page.evaluate(() => document.fonts.check('16px NanumSquareRound', '한빛학교')),
+    ).toBe(true);
+    expect(await page.locator('body').evaluate((el) => getComputedStyle(el).fontFamily)).toContain(
+      'NanumSquareRound',
+    );
+    const output = evidenceOutput();
+    if (output)
+      await page.screenshot({ path: output.file(`wardrobe-${width}.png`), fullPage: true });
+  });
+}
+
+test('exploration is a map with no next-learning or round-card commands', async ({ page }) => {
+  const writes = await scenario(page);
+  await page.goto('/student/map');
+  await expect(page.getByRole('heading', { name: '탐험 지도', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: '탐험 경로' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '다음 배움' })).toHaveCount(0);
+  await expect(page.getByRole('list', { name: '회차별 학습' })).toHaveCount(0);
+  await expect(page.locator('a[href^="#journey-day-"]')).toHaveCount(0);
+  await page.getByRole('button', { name: '현재 위치로 돌아가기' }).click();
+  expect(writes).toEqual([]);
+  const output = evidenceOutput();
+  if (output) await page.screenshot({ path: output.file('exploration.png'), fullPage: true });
+});

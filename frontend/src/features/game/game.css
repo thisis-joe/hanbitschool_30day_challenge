@@ -185,7 +185,7 @@
   position: relative;
   min-height: 440px;
   border-left: 3px solid var(--ink);
-  background: url('/game/scenes/forest.webp') center / cover;
+  background: url('/game/scenes/forest.webp') center bottom / cover;
   image-rendering: pixelated;
 }
 .game-scene-village {
@@ -198,7 +198,7 @@
   position: absolute;
   width: 184px;
   left: 31%;
-  bottom: 21%;
+  bottom: calc(var(--scene-ground, 26.5%) - 8px);
 }
 .button.game-signpost {
   position: absolute;
@@ -392,7 +392,7 @@
   .game-camp-scene > .game-avatar {
     left: 21%;
     width: 124px;
-    bottom: 21%;
+    bottom: calc(var(--scene-ground, 26.5%) - 8px);
   }
   .game-character-studio {
     grid-template-columns: minmax(0, 1fr);

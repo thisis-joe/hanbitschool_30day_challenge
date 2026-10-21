@@ -14,11 +14,15 @@ export function AnimatedGameAvatar({
   equippedBySlot = bare,
   motion,
   animate = true,
+  loopWalk = false,
+  label,
 }: {
   characterId: CharacterId | null;
   equippedBySlot?: Equipment;
   motion: AvatarMotion;
   animate?: boolean;
+  loopWalk?: boolean;
+  label?: string;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [rig, setRig] = useState<AvatarRig | null>(null);
@@ -51,7 +55,15 @@ export function AnimatedGameAvatar({
       if (!canvas.current) return;
       const elapsed = now - since,
         reduced = media?.matches || !animate;
-      paintAvatarPose(canvas.current, rig, samplePose(motion, elapsed, reduced));
+      paintAvatarPose(
+        canvas.current,
+        rig,
+        samplePose(
+          motion,
+          loopWalk && motion === 'walk' ? elapsed % MOTION_MS.walk : elapsed,
+          reduced,
+        ),
+      );
       canvas.current.dataset.ready = 'true';
       const running =
         motion === 'walk' ||
@@ -69,13 +81,14 @@ export function AnimatedGameAvatar({
       cancelAnimationFrame(frame);
       media?.removeEventListener('change', refresh);
     };
-  }, [rig, failed, motion, animate]);
+  }, [rig, failed, motion, animate, loopWalk]);
   if (failed)
     return (
       <GameAvatar
         characterId={characterId}
         equippedBySlot={equippedBySlot}
         className="game-avatar-motion-fallback"
+        label={label}
       />
     );
   return (
@@ -86,7 +99,9 @@ export function AnimatedGameAvatar({
       height={216}
       data-motion={motion}
       role="img"
-      aria-label={characterId ? CHARACTER_NAMES[characterId] : '캐릭터 미선택 (하루 미리보기)'}
+      aria-label={
+        label ?? (characterId ? CHARACTER_NAMES[characterId] : '캐릭터 미선택 (하루 미리보기)')
+      }
     />
   );
 }

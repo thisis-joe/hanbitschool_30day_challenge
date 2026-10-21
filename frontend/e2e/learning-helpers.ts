@@ -307,11 +307,13 @@ export async function start(
   mode: LearningSessionView['mode'],
   day: number | null,
 ) {
-  const rounds = page.getByRole('button', { name: '회차별 학습 보기' });
-  if (new URL(page.url()).pathname === '/student/learning') {
-    await rounds.waitFor({ state: 'visible' });
-    if ((await rounds.getAttribute('aria-expanded')) === 'false' && !(await control.isVisible()))
-      await rounds.click();
+  if (new URL(page.url()).pathname === '/student/learning' && mode === 'REPLAY') {
+    const picker = page.getByRole('combobox', { name: '다시 풀 회차' });
+    if (await picker.locator(`option[value="${day}"]`).count()) {
+      if (!(await picker.isVisible()))
+        await page.getByText('지나온 배움 다시 풀기', { exact: true }).click();
+      await picker.selectOption(String(day));
+    }
   }
   const response = page.waitForResponse(
     (res) =>

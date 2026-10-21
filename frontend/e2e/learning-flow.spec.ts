@@ -24,9 +24,8 @@ test('studentCanPassFiveQuestionsAndRestoreTheSavedResult', async ({ page }) => 
   expect(before.passedDayCount).toBe(0);
   expect(before.firstAnswerCount).toBe(0);
   expect(before.totalXp).toBe(0);
-  await page.getByRole('button', { name: '회차별 학습 보기' }).click();
-  await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: '3회차 시작하기', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '3회차 시작하기', exact: true })).toHaveCount(0);
   await layoutAndTargets(page);
   const first = await start(
     page,
@@ -130,7 +129,7 @@ test('failedDayReplayPassKeepsFirstFactsAndPaysOneXpPerRepeat', async ({ page })
   await page.getByRole('link', { name: '학습 홈으로', exact: true }).click();
   const replay = await start(
     page,
-    page.getByRole('button', { name: '1회차 다시 풀기', exact: true }),
+    page.getByRole('button', { name: '선택 회차 다시 풀기', exact: true }),
     'REPLAY',
     1,
   );
@@ -297,7 +296,7 @@ test('privateQueueBookmarkAndConsentRemainIndependent', async ({ page }) => {
   await page.getByRole('link', { name: '학습 홈으로', exact: true }).click();
   let replay = await start(
     page,
-    page.getByRole('button', { name: '1회차 다시 풀기', exact: true }),
+    page.getByRole('button', { name: '선택 회차 다시 풀기', exact: true }),
     'REPLAY',
     1,
   );
@@ -321,16 +320,16 @@ test('privateQueueBookmarkAndConsentRemainIndependent', async ({ page }) => {
     'aria-pressed',
     'true',
   );
-  await expect(
-    page.getByRole('button', { name: '선택한 문제 복습하기', exact: true }),
-  ).toHaveCount(0); // No queued questions: show the active-session recovery, without a dead action.
+  await expect(page.getByRole('button', { name: '선택한 문제 복습하기', exact: true })).toHaveCount(
+    0,
+  ); // No queued questions: show the active-session recovery, without a dead action.
   await page.getByRole('link', { name: '진행 중인 학습 이어풀기', exact: true }).click();
   await finishDay(page, await advance(page, replay.sessionId), [true, true, true, true]);
   await resultPage(page, replay.sessionId, '회차 통과');
   await page.getByRole('link', { name: '학습 홈으로', exact: true }).click();
   replay = await start(
     page,
-    page.getByRole('button', { name: '1회차 다시 풀기', exact: true }),
+    page.getByRole('button', { name: '선택 회차 다시 풀기', exact: true }),
     'REPLAY',
     1,
   );
@@ -375,7 +374,7 @@ test('privateQueueBookmarkAndConsentRemainIndependent', async ({ page }) => {
   await row.getByRole('button', { name: '다시 볼 목록에서 제거', exact: true }).click();
   await expect(page.getByText('다시 볼 문제가 없어요.', { exact: true })).toBeVisible();
   expect((await personal(page, 'MASTERED')).find((q) => q.questionId === 1)?.mastered).toBe(true);
-  await expect(
-    page.getByRole('button', { name: '선택한 문제 복습하기', exact: true }),
-  ).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '선택한 문제 복습하기', exact: true })).toHaveCount(
+    0,
+  );
 });

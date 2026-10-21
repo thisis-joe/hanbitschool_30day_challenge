@@ -505,3 +505,66 @@
     display: none;
   }
 }
+
+.game-wardrobe-playground {
+  height: 390px;
+  min-height: 0;
+  padding: 0;
+  touch-action: none;
+  cursor: crosshair;
+}
+.game-wardrobe-playground > .game-tag {
+  pointer-events: none;
+  z-index: 2;
+}
+.game-wardrobe-walker {
+  position: absolute;
+  width: 172px;
+  transform: translate(-50%, -90.74%) scaleX(var(--walker-facing));
+  pointer-events: none;
+}
+.game-wardrobe-walker .game-avatar {
+  display: block;
+  width: 100%;
+  aspect-ratio: 176 / 216;
+}
+.game-walk-hint {
+  padding: 10px 14px;
+  margin: 0;
+  font-size: 0.78rem;
+  text-align: center;
+  color: #52644d;
+}
+.game-base-reset {
+  gap: 7px;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-size: 0.8rem;
+}
+.game-base-reset svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.game-base-reset:disabled {
+  box-shadow: none;
+  text-decoration: none;
+}
+@media (max-width: 720px) {
+  .game-wardrobe-playground {
+    height: 250px;
+    min-height: 0;
+    padding: 0;
+  }
+  .game-wardrobe-walker {
+    width: 116px;
+  }
+}

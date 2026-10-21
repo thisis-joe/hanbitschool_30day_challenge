@@ -207,28 +207,12 @@ it('homeContinueUsesActualSessionId', async () => {
     `/student/learning/sessions/${sessionId}`,
   );
 });
-it('thirtyDayCardsDistinguishPassedSequenceAndDateLocks', async () => {
-  server.use(
-    http.get('*/api/student/learning/status', () =>
-      HttpResponse.json({
-        ...ready,
-        calendarCap: 3,
-        passedDayCount: 1,
-        earliestUnpassedDay: 2,
-      }),
-    ),
-  );
+it('home keeps the current learning action without thirty round cards', async () => {
+  server.use(http.get('*/api/student/learning/status', () => HttpResponse.json(ready)));
   renderHome();
-  await userEvent.click(await screen.findByRole('button', { name: '회차별 학습 보기' }));
-  const list = await screen.findByRole('list', { name: '회차별 학습' });
-  const cards = within(list).getAllByRole('listitem');
-  expect(cards).toHaveLength(30);
-  expect(within(cards[0]).getByRole('button', { name: /1회차.*다시 풀기/ })).toBeEnabled();
-  expect(within(cards[1]).getByRole('button', { name: /2회차.*시작하기/ })).toBeEnabled();
-  expect(within(cards[2]).getByText('이전 회차를 먼저 통과해 주세요')).toBeVisible();
-  expect(within(cards[2]).getByRole('button')).toBeDisabled();
-  expect(within(cards[3]).getByText('학습 날짜를 기다려 주세요')).toBeVisible();
-  expect(within(cards[29]).getByRole('button')).toBeDisabled();
+  expect(await screen.findByRole('button', { name: '오늘 학습 시작' })).toBeVisible();
+  expect(screen.queryByRole('list', { name: '회차별 학습' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '회차별 학습 보기' })).toBeNull();
 });
 it('activeSessionBlocksStartingAnotherTarget', async () => {
   let starts = 0;
@@ -242,15 +226,36 @@ it('activeSessionBlocksStartingAnotherTarget', async () => {
     }),
   );
   renderHome();
-  await userEvent.click(await screen.findByRole('button', { name: '회차별 학습 보기' }));
-  const list = await screen.findByRole('list', { name: '회차별 학습' });
-  for (const button of within(list).getAllByRole('button')) expect(button).toBeDisabled();
-  await userEvent.click(within(list).getAllByRole('button')[0]);
+  await screen.findByRole('link', { name: '이어풀기' });
+  expect(screen.queryByRole('button', { name: /회차 시작하기/ })).toBeNull();
   expect(starts).toBe(0);
   expect(screen.getByRole('link', { name: '이어풀기' })).toHaveAttribute(
     'href',
     `/student/learning/sessions/${sessionId}`,
   );
+});
+it('passed rounds remain replayable from a compact selector without cards', async () => {
+  let command: unknown;
+  server.use(
+    http.get('*/api/student/learning/status', () =>
+      HttpResponse.json({ ...ready, calendarCap: 3, passedDayCount: 2, earliestUnpassedDay: 3 }),
+    ),
+    http.post('*/api/student/learning/sessions', async ({ request }) => {
+      command = await request.json();
+      return HttpResponse.json({ ...activeSession, mode: 'REPLAY', dayNumber: 2 });
+    }),
+  );
+  server.use(
+    http.get('*/api/student/learning/sessions/:id', () =>
+      HttpResponse.json({ ...activeSession, mode: 'REPLAY', dayNumber: 2 }),
+    ),
+  );
+  renderHome();
+  await userEvent.click(await screen.findByText('지나온 배움 다시 풀기'));
+  await userEvent.selectOptions(screen.getByRole('combobox', { name: '다시 풀 회차' }), '2');
+  await userEvent.click(screen.getByRole('button', { name: '선택 회차 다시 풀기' }));
+  expect(await screen.findByText('실제 세션 화면')).toBeVisible();
+  expect(command).toMatchObject({ mode: 'REPLAY', dayNumber: 2 });
 });
 it('freshActiveSessionPreventsStaleHomeStart', async () => {
   let reads = 0;
