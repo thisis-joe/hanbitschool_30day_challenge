@@ -83,7 +83,6 @@ export function AnswerGameScene({
     >
       {children ? <div className="game-answer-content">{children}</div> : null}
       {children ? <div className="game-answer-clearing" aria-hidden="true" /> : null}
-      <div className="game-answer-track" aria-hidden="true" />
       <div
         className={onChoose ? 'learning-choices' : undefined}
         role={onChoose ? 'group' : undefined}
@@ -93,6 +92,13 @@ export function AnswerGameScene({
           const label = destination === 'O' ? '사실' : '해석';
           const content = (
             <>
+              <img
+                className="game-answer-landmark-art"
+                src={`/game/answers/${region}.png`}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+              />
               <b>
                 <PixelAnswerArt choice={destination} />
               </b>
@@ -124,7 +130,6 @@ export function AnswerGameScene({
         })}
       </div>
       <div className="game-answer-traveler">
-        <span className="game-answer-shadow" aria-hidden="true" />
         <div className="game-answer-facing">
           <AnimatedGameAvatar
             characterId={appearance?.characterId ?? null}

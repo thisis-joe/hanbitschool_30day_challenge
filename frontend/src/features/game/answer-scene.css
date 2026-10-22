@@ -1,57 +1,42 @@
 .game-learning-scene.game-answer-scene {
   --traveler-width: 154px;
   --scene-ground: 26.5%;
+  --landmark-width: clamp(112px, 16vw, 168px);
+  --answer-o-x: max(calc(var(--landmark-width) / 2 + 4px), 20%);
   height: 360px;
   margin-block: 18px 8px;
   background-position: center bottom;
 }
-.game-answer-track {
-  position: absolute;
-  bottom: var(--scene-ground);
-  height: 0;
-  pointer-events: none;
-}
 .game-answer-destination {
   position: absolute;
-  bottom: 14px;
-  width: clamp(112px, 14vw, 156px);
-  min-height: 126px;
+  bottom: calc(var(--scene-ground) - 6px);
+  width: var(--landmark-width);
+  height: calc(var(--landmark-width) * 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 8px 16px;
+  gap: 3px;
+  padding: 10px 0 16px;
   border: 0;
   border-radius: 0;
   color: #263d35;
-  background: #f3f9d0;
-  box-shadow:
-    inset 0 -8px #c0ce8c,
-    inset 0 6px #ffffed;
-  clip-path: polygon(
-    12px 0,
-    calc(100% - 12px) 0,
-    calc(100% - 12px) 6px,
-    100% 6px,
-    100% calc(100% - 12px),
-    calc(100% - 6px) calc(100% - 12px),
-    calc(100% - 6px) 100%,
-    6px 100%,
-    6px calc(100% - 6px),
-    0 calc(100% - 6px),
-    0 6px,
-    12px 6px
-  );
+  background: transparent;
+  box-shadow: none;
   transform: translateX(-50%);
-  z-index: 4;
+  z-index: 1;
 }
-.game-answer-destination::before {
-  content: '';
+.game-answer-landmark-art {
   position: absolute;
-  inset: 6px;
-  border: 4px solid #526443;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
+  image-rendering: pixelated;
+}
+.game-answer-destination b,
+.game-answer-destination span {
+  position: relative;
 }
 .game-answer-destination b {
   display: block;
@@ -71,21 +56,14 @@
   line-height: 1.2;
 }
 .game-answer-o {
-  left: 22%;
+  left: var(--answer-o-x);
 }
 .game-answer-x {
-  left: 78%;
-  background: #ffe9ad;
-  box-shadow:
-    inset 0 -8px #dab66c,
-    inset 0 6px #fff8db;
+  left: calc(100% - var(--answer-o-x));
 }
-.game-answer-x::before {
-  border-color: #8e6934;
-}
-.game-answer-destination[data-selected='true']::before {
-  border-color: #fffdf3;
-  border-width: 6px;
+.game-answer-destination[data-selected='true'] span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .game-answer-traveler {
   position: absolute;
@@ -94,13 +72,20 @@
   width: var(--traveler-width);
   transform: translateX(-50%);
   transition: left var(--answer-walk-duration, 480ms) cubic-bezier(0.25, 0.1, 0.35, 1);
-  z-index: 1;
+  z-index: 2;
+  pointer-events: none;
 }
 .game-answer-scene[data-choice='O'] .game-answer-traveler {
-  left: 22%;
+  left: min(
+    calc(var(--answer-o-x) + var(--landmark-width) / 2 + var(--traveler-width) * 0.28 + 8px),
+    calc(50% - 12px)
+  );
 }
 .game-answer-scene[data-choice='X'] .game-answer-traveler {
-  left: 78%;
+  left: max(
+    calc(100% - var(--answer-o-x) - var(--landmark-width) / 2 - var(--traveler-width) * 0.28 - 8px),
+    calc(50% + 12px)
+  );
 }
 .game-answer-scene[data-animate='false'] .game-answer-traveler {
   transition: none;
@@ -118,15 +103,6 @@
   width: var(--traveler-width);
   aspect-ratio: 176 / 216;
   filter: none;
-}
-.game-answer-shadow {
-  position: absolute;
-  bottom: 9%;
-  left: 34%;
-  width: 34%;
-  height: 9px;
-  border-radius: 50%;
-  background: #263d354a;
 }
 .game-answer-message {
   position: absolute;
@@ -163,9 +139,9 @@
 .game-answer-scene .learning-choices .game-answer-destination:active:not(:disabled) {
   transform: translate(-50%, 3px);
 }
-.game-answer-scene .learning-choices .game-answer-destination:focus-visible::before {
-  border-color: #263d35;
-  border-width: 6px;
+.game-answer-scene .learning-choices .game-answer-destination:focus-visible {
+  outline: 3px solid #263d35;
+  outline-offset: 3px;
 }
 .game-answer-scene .learning-choices .game-answer-destination:disabled {
   opacity: 0.8;
@@ -176,9 +152,6 @@
   }
   .game-answer-message {
     font-size: 0.75rem;
-  }
-  .game-answer-destination {
-    min-height: 112px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

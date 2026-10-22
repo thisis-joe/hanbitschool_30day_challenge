@@ -41,13 +41,14 @@ async function scenario(page: Page, position = 0, seconds = 60) {
       body = { ...learningStatus, activeSession: session };
     else if (path === '/api/student/learning/questions') body = [];
     else if (path.endsWith('/answers')) {
+      const result = { ...answerResult, correctChoice: route.request().postDataJSON().choice };
       session = {
         ...session,
         state: 'AWAITING_ADVANCE',
         answeredCount: 1,
-        lastAnswer: answerResult,
+        lastAnswer: result,
       };
-      body = answerResult;
+      body = result;
     } else if (path === `/api/student/learning/sessions/${sessionId}`) body = session;
     else throw new Error(`Unexpected synthetic request: ${path}`);
     await route.fulfill({ json: body });
@@ -93,6 +94,90 @@ for (const width of [320, 390, 768, 1280]) {
       if (output && position === 0)
         await page.screenshot({ path: output.file(`learning-${width}.png`), fullPage: true });
     });
+  }
+}
+
+for (const width of [320, 390, 768, 1280]) {
+  for (const [position, region] of [
+    [0, 'forest'],
+    [55, 'village'],
+    [110, 'beach'],
+  ] as const) {
+    for (const choice of ['O', 'X'] as const) {
+      test(`natural landmark ${region} ${choice} at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: width === 320 ? 568 : 900 });
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await scenario(page, position);
+        await page.goto(`/student/learning/sessions/${sessionId}`);
+        const scene = page.getByRole('region', { name: '학습 여행 장면' });
+        await scene.locator('.game-avatar-articulated[data-ready="true"]').waitFor();
+        const marker = scene.locator(`.game-answer-${choice.toLowerCase()}`);
+        const art = marker.locator('.game-answer-landmark-art');
+        await expect(art).toHaveAttribute('src', `/game/answers/${region}.png`);
+        await expect
+          .poll(() => art.evaluate((el) => (el as HTMLImageElement).naturalWidth))
+          .toBeGreaterThan(0);
+        await expect(async () => {
+          const distance = await marker.evaluate((el) => {
+            const scene = el.closest('section')!;
+            const floor =
+              scene.getBoundingClientRect().bottom -
+              scene.clientTop -
+              parseFloat(getComputedStyle(scene).getPropertyValue('--scene-ground'));
+            return Math.abs(el.getBoundingClientRect().bottom - floor);
+          });
+          expect(distance).toBeLessThan(9);
+        }).toPass({ timeout: 1500 });
+        expect(await marker.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+          'rgba(0, 0, 0, 0)',
+        );
+        await expect(scene.locator('.game-answer-track, .game-answer-shadow')).toHaveCount(0);
+        await marker.click();
+        await expect(scene).toHaveAttribute('data-phase', 'correct');
+        const actor = (await scene.locator('.game-answer-traveler').boundingBox())!;
+        const object = (await marker.boundingBox())!;
+        const center = actor.x + actor.width / 2;
+        const objectCenter = object.x + object.width / 2;
+        expect(choice === 'O' ? center - objectCenter : objectCenter - center).toBeGreaterThan(
+          object.width / 2,
+        );
+        // Transparent canvas margins can overlap the stone; its lettering must stay clear.
+        const overlap = await scene.evaluate((el) => {
+          const canvas = el.querySelector<HTMLCanvasElement>('canvas.game-avatar-articulated')!;
+          const pixels = canvas
+            .getContext('2d')!
+            .getImageData(0, 0, canvas.width, canvas.height).data;
+          const box = canvas.getBoundingClientRect();
+          const labels = [
+            ...el.querySelectorAll('.game-answer-destination b, .game-answer-destination span'),
+          ].map((label) => label.getBoundingClientRect());
+          for (let y = 0; y < canvas.height; y++)
+            for (let x = 0; x < canvas.width; x++) {
+              if (pixels[(y * canvas.width + x) * 4 + 3] < 128) continue;
+              const px = box.x + ((x + 0.5) * box.width) / canvas.width;
+              const py = box.y + ((y + 0.5) * box.height) / canvas.height;
+              if (
+                labels.some(
+                  (label) =>
+                    px > label.left && px < label.right && py > label.top && py < label.bottom,
+                )
+              )
+                return true;
+            }
+          return false;
+        });
+        expect(overlap).toBe(false);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        );
+        const output = evidenceOutput();
+        if (output && [320, 1280].includes(width))
+          await page.screenshot({
+            path: output.file(`landmark-${region}-${choice.toLowerCase()}-${width}.png`),
+            fullPage: true,
+          });
+      });
+    }
   }
 }
 

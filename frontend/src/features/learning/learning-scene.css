@@ -233,7 +233,7 @@
 }
 @media (max-width: 640px) {
   .game-learning-session .game-learning-scene.game-answer-immersive {
-    --traveler-width: 144px;
+    --traveler-width: 124px;
     min-height: max(620px, var(--scene-required-height, 0px));
     border-radius: 16px;
   }
@@ -246,14 +246,6 @@
   .game-answer-immersive .game-answer-traveler,
   .game-answer-immersive .game-answer-traveler .game-avatar-articulated {
     width: var(--traveler-width);
-  }
-  .game-answer-immersive .game-answer-o,
-  .game-answer-immersive[data-choice='O'] .game-answer-traveler {
-    left: 26%;
-  }
-  .game-answer-immersive .game-answer-x,
-  .game-answer-immersive[data-choice='X'] .game-answer-traveler {
-    left: 74%;
   }
   .game-answer-immersive .game-answer-message {
     bottom: calc(var(--scene-ground) + var(--traveler-width) * 1.25);
@@ -337,7 +329,7 @@
     padding-block: 4px;
   }
   .game-learning-session .game-learning-scene.game-answer-immersive {
-    --traveler-width: 120px;
+    --traveler-width: 112px;
     min-height: max(420px, var(--scene-required-height, 0px));
   }
   .game-answer-immersive .game-answer-clearing {
