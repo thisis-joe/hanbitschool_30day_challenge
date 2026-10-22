@@ -128,6 +128,16 @@ for (const width of [320, 390, 768, 1280]) {
           });
           expect(distance).toBeLessThan(9);
         }).toPass({ timeout: 1500 });
+        const face = (await marker.boundingBox())!;
+        const letter = (await marker.locator('b').boundingBox())!;
+        const word = (await marker.locator('span').boundingBox())!;
+        for (const ink of [letter, word]) {
+          expect(ink.x).toBeGreaterThanOrEqual(face.x + face.width * 0.25);
+          expect(ink.x + ink.width).toBeLessThanOrEqual(face.x + face.width * 0.75);
+          expect(ink.y).toBeGreaterThanOrEqual(face.y + face.height * 0.24);
+          expect(ink.y + ink.height).toBeLessThanOrEqual(face.y + face.height * 0.87);
+        }
+        expect(word.y).toBeGreaterThanOrEqual(letter.y + letter.height);
         expect(await marker.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
           'rgba(0, 0, 0, 0)',
         );

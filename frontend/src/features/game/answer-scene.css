@@ -1,7 +1,7 @@
 .game-learning-scene.game-answer-scene {
   --traveler-width: 154px;
   --scene-ground: 26.5%;
-  --landmark-width: clamp(112px, 16vw, 168px);
+  --landmark-width: clamp(128px, 16vw, 176px);
   --answer-o-x: max(calc(var(--landmark-width) / 2 + 4px), 20%);
   height: 360px;
   margin-block: 18px 8px;
@@ -36,12 +36,15 @@
 }
 .game-answer-destination b,
 .game-answer-destination span {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 .game-answer-destination b {
   display: block;
-  width: clamp(48px, 6vw, 68px);
-  height: clamp(48px, 6vw, 68px);
+  top: 25%;
+  width: clamp(48px, 4.4vw, 56px);
+  height: clamp(48px, 4.4vw, 56px);
   line-height: 1;
 }
 .game-answer-destination b svg {
@@ -51,7 +54,8 @@
   fill: currentColor;
 }
 .game-answer-destination span {
-  font-size: clamp(1.15rem, 2.3vw, 1.5rem);
+  top: 68%;
+  font-size: clamp(1rem, 2vw, 1.25rem);
   font-weight: 800;
   line-height: 1.2;
 }
@@ -78,13 +82,13 @@
 .game-answer-scene[data-choice='O'] .game-answer-traveler {
   left: min(
     calc(var(--answer-o-x) + var(--landmark-width) / 2 + var(--traveler-width) * 0.28 + 8px),
-    calc(50% - 12px)
+    calc(50% - 8px)
   );
 }
 .game-answer-scene[data-choice='X'] .game-answer-traveler {
   left: max(
     calc(100% - var(--answer-o-x) - var(--landmark-width) / 2 - var(--traveler-width) * 0.28 - 8px),
-    calc(50% + 12px)
+    calc(50% + 8px)
   );
 }
 .game-answer-scene[data-animate='false'] .game-answer-traveler {
