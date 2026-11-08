@@ -99,6 +99,7 @@ export function AnswerGameScene({
               key={destination}
               className={className}
               aria-label={`${destination} · ${label}`}
+              data-selected={choice === destination}
               disabled={choicesDisabled}
               onClick={() => onChoose(destination)}
             >

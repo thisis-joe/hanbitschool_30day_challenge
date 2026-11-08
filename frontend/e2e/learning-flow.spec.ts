@@ -17,6 +17,7 @@ const root = '/api/student/learning';
 
 // Catches missing fifth-answer persistence, completion POSTs, or client-derived XP/progress.
 test('studentCanPassFiveQuestionsAndRestoreTheSavedResult', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   const classroom = await provisionLearner(page);
   const before = await status(page);
   expect(before.nextAction).toBe('START_FIRST');

@@ -22,6 +22,7 @@ async function scenario(
   page: Page,
   role: 'student' | 'teacher' | 'admin' | 'anonymous' = 'student',
   empty = false,
+  continuing = false,
 ) {
   let appearance = { ...gameView, characterId: 'haru' as const };
   let session: LearningSessionView = {
@@ -72,7 +73,9 @@ async function scenario(
       body = appearance;
     } else if (path === '/api/student/learning/map') body = journeyView;
     else if (path === '/api/student/learning/status')
-      body = { ...learningStatus, nextAction: 'START_FIRST', activeSession: null };
+      body = continuing
+        ? { ...learningStatus, activeSession: session }
+        : { ...learningStatus, nextAction: 'START_FIRST', activeSession: null };
     else if (path === '/api/student/learning/questions')
       body = rows.filter(
         (row) => url.searchParams.get('filter') !== 'BOOKMARKED' || row.bookmarked,
@@ -138,6 +141,48 @@ async function sameRow(a: Locator, b: Locator) {
     expect(Math.abs(first - second)).toBeLessThan(5);
   }).toPass({ timeout: 5000 });
 }
+
+for (const viewport of [
+  { width: 320, height: 568 },
+  { width: 390, height: 844 },
+]) {
+  for (const continuing of [false, true]) {
+    test(`primary learning action fits at ${viewport.width}px (continuing=${continuing})`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await scenario(page, 'student', false, continuing);
+      await page.goto('/student/learning');
+      const action = continuing
+        ? page.getByRole('link', { name: '이어풀기', exact: true })
+        : page.getByRole('button', { name: '오늘 학습 시작', exact: true });
+      await expect(action).toBeInViewport({ ratio: 1, timeout: 2000 });
+      const output = evidenceOutput();
+      if (output) {
+        const state = continuing ? 'resume' : 'start';
+        await page.screenshot({ path: output.file(`home-${viewport.width}-${state}.png`) });
+      }
+    });
+  }
+}
+
+test('a confirmed answer presents the reason before routine XP', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await scenario(page);
+  await page.goto(`/student/learning/sessions/${sessionId}`);
+  await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
+  const explanation = page.getByText('나무는 햇빛으로 양분을 만들어요.');
+  const reward = page.getByRole('status', { name: /받은 경험치/ });
+  await expect(page.getByText('정답은 O · 사실')).toBeVisible({ timeout: 2000 });
+  await expect(explanation).toBeInViewport({ ratio: 1 });
+  await expect(reward).toBeVisible();
+  expect((await explanation.boundingBox())!.y).toBeLessThan((await reward.boundingBox())!.y);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const output = evidenceOutput();
+  if (output) await page.screenshot({ path: output.file('answer-reason-390.png') });
+  await page.getByRole('link', { name: '완료하기', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '회차 통과', exact: true })).toBeVisible();
+});
 
 for (const width of [320, 390, 768, 1280]) {
   test(`student surfaces at ${width}px`, async ({ page }) => {

@@ -116,10 +116,24 @@
   font-size: 0.95rem;
   line-height: 1.7;
 }
-.game-answer-content .learning-reading-panel .learning-source + .learning-explanation {
-  margin-top: 12px;
-  padding-top: 12px;
+.game-answer-content .learning-answer-key {
+  margin: 0 0 4px;
+  font-weight: 800;
+}
+.game-answer-content .learning-source + .learning-answer-key {
+  margin-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid #43574830;
+}
+.game-answer-content .learning-answer-status {
+  width: fit-content;
+  max-width: 100%;
+  margin: 6px auto 0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #fffef4;
+  color: #263d35;
+  font-size: 0.8rem;
 }
 .game-answer-content .learning-description {
   margin: 8px 0 0;
@@ -137,6 +151,14 @@
 }
 .game-answer-content .learning-feedback-navigation {
   margin-top: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.game-answer-content .learning-feedback-navigation .learning-next,
+.game-answer-content .learning-feedback-navigation .learning-completion {
+  margin-inline-start: auto;
 }
 .game-answer-content .learning-feedback .learning-next {
   min-height: 72px;
@@ -225,6 +247,7 @@
   }
   .game-answer-content .learning-feedback-header {
     gap: 6px 10px;
+    margin-bottom: 8px;
   }
   .game-answer-content .learning-progress {
     margin-bottom: 12px;
@@ -235,6 +258,21 @@
   .game-answer-content .learning-next svg {
     width: 64px;
     height: 64px;
+  }
+  .game-answer-content .learning-feedback .learning-reading-panel {
+    padding: 10px 12px;
+  }
+  .game-answer-content .learning-feedback .learning-completion,
+  .game-answer-content .learning-feedback .learning-next {
+    gap: 4px;
+    min-height: 48px;
+  }
+  .game-answer-content .learning-feedback-navigation svg {
+    width: 48px;
+    height: 48px;
+  }
+  .game-answer-content .learning-feedback-navigation .game-xp-amount {
+    font-size: 1.1rem;
   }
 }
 
@@ -301,7 +339,7 @@
 }
 
 @media (max-width: 360px) {
-  body:has(.game-learning-session) .game-student-nav a {
+  .game-student-nav a {
     flex-direction: column;
     gap: 2px;
     white-space: nowrap;

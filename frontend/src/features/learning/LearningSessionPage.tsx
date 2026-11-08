@@ -213,7 +213,13 @@ export function LearningSessionPage() {
                   <p className="learning-source">{question.text}</p>
                 </div>
                 <p className="learning-description">문장을 읽고 사실인지 해석인지 골라 주세요.</p>
-                {waitingForServer ? <p role="status">서버에서 답변을 확인하고 있어요</p> : null}
+                {waitingForServer || (actions.busy && pendingChoice) ? (
+                  <p className="learning-answer-status" role="status">
+                    {waitingForServer
+                      ? '서버에서 답변을 확인하고 있어요'
+                      : '답변을 확인하고 있어요'}
+                  </p>
+                ) : null}
               </>
             ) : feedback ? (
               <div className="learning-feedback" data-outcome={feedback.outcome}>
@@ -221,16 +227,19 @@ export function LearningSessionPage() {
                   <h1 ref={heading} tabIndex={-1}>
                     {outcomes[feedback.outcome]}
                   </h1>
-                  <ExperienceReward answer={feedback} />
                 </div>
                 <div className="learning-reading-panel">
                   {question?.questionId === feedback.questionId ? (
                     <p className="learning-source">{question.text}</p>
                   ) : null}
+                  <p className="learning-answer-key">
+                    정답은 {feedback.correctChoice === 'O' ? 'O · 사실' : 'X · 해석'}
+                  </p>
                   <p className="learning-explanation">{feedback.explanation}</p>
                 </div>
                 <QuestionFeedbackActions questionId={feedback.questionId} result={feedback} />
                 <div className="learning-feedback-navigation">
+                  <ExperienceReward answer={feedback} />
                   {view.state === 'COMPLETED' ? (
                     <Link
                       className="button learning-completion"
@@ -261,7 +270,7 @@ export function LearningSessionPage() {
           </AnswerGameScene>
         </div>
       ) : null}
-      {actions.busy ? (
+      {actions.busy && !(active && pendingChoice) ? (
         <p role="status">
           {pending?.kind === 'ANSWER'
             ? '답변을 확인하고 있어요'

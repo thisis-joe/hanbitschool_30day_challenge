@@ -523,7 +523,7 @@ it.each([
   setup();
   await userEvent.click(await screen.findByRole('button', { name: 'O · 사실' }));
   expect(await screen.findByRole('heading', { name: label })).toHaveFocus();
-  expect(screen.queryByText(/정답은/)).not.toBeInTheDocument();
+  expect(screen.getByText('정답은 X · 해석')).toBeVisible();
   expect(screen.getByText('테스트용 설명입니다.')).toBeVisible();
   expect(screen.getByRole('status', { name: '이번 답변으로 받은 경험치: 1 XP' })).toBeVisible();
   // Canonical feedback publishes before the existing learning cache refresh settles.
