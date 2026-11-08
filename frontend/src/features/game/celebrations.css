@@ -169,6 +169,28 @@
   animation-duration: 900ms;
   animation-delay: var(--spark-delay-xp);
 }
+.game-answer-scene.game-scene-forest .game-character-xp-aura,
+.game-answer-scene.game-scene-forest .game-character-xp-orbit,
+.game-answer-scene.game-scene-forest .game-character-xp .game-celebration-halo,
+.game-answer-scene.game-scene-forest .game-character-xp .game-celebration-ring {
+  display: none;
+}
+.game-answer-scene.game-scene-forest .game-character-xp .game-celebration-particle {
+  width: 9px;
+  height: 9px;
+  clip-path: polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%);
+  background: #fff0ba;
+  animation-name: game-pixel-spark;
+  animation-timing-function: steps(8, end);
+}
+@keyframes game-pixel-spark {
+  0% { opacity: 0; }
+  15%, 60% { opacity: 1; }
+  100% {
+    transform: translate(var(--spark-x), var(--spark-y));
+    opacity: 0;
+  }
+}
 .game-item-acquired {
   display: inline-block;
   padding: 6px 12px;

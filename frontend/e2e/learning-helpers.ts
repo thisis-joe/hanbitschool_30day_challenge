@@ -308,10 +308,11 @@ export async function start(
   day: number | null,
 ) {
   if (new URL(page.url()).pathname === '/student/learning' && mode === 'REPLAY') {
-    const picker = page.getByRole('combobox', { name: '다시 풀 회차' });
+    const replaySummary = page.getByText('지나온 배움 다시 풀기', { exact: true });
+    await expect(control.or(replaySummary).first()).toBeVisible();
+    const picker = page.getByLabel('다시 풀 회차', { exact: true });
     if (await picker.locator(`option[value="${day}"]`).count()) {
-      if (!(await picker.isVisible()))
-        await page.getByText('지나온 배움 다시 풀기', { exact: true }).click();
+      if (!(await picker.isVisible())) await replaySummary.click();
       await picker.selectOption(String(day));
     }
   }

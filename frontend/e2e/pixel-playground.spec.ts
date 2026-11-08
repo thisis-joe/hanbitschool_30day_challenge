@@ -58,7 +58,7 @@ async function scenario(page: Page, position = 0, seconds = 60) {
 
 for (const width of [320, 390, 768, 1280]) {
   for (const [position, ground] of [
-    [0, 0.735],
+    [0, 94 / 128],
     [55, 0.75],
     [110, 0.845],
   ]) {
@@ -97,6 +97,41 @@ for (const width of [320, 390, 768, 1280]) {
   }
 }
 
+for (const density of [1, 2]) {
+  test.describe(`forest pixel grid at ${density}× density`, () => {
+    test.use({ deviceScaleFactor: density, viewport: { width: 390, height: 844 } });
+
+    test('uses the authored grid, equipped companion and stepped sparks', async ({ page }) => {
+      await scenario(page);
+      await page.goto(`/student/learning/sessions/${sessionId}`);
+      const scene = page.getByRole('region', { name: '학습 여행 장면' });
+      await expect(scene.locator('canvas[data-ready="true"]')).toBeVisible();
+      expect(await page.evaluate(() => devicePixelRatio)).toBe(density);
+      await expect(scene).toHaveCSS('image-rendering', 'pixelated');
+      const rock = scene.locator('.game-answer-o .game-answer-landmark-art');
+      await expect(rock).toHaveCSS('width', '128px');
+      await expect(rock).toHaveCSS('height', '116px');
+      const sourceSize = await scene.evaluate(async (element) => {
+        const source = getComputedStyle(element).backgroundImage.match(/url\("([^"]+)"\)/)?.[1];
+        const image = new Image();
+        image.src = source!;
+        await image.decode();
+        return [image.naturalWidth, image.naturalHeight];
+      });
+      expect(sourceSize).toEqual([192, 128]);
+
+      const output = evidenceOutput();
+      if (output) await page.screenshot({ path: output.file(`forest-density-${density}.png`) });
+      await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
+      await expect(scene.locator('.game-celebration-particle').first()).toHaveCSS(
+        'animation-name',
+        'game-pixel-spark',
+      );
+      await expect(page.getByRole('button', { name: '다음 문제' })).toBeEnabled();
+    });
+  });
+}
+
 for (const width of [320, 390, 768, 1280]) {
   for (const [position, region] of [
     [0, 'forest'],
@@ -113,7 +148,10 @@ for (const width of [320, 390, 768, 1280]) {
         await scene.locator('.game-avatar-articulated[data-ready="true"]').waitFor();
         const marker = scene.locator(`.game-answer-${choice.toLowerCase()}`);
         const art = marker.locator('.game-answer-landmark-art');
-        await expect(art).toHaveAttribute('src', `/game/answers/${region}.png`);
+        await expect(art).toHaveAttribute(
+          'src',
+          region === 'forest' ? '/game/answers/forest-rock.svg' : `/game/answers/${region}.png`,
+        );
         await expect
           .poll(() => art.evaluate((el) => (el as HTMLImageElement).naturalWidth))
           .toBeGreaterThan(0);

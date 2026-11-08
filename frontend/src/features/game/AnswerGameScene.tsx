@@ -62,6 +62,7 @@ export function AnswerGameScene({
           : 'idle';
   const position = journey?.journeyPosition ?? 0;
   const region = position < 50 ? 'forest' : position < 100 ? 'village' : 'beach';
+  const landmark = region === 'forest' ? 'forest-rock.svg' : `${region}.png`;
   const scene = useSceneGround<HTMLElement>(region);
   const messages = {
     idle: appearance ? 'O와 X 중 어디로 갈까요?' : '여행 장면을 준비하고 있어요',
@@ -94,7 +95,7 @@ export function AnswerGameScene({
             <>
               <img
                 className="game-answer-landmark-art"
-                src={`/game/answers/${region}.png`}
+                src={`/game/answers/${landmark}`}
                 alt=""
                 aria-hidden="true"
                 draggable={false}

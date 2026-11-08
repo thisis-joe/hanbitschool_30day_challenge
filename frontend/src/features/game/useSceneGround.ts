@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 
-// The three 1536×1024 pictures have different painted walking surfaces.
-const ground = { forest: 0.735, village: 0.75, beach: 0.845 } as const;
+// The forest grid places the walking surface on row 94 of 128.
+const ground = { forest: 94 / 128, village: 0.75, beach: 0.845 } as const;
 export type SceneRegion = keyof typeof ground;
 
 export function useSceneGround<T extends HTMLElement>(region: SceneRegion) {

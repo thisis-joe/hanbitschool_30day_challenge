@@ -7,6 +7,21 @@
   margin-block: 18px 8px;
   background-position: center bottom;
 }
+.game-learning-scene.game-answer-scene.game-scene-forest {
+  --landmark-width: 128px;
+  --scene-image-rendering: pixelated;
+  background-image: url('/game/scenes/forest-clearing.svg');
+}
+.game-scene-forest.game-answer-scene .game-answer-destination {
+  height: 116px;
+}
+.game-scene-forest.game-answer-scene .game-answer-destination b {
+  width: 48px;
+  height: 48px;
+}
+.game-scene-forest.game-answer-scene .game-answer-destination span {
+  font-size: 1rem;
+}
 .game-answer-destination {
   position: absolute;
   bottom: calc(var(--scene-ground) - 6px);

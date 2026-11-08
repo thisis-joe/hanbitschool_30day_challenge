@@ -296,6 +296,11 @@ export function LearningSessionPage() {
           </button>
         </div>
       ) : null}
+      {active ? (
+        <div className="learning-exit">
+          <p>다른 메뉴로 이동해도 현재 문항의 제한시간은 계속 흘러요.</p>
+        </div>
+      ) : null}
     </section>
   );
 }
