@@ -17,11 +17,12 @@
   position: absolute;
   bottom: 20px;
   width: 76px;
-  height: 54px;
+  height: 76px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  flex-direction: column;
+  gap: 2px;
   border: 3px solid #314a3d;
   border-radius: 50%;
   background: #f6ffe1;
@@ -30,7 +31,8 @@
   transform: translateX(-50%);
 }
 .game-answer-destination b {
-  font-size: 1.65rem;
+  font-size: 1.9rem;
+  line-height: 1;
 }
 .game-answer-destination span {
   font-size: 0.75rem;
@@ -50,7 +52,7 @@
 .game-answer-traveler {
   position: absolute;
   left: 50%;
-  bottom: 46px;
+  bottom: 70px;
   width: 154px;
   transform: translateX(-50%);
   transition: left var(--answer-walk-duration, 480ms) cubic-bezier(0.25, 0.1, 0.35, 1);
@@ -66,6 +68,8 @@
   transition: none;
 }
 .game-answer-facing {
+  position: relative;
+  z-index: 1;
   transform-origin: center;
 }
 .game-answer-scene[data-choice='O'][data-phase='walking'] .game-answer-facing {
@@ -118,30 +122,6 @@
   color: #263d35;
   font-size: 0.65rem;
 }
-.game-answer-sparkles {
-  position: absolute;
-  top: 40%;
-  left: 10%;
-  font-size: 27px;
-  color: #fff1a0;
-  text-shadow: 1px 2px #80602d;
-}
-.game-answer-sparkles::after {
-  content: '✦';
-  position: absolute;
-  left: 105px;
-  top: -32px;
-  font-size: 20px;
-}
-.game-answer-scene[data-animate='true'] .game-answer-sparkles {
-  animation: answer-sparkle 600ms ease-in-out 2;
-}
-@keyframes answer-sparkle {
-  50% {
-    opacity: 0.4;
-    transform: scale(0.8);
-  }
-}
 @media (max-width: 480px) {
   .game-learning-page .game-learning-scene.game-answer-scene,
   .game-learning-scene.game-answer-scene {
@@ -156,18 +136,12 @@
   }
   .game-answer-destination {
     width: 64px;
-    height: 46px;
-  }
-  .game-answer-sparkles::after {
-    left: 85px;
+    height: 68px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .game-answer-traveler {
     transition: none;
-  }
-  .game-answer-scene[data-animate='true'] .game-answer-sparkles {
-    animation: none;
   }
 }
 
@@ -181,4 +155,30 @@
     width: 90px;
     margin: 18px auto 10px;
   }
+}
+
+.game-answer-scene .learning-choices {
+  display: contents;
+}
+.game-answer-scene .learning-choices .game-answer-destination {
+  width: 76px;
+  min-height: 76px;
+  padding: 6px;
+  font-size: 1rem;
+  border-radius: 50%;
+  border: 3px solid #314a3d;
+  background: #f6ffe1;
+  color: #263d35;
+  z-index: 4;
+}
+.game-answer-scene .learning-choices .game-answer-x {
+  background: #ffedc6;
+}
+.game-answer-scene .learning-choices .game-answer-destination:active:not(:disabled) {
+  transform: translate(-50%, 3px);
+}
+.game-answer-scene .learning-choices .game-answer-destination:focus-visible {
+  outline: 3px solid #fffdf3;
+  outline-offset: 4px;
+  box-shadow: 0 0 0 7px #314a3d;
 }

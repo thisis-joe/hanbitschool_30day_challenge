@@ -190,7 +190,6 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
             {day ? ` · ${day}회차` : ''}
           </p>
           <h2>{exploration ? '다음 배움' : '오늘의 탐험'}</h2>
-          <p>문장을 읽고 O · 사실, X · 해석을 골라 보세요.</p>
           {status.isPending ? <p role="status">학습을 불러오고 있어요</p> : null}
           {view ? (
             <>
@@ -203,6 +202,7 @@ export function LearningDashboardPage({ exploration = false }: { exploration?: b
               ) : null}
             </>
           ) : null}
+          <p>문장을 읽고 O · 사실, X · 해석을 골라 보세요.</p>
           {isChecking || actions.busy ? (
             <p role="status">최신 학습 상태를 확인하고 있어요</p>
           ) : null}

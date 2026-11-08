@@ -9,7 +9,10 @@ import { gameView, journeyView } from '../src/test/gameFixtures';
 import { emptyEquipment } from '../src/features/game/types';
 import { evidenceOutput } from './evidence-output';
 
-async function learningScenario(page: Page) {
+async function learningScenario(
+  page: Page,
+  options: { wrong?: boolean; delay?: number; longText?: boolean } = {},
+) {
   const student = {
     accountId: 'visual-student',
     role: 'STUDENT',
@@ -42,7 +45,9 @@ async function learningScenario(page: Page) {
     answeredCount: 4,
     question: {
       ...activeSession.question!,
-      text: '나무는 햇빛을 받아 자랍니다.',
+      text: options.longText
+        ? '같은 장면을 보더라도 사람마다 서로 다르게 느끼고 생각할 수 있습니다. 이 문장에서 직접 확인할 수 있는 사실과 개인의 해석을 구별해 보세요.'
+        : '나무는 햇빛을 받아 자랍니다.',
       position: 5,
       deadlineAt: new Date(Date.now() + 60000).toISOString(),
       timeLimitSeconds: 60,
@@ -53,7 +58,10 @@ async function learningScenario(page: Page) {
     ...answerResult,
     attemptCorrectCount: 5,
     attemptAnsweredCount: 5,
-    explanation: '나무는 햇빛으로 양분을 만들어요.',
+    outcome: options.wrong ? ('WRONG' as const) : ('CORRECT' as const),
+    explanation: options.longText
+      ? '눈으로 확인하거나 자료로 검증할 수 있는 내용은 사실입니다. 느낌과 의도에 대한 추측은 해석입니다. 서로 다른 의견을 이해하려면 어떤 근거를 사용했는지도 살펴보세요.'
+      : '나무는 햇빛으로 양분을 만들어요.',
     attemptState: 'PASSED' as const,
     dayState: 'PASSED' as const,
     rewardGranted: { itemId: gift.itemId, dayNumber: 1, acquiredAt: '2026-10-19T01:00:00Z' },
@@ -65,6 +73,7 @@ async function learningScenario(page: Page) {
     else if (path === '/api/auth/csrf')
       body = { headerName: 'X-CSRF-TOKEN', token: 'visual-test-token' };
     else if (path.endsWith('/answers')) {
+      if (options.delay) await new Promise((resolve) => setTimeout(resolve, options.delay));
       session = { ...session, state: 'COMPLETED', answeredCount: 5, lastAnswer: award };
       game = {
         ...game,
@@ -95,41 +104,57 @@ async function learningScenario(page: Page) {
   return { saves: () => saves, game: () => game };
 }
 
-for (const width of [1280, 390, 320]) {
-  test(`cinematic rewards hand off to actionable cards at ${width}px`, async ({ page }) => {
+for (const width of [1280, 768, 390, 320]) {
+  test(`character XP stays local and item rewards remain actionable at ${width}px`, async ({
+    page,
+  }) => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await page.setViewportSize({ width, height: width === 320 ? 568 : 960 });
     const scenario = await learningScenario(page);
     await page.goto(`/student/learning/sessions/${sessionId}`);
     await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
-    const xpScene = page.getByRole('dialog', { name: '경험치 획득 연출' });
-    await expect(xpScene).toBeVisible();
-    expect(await xpScene.boundingBox()).toEqual({
-      x: 0,
-      y: 0,
-      width,
-      height: width === 320 ? 568 : 960,
-    });
-    await expect(xpScene).toBeFocused();
-    await expect(xpScene.getByRole('button', { name: '연출 건너뛰기' })).toHaveCount(0);
-    await page.keyboard.press('Escape');
-    await expect(xpScene).toBeVisible();
-    await page.keyboard.press('Tab');
-    await expect(xpScene).toBeFocused();
-    expect(await xpScene.evaluate((element) => getComputedStyle(element).animationDuration)).toBe(
-      '1.3s',
+    const scene = page.getByRole('region', { name: '학습 여행 장면' });
+    const effect = scene.locator('.game-character-xp');
+    await expect(scene).toHaveAttribute('data-phase', 'walking');
+    await expect(effect).toHaveCount(0);
+    await expect(effect).toBeVisible();
+    await expect(scene).toHaveAttribute('data-phase', 'correct');
+    const feedback = scene.locator('.learning-feedback');
+    expect(await feedback.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+      'rgba(0, 0, 0, 0)',
     );
-    const xp = page.locator('.game-xp-reward');
-    await expect(xp).not.toHaveAttribute('data-celebrating', 'true');
-    const output = evidenceOutput();
-    if (output) {
-      await page.waitForTimeout(450);
-      await page.screenshot({ path: output.file(`xp-cinematic-${width}.png`) });
+    expect(await feedback.evaluate((el) => getComputedStyle(el).borderTopWidth)).toBe('0px');
+    expect(
+      await scene
+        .locator('.learning-reading-panel')
+        .evaluate((el) => getComputedStyle(el).backgroundColor),
+    ).not.toBe('rgba(0, 0, 0, 0)');
+    for (const selector of ['.game-answer-o', '.game-answer-x']) {
+      const letter = (await scene.locator(selector).locator('b').boundingBox())!;
+      const label = (await scene.locator(selector).locator('span').boundingBox())!;
+      expect(label.y).toBeGreaterThanOrEqual(letter.y + letter.height);
+      expect(Math.abs(label.x + label.width / 2 - letter.x - letter.width / 2)).toBeLessThan(1);
     }
-    await expect(xpScene).toHaveCount(0);
-    await expect(xp).toBeFocused();
-    await expect(xp).toHaveAttribute('data-celebrating', 'true');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: '정답이에요!', exact: true })).toBeFocused();
+    const travelerBox = (await scene.locator('.game-answer-traveler').boundingBox())!;
+    const effectBox = (await effect.boundingBox())!;
+    expect(
+      Math.abs(effectBox.x + effectBox.width / 2 - travelerBox.x - travelerBox.width / 2),
+    ).toBeLessThan(1);
+    expect(effectBox.width).toBeLessThan(260);
+    expect(effectBox.height).toBeLessThan(300);
+    expect(await effect.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+    const xp = page.getByRole('status', { name: '이번 답변으로 받은 경험치: 100 XP', exact: true });
+    await expect(xp).toBeVisible();
+    await expect(page.getByRole('link', { name: '완료하기', exact: true })).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    );
+    const output = evidenceOutput();
+    if (output) await page.screenshot({ path: output.file(`xp-character-${width}.png`) });
+    await expect(effect).toBeVisible();
     await expect(xp).toContainText('+100');
     await page.getByRole('link', { name: '완료하기', exact: true }).click();
     const itemScene = page.getByRole('dialog', { name: '아이템 획득 연출' });
@@ -174,7 +199,9 @@ test('reduced motion shows the awards without animated effects', async ({ page }
   await page.goto(`/student/learning/sessions/${sessionId}`);
   await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByText('이번 답변으로 받은 경험치: 100 XP')).toBeVisible();
+  await expect(
+    page.getByRole('status', { name: '이번 답변으로 받은 경험치: 100 XP', exact: true }),
+  ).toBeVisible();
   await expect(page.locator('.game-celebration-burst')).toHaveCount(0);
   await page.getByRole('link', { name: '완료하기', exact: true }).click();
   await expect(page.getByRole('button', { name: '지금 착용하기', exact: true })).toBeEnabled();
@@ -186,17 +213,63 @@ test('reduced motion shows the awards without animated effects', async ({ page }
   ).toBe(0);
 });
 
-test('changing motion preferences closes the active cinematic and restores input', async ({
+test('changing motion preferences hides local XP effects without moving focus', async ({
   page,
 }) => {
   await learningScenario(page);
   await page.goto(`/student/learning/sessions/${sessionId}`);
   await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.locator('.game-character-xp')).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.locator('.game-xp-reward')).toBeFocused();
+  await expect(page.locator('.game-character-xp')).toBeHidden();
+  await expect(page.getByRole('heading', { name: '정답이에요!', exact: true })).toBeFocused();
   await page.getByRole('link', { name: '완료하기', exact: true }).click();
   await expect(page.getByRole('button', { name: '지금 착용하기', exact: true })).toBeEnabled();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+test('X arrival waits for a delayed answer before showing the confirmed XP', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await learningScenario(page, { wrong: true, delay: 900 });
+  await page.goto(`/student/learning/sessions/${sessionId}`);
+  const scene = page.getByRole('region', { name: '학습 여행 장면' });
+  const button = page.getByRole('button', { name: 'X · 해석', exact: true });
+  const letter = (await button.locator('b').boundingBox())!;
+  const label = (await button.locator('span').boundingBox())!;
+  expect(label.y).toBeGreaterThanOrEqual(letter.y + letter.height);
+  expect(Math.abs(label.x + label.width / 2 - letter.x - letter.width / 2)).toBeLessThan(1);
+  await button.click();
+  await expect(scene).toHaveAttribute('data-phase', 'waiting');
+  await expect(scene.locator('.game-character-xp')).toHaveCount(0);
+  await expect(scene).toHaveAttribute('data-phase', 'wrong');
+  await expect(scene.locator('.game-character-xp')).toBeVisible();
+  const character = (await scene.locator('.game-answer-traveler').boundingBox())!;
+  const destination = (await scene.locator('.game-answer-x').boundingBox())!;
+  expect(
+    Math.abs(character.x + character.width / 2 - destination.x - destination.width / 2),
+  ).toBeLessThan(1);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(scene.locator('.game-character-xp')).toHaveCount(0);
+});
+
+test('long text stays readable above the character on a small phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await learningScenario(page, { longText: true });
+  await page.goto(`/student/learning/sessions/${sessionId}`);
+  const source = page.locator('.learning-source');
+  const o = page.getByRole('button', { name: 'O · 사실', exact: true });
+  const letter = (await o.locator('b').boundingBox())!;
+  const label = (await o.locator('span').boundingBox())!;
+  expect(label.y).toBeGreaterThanOrEqual(letter.y + letter.height);
+  await o.click();
+  await expect(page.getByRole('heading', { name: '정답이에요!', exact: true })).toBeVisible();
+  const text = (await page.locator('.learning-reading-panel').boundingBox())!;
+  const character = (await page.locator('.game-answer-traveler').boundingBox())!;
+  expect(text.y + text.height).toBeLessThan(character.y);
+  await expect(source).toContainText('서로 다르게');
+  await expect(page.locator('.learning-explanation')).toContainText('어떤 근거');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole('link', { name: '완료하기', exact: true })).toBeInViewport();
 });

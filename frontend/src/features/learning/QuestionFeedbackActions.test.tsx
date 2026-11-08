@@ -87,7 +87,7 @@ it('ineligibleResultNeverOffersAutomaticQueueMutation', async () => {
     http.get('*/api/student/learning/questions', () => HttpResponse.json([personalQuestion])),
   );
   renderPage(<QuestionFeedbackActions questionId={1} result={answerResult} />);
-  await waitFor(() => expect(screen.getByRole('button', { name: '별표' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: '즐겨찾기' })).toBeEnabled());
   expect(screen.queryByRole('button', { name: '추가하기' })).toBeNull();
   expect(screen.queryByText('다시 볼 문제로 추가할까요?')).toBeNull();
 });

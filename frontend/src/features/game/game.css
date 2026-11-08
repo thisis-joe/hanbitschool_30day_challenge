@@ -354,6 +354,15 @@
   border-radius: 9px;
 }
 @media (max-width: 720px) {
+  .game-home-page .game-home-intro {
+    margin-block: 0 16px;
+  }
+  .game-home-page .game-home-intro h1 {
+    margin-block: 4px 8px;
+  }
+  .game-home-page .game-home-intro p {
+    margin-block: 0;
+  }
   .learning-card.game-camp {
     grid-template-columns: minmax(0, 1fr);
   }

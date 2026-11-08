@@ -1,108 +1,104 @@
-/* Finite, local celebrations: transform/opacity only, with no input interception. */
+/* Reward text stays in the scene; finite effects are anchored to the traveler. */
 .game-xp-reward {
-  position: relative;
-  isolation: isolate;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 18px;
-  margin: 26px 0 22px;
-  padding: 20px 24px;
-  border: 2px solid #ac8736;
-  border-radius: 16px;
-  background: radial-gradient(ellipse at 15% 30%, #fff5b8, transparent 60%), #fff9e7;
-  box-shadow:
-    0 4px 0 #d3b86b,
-    inset 0 0 0 3px #fffdf3;
-  color: #473c24;
-}
-.game-xp-emblem {
-  position: relative;
-  flex: 0 0 64px;
-  height: 64px;
-  display: grid;
-  place-items: center;
-}
-.game-xp-star {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border: 2px solid #9b7026;
-  border-radius: 18px;
-  background: linear-gradient(145deg, #fff0a3 10%, #efc55f 55%, #d79839);
-  box-shadow:
-    inset 0 0 0 3px #fff0b9,
-    0 4px 0 #a77e31;
-  color: #76501b;
-  font-size: 36px;
-  text-shadow: 0 2px #fff2b0;
-}
-.game-xp-copy {
-  min-width: 0;
-}
-.game-xp-eyebrow {
-  display: block;
-  color: #6b5426;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  color: #314a35;
+  text-shadow:
+    0 1px 2px #fffef1,
+    0 0 8px #fffef1;
 }
 .game-xp-amount {
-  display: block;
-  font-size: clamp(1.7rem, 5vw, 2.3rem);
+  font-size: 1.4rem;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  color: #715018;
 }
 .game-xp-amount small {
   display: inline;
   margin: 0;
   color: inherit;
-  font-size: 0.5em;
-}
-.game-xp-copy p {
-  margin: 7px 0 0;
-  font-size: 0.75rem;
-  line-height: 1.5;
+  font-size: 0.55em;
 }
 .game-xp-total {
   display: grid;
-  gap: 6px;
-  margin-left: auto;
-  padding-left: 20px;
-  border-left: 1px solid #cfbb83;
-  white-space: nowrap;
+  gap: 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
 }
 .game-xp-total b {
-  font-size: 1rem;
-  color: #355a46;
-}
-.game-xp-total span {
   font-size: 0.75rem;
 }
-.game-xp-float {
+.game-character-xp {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+}
+.game-character-xp-aura {
+  position: absolute;
+  inset: 4% 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #fff4a66b, #ffe8753d 35%, #81edd329 56%, transparent 72%);
+  animation: character-xp-aura 2000ms ease-out both;
+}
+.game-character-xp-orbit {
+  position: absolute;
+  inset: 18% 2%;
+  border: 2px solid #ffe9a3;
+  border-radius: 50%;
+  box-shadow:
+    0 0 14px #ffe27a,
+    inset 0 0 12px #fff6c180;
+  animation: character-xp-orbit 1500ms both ease-out;
+}
+.game-character-xp-orbit-late {
+  inset: 12% 12%;
+  border-color: #b3f8df;
+  animation-delay: 200ms;
+}
+.game-character-xp-amount {
   position: absolute;
   z-index: 3;
   left: 50%;
-  top: -10px;
+  top: 5%;
   white-space: nowrap;
-  color: #675016;
-  font-size: 1rem;
+  color: #fff4b4;
+  font-size: clamp(1.1rem, 3vw, 1.6rem);
   font-weight: 900;
   text-shadow:
-    0 1px #fff,
-    1px 0 #fff,
-    -1px 0 #fff,
-    0 -1px #fff;
-  animation: game-xp-float 950ms 75ms both cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
+    0 2px #634622,
+    2px 0 #634622,
+    -2px 0 #634622,
+    0 -1px #634622,
+    0 0 12px #ffd35f;
+  animation: game-xp-float 1900ms both ease-out;
 }
-.game-xp-reward[data-celebrating='true'] .game-xp-star {
-  animation: game-prize-pop 350ms both cubic-bezier(0.16, 1, 0.3, 1);
+@keyframes character-xp-aura {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  20%,
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.16);
+  }
 }
-.game-xp-reward[data-celebrating='true'] .game-xp-amount {
-  animation: game-prize-pop 325ms 60ms both cubic-bezier(0.16, 1, 0.3, 1);
-  transform-origin: left center;
+@keyframes character-xp-orbit {
+  0% {
+    opacity: 0;
+    transform: scale(0.35) rotate(-35deg);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1) rotate(35deg);
+  }
 }
 .game-celebration-burst {
   position: absolute;
@@ -159,17 +155,17 @@
   width: 5px;
   height: 8px;
 }
-.game-xp-reward .game-celebration-halo {
+.game-character-xp .game-celebration-halo {
   animation-duration: 1100ms;
 }
-.game-xp-reward .game-celebration-ring {
+.game-character-xp .game-celebration-ring {
   animation-duration: 650ms;
   animation-delay: 40ms;
 }
-.game-xp-reward .game-celebration-ring-late {
+.game-character-xp .game-celebration-ring-late {
   animation-delay: 175ms;
 }
-.game-xp-reward .game-celebration-particle {
+.game-character-xp .game-celebration-particle {
   animation-duration: 900ms;
   animation-delay: var(--spark-delay-xp);
 }
@@ -218,7 +214,7 @@
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, -48px) scale(1.08);
+    transform: translate(-50%, -18px) scale(1.08);
     opacity: 0;
   }
 }
@@ -296,36 +292,15 @@
   }
 }
 @media (max-width: 540px) {
-  .game-xp-reward {
-    padding: 16px 12px;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .game-xp-emblem {
-    flex-basis: 48px;
-  }
-  .game-xp-star {
-    width: 46px;
-    height: 46px;
-    font-size: 30px;
-    border-radius: 14px;
-  }
-  .game-xp-total {
-    flex-basis: 100%;
-    display: flex;
-    justify-content: space-between;
-    border-left: 0;
-    border-top: 1px solid #cfbb83;
-    padding: 10px 0 0;
+  .game-character-xp .game-celebration-burst {
+    transform: scale(0.78);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .game-celebration-burst,
-  .game-xp-float {
+  .game-character-xp {
     display: none;
   }
-  .game-xp-reward[data-celebrating='true'] .game-xp-star,
-  .game-xp-reward[data-celebrating='true'] .game-xp-amount,
   .game-reward-card[data-revealing='true'] .game-item-acquired,
   .game-reward-card[data-revealing='true'] .game-reward-art > .game-equipment-icon,
   .game-reward-card[data-revealing='true'] .game-treasure-chest {
