@@ -128,3 +128,9 @@ export interface AnswerListQuery {
   page: number;
   size: number;
 }
+export interface StatisticsListContext {
+  listUrl: string;
+  ownerId: string;
+  classroomId: string;
+  listFocus?: string;
+}

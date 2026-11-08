@@ -8,7 +8,12 @@ import { useTeacherClassroom, useTeacherStudent } from './queries';
 import { numberParam, studentStatusLabel } from './StatisticsPage';
 import { StudentSummaryCharts } from './StatisticsCharts';
 import { QuestionDetailDialog } from './QuestionDetailDialog';
-import type { AnswerListQuery, TeacherAnswerState, TeacherDayRow } from './types';
+import type {
+  AnswerListQuery,
+  StatisticsListContext,
+  TeacherAnswerState,
+  TeacherDayRow,
+} from './types';
 import './stats.css';
 
 const dayLabels: Record<TeacherDayRow['state'], string> = {
@@ -23,7 +28,6 @@ const answerLabels: Record<TeacherAnswerState, string> = {
   WRONG: '선택 오답',
   TIMED_OUT: '시간초과',
 };
-type ListContext = { listUrl: string; ownerId: string; classroomId: string };
 export function StudentDetailPage() {
   const { classroomId = '', studentId = '' } = useParams();
   const { data: me } = useCurrentAccount();
@@ -49,15 +53,21 @@ function StudentWorkspace({
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const basePath = `/staff/classrooms/${encodeURIComponent(classroomId)}/learning`;
-  const candidate = location.state as Partial<ListContext> | null;
-  const listUrl =
+  const candidate = location.state as Partial<StatisticsListContext> | null;
+  const hasListContext =
     candidate?.ownerId === accountId &&
     candidate.classroomId === classroomId &&
     typeof candidate.listUrl === 'string' &&
-    (candidate.listUrl === basePath || candidate.listUrl.startsWith(basePath + '?'))
-      ? candidate.listUrl
-      : basePath;
-  const listContext: ListContext = { listUrl, ownerId: accountId, classroomId };
+    (candidate.listUrl === basePath || candidate.listUrl.startsWith(basePath + '?'));
+  const listUrl = hasListContext ? (candidate.listUrl ?? basePath) : basePath;
+  const listFocus =
+    hasListContext && typeof candidate.listFocus === 'string' ? candidate.listFocus : undefined;
+  const listContext: StatisticsListContext = {
+    listUrl,
+    ownerId: accountId,
+    classroomId,
+    listFocus,
+  };
   const query: AnswerListQuery = {
     day: numberParam(params.get('day'), 0, 30),
     filter: (params.get('filter') ?? 'WRONG') as AnswerListQuery['filter'],
@@ -86,14 +96,16 @@ function StudentWorkspace({
         next.delete('question');
         return next;
       },
-      { replace: true, state: { listUrl, ownerId: accountId, classroomId } },
+      { replace: true, state: { listUrl, ownerId: accountId, classroomId, listFocus } },
     );
-  }, [setParams, listUrl, accountId, classroomId]);
+  }, [setParams, listUrl, accountId, classroomId, listFocus]);
   const data = detail.data;
   const heading = useRouteHeadingFocus(accountId, !!data, questionId !== null);
   return (
     <section className="workspace teacher-stats">
-      <Link to={listUrl}>목록으로 돌아가기</Link>
+      <Link to={listUrl} state={listContext}>
+        목록으로 돌아가기
+      </Link>
       <header className="stats-header">
         <div>
           <p className="stats-eyebrow">STUDENT · LEARNING DETAILS</p>

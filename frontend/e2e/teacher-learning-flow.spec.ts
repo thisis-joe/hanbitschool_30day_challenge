@@ -255,7 +255,10 @@ test('teacherClassShowsActualFirstAnswerAndReviewImprovement', async ({ page, br
     await staff.getByRole('button', { name: '문항 분석', exact: true }).click();
     const origin = new URL(staff.url()).pathname + new URL(staff.url()).search;
     for (const question of [1, 2]) {
-      await staff.getByRole('button', { name: `${question}번 문항 상세`, exact: true }).click();
+      const trigger = staff
+        .getByRole('table', { name: '문항 분석', exact: true })
+        .getByRole('button', { name: `${question}번 문항 상세`, exact: true });
+      await trigger.click();
       const dialog = staff.getByRole('dialog');
       const link = dialog.getByRole('link');
       protectedEqual(await link.getAttribute('href'), `${route(c)}/students/${c.studentIds[0]}`);
@@ -269,7 +272,7 @@ test('teacherClassShowsActualFirstAnswerAndReviewImprovement', async ({ page, br
         origin,
       );
       await staff.getByRole('link', { name: '목록으로 돌아가기', exact: true }).click();
-      await headingFocused(staff);
+      await expect(trigger).toBeFocused();
     }
   } finally {
     await staff.close();
@@ -605,7 +608,7 @@ test('teacherQuestionDialogShowsTimeoutSeparateFromUntouched', async ({ page }) 
     origin,
   );
   await page.getByRole('link', { name: '목록으로 돌아가기', exact: true }).click();
-  await headingFocused(page);
+  await expect(trigger).toBeFocused();
   await teacherLayout(page, 'questions');
   await page.getByLabel('문항 회차', { exact: true }).selectOption('2');
   await expect(page.getByRole('button', { name: '6번 문항 상세' })).toBeVisible();
@@ -628,7 +631,7 @@ test('teacherQuestionDialogShowsTimeoutSeparateFromUntouched', async ({ page }) 
     ],
   );
   await expect(
-    page.getByRole('table', { name: '문항 분석' }).getByRole('cell').filter({ hasText: /^—$/ }),
+    page.getByRole('table', { name: '문항 분석' }).getByText('응답 없음', { exact: true }),
   ).toHaveCount(5);
   const untouched = await get<TeacherStudentDetail>(
     page,

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentAccount } from '../../auth/queries';
 import { GameAvatar } from '../../game/GameAvatar';
@@ -7,7 +7,7 @@ import { useRouteHeadingFocus } from '../../../lib/useRouteHeadingFocus';
 import { useTeacherClassroom, useTeacherQuestions, useTeacherStudents } from './queries';
 import { ClassSummaryCharts, rate } from './StatisticsCharts';
 import { QuestionDetailDialog } from './QuestionDetailDialog';
-import type { QuestionListQuery, StudentListQuery } from './types';
+import type { QuestionListQuery, StatisticsListContext, StudentListQuery } from './types';
 import './stats.css';
 
 export function numberParam(value: string | null, fallback = 0, max = Number.MAX_SAFE_INTEGER) {
@@ -63,16 +63,24 @@ function StatisticsWorkspace({
   const students = useTeacherStudents(classroomId, studentQuery);
   const questions = useTeacherQuestions(classroomId, questionQuery, tab === 'questions');
   const questionId = numberParam(params.get('question'), 0, 150) || null;
-  const change = (changes: Record<string, string | null>, resetPage = true) => {
-    setParams((current) => {
-      const next = new URLSearchParams(current);
-      if (resetPage) next.delete('page');
-      for (const [key, value] of Object.entries(changes)) {
-        if (value === null) next.delete(key);
-        else next.set(key, value);
-      }
-      return next;
-    });
+  const listContext = {
+    listUrl: location.pathname + location.search,
+    ownerId: accountId,
+    classroomId,
+  };
+  const change = (changes: Record<string, string | null>, resetPage = true, listFocus?: string) => {
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (resetPage) next.delete('page');
+        for (const [key, value] of Object.entries(changes)) {
+          if (value === null) next.delete(key);
+          else next.set(key, value);
+        }
+        return next;
+      },
+      listFocus ? { state: { ...listContext, listFocus } } : undefined,
+    );
   };
   const closeQuestion = useCallback(() => {
     setParams(
@@ -86,24 +94,41 @@ function StatisticsWorkspace({
   }, [setParams]);
   const selectedList = tab === 'students' ? students : questions;
   const pagination = tab === 'students' ? students.data?.students : questions.data;
-  const heading = useRouteHeadingFocus(
-    accountId,
-    !!classroom.data && !!selectedList.data,
-    questionId !== null,
-  );
+  const ready = !!classroom.data && !!selectedList.data && !selectedList.isPlaceholderData;
+  const origin = location.state as Partial<StatisticsListContext> | null;
+  const returnTarget =
+    origin?.ownerId === accountId &&
+    origin.classroomId === classroomId &&
+    origin.listUrl === listContext.listUrl &&
+    typeof origin.listFocus === 'string'
+      ? origin.listFocus
+      : undefined;
+  const workspace = useRef<HTMLElement>(null);
+  const listNav = useRef<HTMLElement>(null);
+  const restored = useRef<string>(null);
+  const heading = useRouteHeadingFocus(accountId, ready, questionId !== null || !!returnTarget);
+  useEffect(() => {
+    if (!ready || questionId !== null || !returnTarget || restored.current === location.key) return;
+    restored.current = location.key;
+    const target = document.getElementById(returnTarget);
+    const destination = target && workspace.current?.contains(target) ? target : listNav.current;
+    destination?.focus({ preventScroll: true });
+    destination?.scrollIntoView?.({ block: 'center' });
+  }, [ready, questionId, returnTarget, location.key]);
+  const summary = students.data?.summary;
   return (
-    <section className="workspace teacher-stats">
-      <header className="stats-header">
+    <section ref={workspace} className="workspace teacher-stats stats-overview">
+      <header className="stats-header stats-overview-header">
         <div>
-          <Link to="/staff/classrooms">학급 목록</Link>
-          <p className="stats-eyebrow">TEACHER · LEARNING STATISTICS</p>
+          <Link className="stats-back" to="/staff/classrooms">
+            ← 학급 목록
+          </Link>
           <h1 ref={heading} tabIndex={-1}>
             {classroom.data
               ? `${classroom.data.gradeLabel} ${classroom.data.classNumber}반 학습 통계`
               : '학급 학습 통계'}
           </h1>
-          <p>첫 답변을 기준으로 학급 전체 학습과 복습 개선을 확인합니다.</p>
-          <a href="#statistics-list">학생·문항 목록 바로가기 ↓</a>
+          <p>학급 참여와 첫 답변을 확인하세요.</p>
         </div>
         <span className="stats-readonly">교사용 조회</span>
       </header>
@@ -120,39 +145,50 @@ function StatisticsWorkspace({
           <button onClick={() => void students.refetch()}>다시 시도</button>
         </div>
       ) : null}
-      {students.data ? (
-        <>
-          <ClassSummaryCharts summary={students.data.summary} />
-          <section aria-label="어려운 문항 TOP 3" className="stats-card stats-hard">
-            <h2>어려운 문항 TOP 3</h2>
-            <p>
-              학급 전체 중 최소 {Math.min(3, students.data.summary.studentCount)}명이 응답하고
-              오답이 있는 문항을 서버 오답률 순으로 표시합니다.
-            </p>
-            <ol>
-              {students.data.summary.hardQuestions.map((q) => (
-                <li key={q.questionId}>
-                  <button
-                    className="secondary"
-                    aria-label={`${q.questionId}번 문항 상세`}
-                    onClick={() => change({ question: String(q.questionId) }, false)}
-                  >
-                    {q.questionId}번 · {q.dayNumber}회차 <span>{q.text}</span>
-                    <strong>오답률 {rate(q.wrongRate)}</strong>
-                    <small>
-                      응답 {q.answered}명 · 오답 {q.wrong}명
-                    </small>
-                  </button>
-                </li>
-              ))}
-            </ol>
-            {students.data.summary.hardQuestions.length === 0 ? (
-              <p>조건에 맞는 어려운 문항이 없습니다.</p>
-            ) : null}
-          </section>
-        </>
+      {summary ? (
+        <section className="stats-participation" aria-labelledby="stats-participation-heading">
+          <h2 id="stats-participation-heading">학급 참여</h2>
+          <dl>
+            <div>
+              <dt>참여</dt>
+              <dd>
+                {summary.participatingCount} / {summary.studentCount}명
+              </dd>
+            </div>
+            <div>
+              <dt>미참여</dt>
+              <dd>{summary.studentCount - summary.participatingCount}명</dd>
+            </div>
+            <div>
+              <dt>30회차 완료</dt>
+              <dd>{summary.completeCount}명</dd>
+            </div>
+          </dl>
+          <button
+            className="secondary"
+            onClick={() => {
+              change({
+                tab: 'students',
+                search: null,
+                status: 'NEW',
+                sort: null,
+                day: null,
+                question: null,
+              });
+              listNav.current?.focus();
+            }}
+          >
+            미참여 학생 보기
+          </button>
+        </section>
       ) : null}
-      <nav id="statistics-list" tabIndex={-1} className="stats-tabs" aria-label="통계 종류">
+      <nav
+        ref={listNav}
+        id="statistics-list"
+        tabIndex={-1}
+        className="stats-tabs"
+        aria-label="통계 종류"
+      >
         <button
           aria-pressed={tab === 'students'}
           onClick={() =>
@@ -183,6 +219,7 @@ function StatisticsWorkspace({
         >
           문항 분석
         </button>
+        {summary ? <a href="#class-summary">학급 전체 통계</a> : null}
       </nav>
       <div className="stats-card">
         <form
@@ -269,15 +306,11 @@ function StatisticsWorkspace({
             <button onClick={() => void questions.refetch()}>다시 시도</button>
           </div>
         ) : null}
-        {selectedList.data ? (
-          <p className="stats-scroll-hint">표를 좌우로 밀어 나머지 항목을 확인하세요.</p>
-        ) : null}
         {tab === 'students' && students.data ? (
           <div
-            className="stats-table-scroll"
-            tabIndex={0}
+            className="stats-table-scroll stats-overview-table stats-roster-table"
             role="region"
-            aria-label="학생 학습 표 가로 스크롤"
+            aria-label="학생 학습 목록"
             aria-busy={students.isFetching}
           >
             <table aria-label="학생 학습 현황">
@@ -300,13 +333,10 @@ function StatisticsWorkspace({
                     <th scope="row">
                       <Link
                         className="stats-student"
+                        id={`stats-student-${row.accountId}`}
                         aria-label={`${row.studentNumber}번 ${row.name} 학생 상세`}
                         to={`/staff/classrooms/${encodeURIComponent(classroomId)}/learning/students/${encodeURIComponent(row.accountId)}`}
-                        state={{
-                          listUrl: location.pathname + location.search,
-                          ownerId: accountId,
-                          classroomId,
-                        }}
+                        state={{ ...listContext, listFocus: `stats-student-${row.accountId}` }}
                       >
                         <GameAvatar characterId={row.characterId} />
                         <span>
@@ -315,10 +345,20 @@ function StatisticsWorkspace({
                         </span>
                       </Link>
                     </th>
-                    <td>{studentStatusLabel[row.status]}</td>
+                    <td>
+                      {studentStatusLabel[row.status]}
+                      <small className="stats-compact">미개선 {row.pendingWrong}개</small>
+                    </td>
                     <td>{row.answered} / 150</td>
                     <td>{row.passedDayCount} / 30</td>
-                    <td>{rate(row.accuracy)}</td>
+                    <td>
+                      {rate(row.accuracy)}
+                      <small>
+                        {row.answered
+                          ? `정답 ${row.correct} / 응답 ${row.answered}개`
+                          : '응답 없음'}
+                      </small>
+                    </td>
                     <td>{row.pendingWrong}개</td>
                   </tr>
                 ))}
@@ -328,10 +368,9 @@ function StatisticsWorkspace({
         ) : null}
         {tab === 'questions' && questions.data ? (
           <div
-            className="stats-table-scroll"
-            tabIndex={0}
+            className="stats-table-scroll stats-overview-table stats-questions-table"
             role="region"
-            aria-label="문항 분석 표 가로 스크롤"
+            aria-label="문항 분석 목록"
             aria-busy={questions.isFetching}
           >
             <table aria-label="문항 분석">
@@ -356,8 +395,15 @@ function StatisticsWorkspace({
                     <th scope="row">
                       <button
                         className="secondary stats-question-text"
+                        id={`stats-question-${q.questionId}`}
                         aria-label={`${q.questionId}번 문항 상세`}
-                        onClick={() => change({ question: String(q.questionId) }, false)}
+                        onClick={() =>
+                          change(
+                            { question: String(q.questionId) },
+                            false,
+                            `stats-question-${q.questionId}`,
+                          )
+                        }
                       >
                         {q.questionId}번 · {q.dayNumber}회차 <span>{q.text}</span>
                       </button>
@@ -368,7 +414,12 @@ function StatisticsWorkspace({
                     <td>{q.choiceWrong}명</td>
                     <td>{q.timedOut}명</td>
                     <td>{q.unanswered}명</td>
-                    <td>{rate(q.wrongRate)}</td>
+                    <td>
+                      {rate(q.wrongRate)}
+                      <small>
+                        {q.answered ? `오답 ${q.wrong} / 응답 ${q.answered}명` : '응답 없음'}
+                      </small>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -407,6 +458,46 @@ function StatisticsWorkspace({
           </div>
         ) : null}
       </div>
+      {summary ? (
+        <>
+          <ClassSummaryCharts summary={summary} />
+          <section aria-label="어려운 문항 TOP 3" className="stats-card stats-hard">
+            <h2>어려운 문항 TOP 3</h2>
+            <p>
+              학급 전체 중 최소 {Math.min(3, summary.studentCount)}명이 응답하고 오답이 있는 문항을
+              첫 답변 오답률 순으로 표시합니다.
+            </p>
+            {summary.hardQuestions.length ? (
+              <ol>
+                {summary.hardQuestions.map((q) => (
+                  <li key={q.questionId}>
+                    <button
+                      className="secondary"
+                      id={`stats-hard-${q.questionId}`}
+                      aria-label={`${q.questionId}번 문항 상세`}
+                      onClick={() =>
+                        change(
+                          { question: String(q.questionId) },
+                          false,
+                          `stats-hard-${q.questionId}`,
+                        )
+                      }
+                    >
+                      {q.questionId}번 · {q.dayNumber}회차 <span>{q.text}</span>
+                      <strong>오답률 {rate(q.wrongRate)}</strong>
+                      <small>
+                        응답 {q.answered}명 · 오답 {q.wrong}명
+                      </small>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p>조건에 맞는 어려운 문항이 없습니다.</p>
+            )}
+          </section>
+        </>
+      ) : null}
       <QuestionDetailDialog
         classroomId={classroomId}
         questionId={questionId}
