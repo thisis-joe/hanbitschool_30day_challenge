@@ -132,6 +132,48 @@ for (const density of [1, 2]) {
   });
 }
 
+test('resizing the answer scene keeps the ground aligned without observer warnings', async ({
+  page,
+}) => {
+  const warnings: string[] = [];
+  page.on('pageerror', (error) => {
+    if (error.message.includes('ResizeObserver loop')) warnings.push(error.message);
+  });
+  page.on('console', (message) => {
+    if (message.text().includes('ResizeObserver loop')) warnings.push(message.text());
+  });
+  await page.addInitScript(() => {
+    window.addEventListener('error', (event) => {
+      if (event.message.includes('ResizeObserver loop')) console.error(event.message);
+    });
+  });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await scenario(page);
+  await page.goto(`/student/learning/sessions/${sessionId}`);
+  const scene = page.getByRole('region', { name: '학습 여행 장면' });
+  await expect(scene.locator('canvas[data-ready="true"]')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  for (const width of [1280, 390, 768, 320]) {
+    await page.setViewportSize({ width, height: 600 });
+    await expect
+      .poll(() =>
+        scene.evaluate((element) => {
+          const depth = Math.max(element.clientHeight, element.clientWidth / 1.5) * (1 - 94 / 128);
+          const ground = parseFloat(getComputedStyle(element).getPropertyValue('--scene-ground'));
+          return Math.abs(ground - depth);
+        }),
+      )
+      .toBeLessThan(1);
+  }
+  await page.getByRole('button', { name: 'O · 사실', exact: true }).click();
+  await expect(page.locator('.learning-explanation')).toBeVisible();
+  await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  expect(warnings).toEqual([]);
+});
+
 for (const width of [320, 390, 768, 1280]) {
   for (const [position, region] of [
     [0, 'forest'],
