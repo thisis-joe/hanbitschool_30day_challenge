@@ -26,11 +26,22 @@ export function useSceneGround<T extends HTMLElement>(region: SceneRegion) {
     };
     update();
     if (typeof ResizeObserver === 'undefined') return;
-    const observer = new ResizeObserver(update);
+    let frame: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (frame !== null) return;
+      // Setting the required height can resize the observed scene itself.
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        update();
+      });
+    });
     observer.observe(scene);
     if (content) observer.observe(content);
     if (actor) observer.observe(actor);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
   }, [region]);
   return ref;
 }
