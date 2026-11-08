@@ -83,6 +83,7 @@ async function firstPass(page: Page) {
 // Catches completion unmounting the confirmed-answer flight before pending cleanup.
 test('completionWaitsForRelatedStatusThenHomeReplayNeedsNoRetry', async ({ page }) => {
   await provisionLearningClass(page, 1);
+  await page.goto('/student/learning');
   const first = await start(
     page,
     page.getByRole('button', { name: '오늘 학습 시작', exact: true }),
@@ -106,13 +107,20 @@ test('completionWaitsForRelatedStatusThenHomeReplayNeedsNoRetry', async ({ page 
   let heldStatus = false;
   let releaseStatus!: () => void;
   let enteredStatus!: () => void;
-  const release = new Promise<void>((resolve) => { releaseStatus = resolve; });
-  const entered = new Promise<void>((resolve) => { enteredStatus = resolve; });
+  const release = new Promise<void>((resolve) => {
+    releaseStatus = resolve;
+  });
+  const entered = new Promise<void>((resolve) => {
+    enteredStatus = resolve;
+  });
   const observe = (response: Response) => {
     if (
-      new URL(response.url()).pathname === `/api/student/learning/sessions/${review.sessionId}/answers` &&
-      response.request().method() === 'POST' && response.status() === 200
-    ) answerAccepted = true;
+      new URL(response.url()).pathname ===
+        `/api/student/learning/sessions/${review.sessionId}/answers` &&
+      response.request().method() === 'POST' &&
+      response.status() === 200
+    )
+      answerAccepted = true;
   };
   page.on('response', observe);
   await page.route('**/api/student/learning/status', async (route) => {
@@ -151,12 +159,18 @@ test('completionWaitsForRelatedStatusThenHomeReplayNeedsNoRetry', async ({ page 
     await page.unroute('**/api/student/learning/status');
   }
   await page.goto('/student/learning');
-  await page.getByRole('button', { name: '회차별 학습 보기' }).click();
-  await expect(page.getByRole('button', { name: '1회차 다시 풀기', exact: true })).toBeEnabled();
-  await expect(page.getByRole('button', { name: '같은 요청 다시 확인', exact: true })).toHaveCount(0);
-  expect(await page.evaluate(() => Object.keys(sessionStorage).some((key) =>
-    key.startsWith('hanbit.learning.pending.v1:'),
-  ))).toBe(false);
+  await page.getByText('지나온 배움 다시 풀기', { exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: '선택 회차 다시 풀기', exact: true }),
+  ).toBeEnabled();
+  await expect(page.getByRole('button', { name: '같은 요청 다시 확인', exact: true })).toHaveCount(
+    0,
+  );
+  expect(
+    await page.evaluate(() =>
+      Object.keys(sessionStorage).some((key) => key.startsWith('hanbit.learning.pending.v1:')),
+    ),
+  ).toBe(false);
 });
 
 // Catches unsaved clothing, appearance reset on relogin, and missing six-slot persistence.
@@ -344,7 +358,7 @@ test('firstPassGiftSavesWithoutFinishAndReplayPaysOnlyRepeatXp', async ({ page }
   await page.goto('/student/learning');
   const replay = await start(
     page,
-    page.getByRole('button', { name: '1회차 다시 풀기', exact: true }),
+    page.getByRole('button', { name: '선택 회차 다시 풀기', exact: true }),
     'REPLAY',
     1,
   );
@@ -396,8 +410,9 @@ test('mapUsesFirstFactsAndServerLocks', async ({ page }) => {
   await page.goto('/student/map');
   await expect(page.getByRole('heading', { name: '탐험 지도', exact: true })).toBeFocused();
   await layoutAndTargets(page);
-  await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: '3회차 시작하기', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '3회차 시작하기', exact: true })).toHaveCount(0);
+  await page.goto('/student/learning');
   const first = await start(
     page,
     page.getByRole('button', { name: '오늘 학습 시작', exact: true }),
@@ -410,7 +425,7 @@ test('mapUsesFirstFactsAndServerLocks', async ({ page }) => {
   expect(facts.firstAnswerCount).toBe(5);
   expect(facts.days[0].state).toBe('RETRY_REQUIRED');
   expect(facts.days[1].availability).not.toBe('AVAILABLE');
-  await page.goto('/student/map');
+  await page.goto('/student/learning');
   const replay = await start(
     page,
     page.getByRole('button', { name: '다시 도전하기', exact: true }),
@@ -425,8 +440,8 @@ test('mapUsesFirstFactsAndServerLocks', async ({ page }) => {
   expect(passed.days[1].availability).toBe('AVAILABLE');
   expect(passed.days[2].availability).toBe('LOCKED_DATE');
   await page.goto('/student/map');
-  await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toBeEnabled();
-  await expect(page.getByRole('button', { name: '3회차 시작하기', exact: true })).toBeDisabled();
+  await expect(page.getByLabel('2회차 도전 가능', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '3회차 시작하기', exact: true })).toHaveCount(0);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const recenter = page.getByRole('button', { name: '현재 위치로 돌아가기' });
   await recenter.focus();
@@ -442,6 +457,7 @@ test('directActiveSessionSurvivesMissingCharacter', async ({ page }) => {
   await layoutAndTargets(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('.game-avatar-idle')).toHaveCSS('animation-name', 'none');
+  await page.goto('/student/learning');
   const first = await start(
     page,
     page.getByRole('button', { name: '오늘 학습 시작', exact: true }),
@@ -493,6 +509,7 @@ test('twoTabsRecoverRevisionConflictBeforeAnExplicitNewSave', async ({ page, con
 // Delay actual cosmetic responses after answer one; the canonical learning command must still settle.
 test('cosmeticReadsCannotHoldTheLearningCommandOrResetItsDeadline', async ({ page }) => {
   await provisionLearner(page);
+  await page.goto('/student/learning');
   const first = await start(
     page,
     page.getByRole('button', { name: '오늘 학습 시작', exact: true }),

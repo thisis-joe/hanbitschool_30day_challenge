@@ -111,7 +111,7 @@ async function improve(page: Page, first: LearningSessionView) {
   await page.goto('/student/learning');
   const replay = await start(
     page,
-    page.getByRole('button', { name: '1회차 다시 풀기', exact: true }),
+    page.getByRole('button', { name: '선택 회차 다시 풀기', exact: true }),
     'REPLAY',
     1,
   );
@@ -822,7 +822,7 @@ test('combinedGameHistoryAndTeacherStatsSurviveBackendRestart', async ({ page, b
     });
     await layoutAndTargets(page);
     await page.goto('/student/map');
-    await expect(page.getByRole('button', { name: '2회차 시작하기', exact: true })).toBeEnabled();
+    await expect(page.getByLabel('2회차 도전 가능', { exact: true })).toBeVisible();
     await layoutAndTargets(page);
     // The map's hero is static; the home scene has one finite arrival animation.
     await page.goto('/student/learning');

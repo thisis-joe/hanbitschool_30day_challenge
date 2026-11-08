@@ -114,15 +114,15 @@ export function JourneyMap({
             const anchor = MAP_ANCHORS[day.dayNumber];
             if (!anchor) return null;
             return (
-              <a
+              <span
+                role="img"
                 className={`game-map-day ${day.state === 'PASSED' ? 'game-map-passed' : day.availability === 'AVAILABLE' ? 'game-map-current' : 'game-map-locked'}`}
                 key={day.dayNumber}
-                href={`#journey-day-${day.dayNumber}`}
                 style={{ left: `${anchor[0]}%`, top: `${anchor[1]}%` }}
-                aria-label={`${day.dayNumber}회차 살펴보기`}
+                aria-label={`${day.dayNumber}회차 ${day.state === 'PASSED' ? '통과' : day.availability === 'AVAILABLE' ? '도전 가능' : '아직 열리지 않음'}`}
               >
                 {day.dayNumber}
-              </a>
+              </span>
             );
           })}
           {MAP_REGIONS.map((region) => {
@@ -161,9 +161,7 @@ export function JourneyMap({
           </div>
         </div>
       </div>
-      <p className="game-map-caption">
-        지도를 위로 움직여 여행할 곳을 둘러보세요. 아래 회차 목록에서도 학습을 선택할 수 있어요.
-      </p>
+      <p className="game-map-caption">지도를 위로 움직여 여행할 곳을 둘러보세요.</p>
       {journey.journeyPosition === 150 && !journey.courseCompleted ? (
         <p>등대에 도착했어요. 아직 통과하지 못한 회차에 다시 도전해요.</p>
       ) : null}

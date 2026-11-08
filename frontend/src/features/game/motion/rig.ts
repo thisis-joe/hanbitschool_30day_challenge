@@ -17,6 +17,7 @@ interface Gear {
   value: number;
 }
 export interface AvatarRig {
+  original: HTMLCanvasElement;
   body: HTMLCanvasElement;
   heads: Record<AvatarPose['expression'], HTMLCanvasElement>;
   hair: HTMLCanvasElement;
@@ -90,7 +91,8 @@ export async function buildAvatarRig(
   signal: AbortSignal,
 ): Promise<AvatarRig> {
   const body = surface(),
-    bare = surface();
+    bare = surface(),
+    originalPose = surface();
   const [, , face, hat, held] = await Promise.all([
     renderAvatar(
       body.canvas,
@@ -109,6 +111,7 @@ export async function buildAvatarRig(
     gear(equipment.hand, 'hand', signal),
   ]);
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+  await renderAvatar(originalPose.canvas, character, equipment, signal);
   const a = avatarAnchor(character),
     anatomy = ANATOMY[character];
   const source = body.ctx.getImageData(0, 0, 128, 176),
@@ -155,24 +158,8 @@ export async function buildAvatarRig(
     [farShoulder[0] - 2, farShoulder[1] - 3, farShoulder[0] + 9, palm[1] + 8],
     true,
   );
-  // The far arm is occluded in the original. A mirrored complete texture has a real shoulder and elbow.
-  const far = surface();
-  far.ctx.translate(...farShoulder);
-  far.ctx.scale(-0.86, 0.94);
-  far.ctx.translate(-shoulder[0], -shoulder[1]);
-  far.ctx.drawImage(nearArm.image, 0, 0);
-  const mirrored = (p: Point): Point => [
-    farShoulder[0] - (p[0] - shoulder[0]) * 0.86,
-    farShoulder[1] + (p[1] - shoulder[1]) * 0.94,
-  ];
-  const farArm: Limb = {
-    ...farSource,
-    image: far.canvas,
-    joints: [farShoulder, mirrored(elbow), mirrored(palm)],
-    bounds: [farShoulder[0] - 7, farShoulder[1] - 6, farShoulder[0] + 18, palm[1] + 8],
-  };
-  const hipY = a.pants[3] - 5,
-    split = Math.round((a.feet[0] + a.feet[1] + 17) / 2);
+  const farArm = farSource;
+  const hipY = a.pants[3] - 5;
   const leg = (index: number, bounds: Box): Limb => {
     const layer = surface(),
       pixels = layer.ctx.createImageData(128, 176);
@@ -181,8 +168,9 @@ export async function buildAvatarRig(
     const length = distance(hip, ankle) * 0.54;
     for (let y = bounds[1]; y < bounds[3]; y++)
       for (let x = bounds[0]; x < bounds[2]; x++) {
+        if (index === 0 ? x >= seam[y] : x < seam[y]) continue;
         copyPixel(pixels, remaining, x, y);
-        remaining.data[(y * 128 + x) * 4 + 3] = 0;
+        if (y >= a.pants[3]) remaining.data[(y * 128 + x) * 4 + 3] = 0;
       }
     layer.ctx.putImageData(pixels, 0, 0);
     return { image: layer.canvas, joints: [hip, knee(hip, ankle, length, length), ankle], bounds };
@@ -207,12 +195,35 @@ export async function buildAvatarRig(
     }
   head.ctx.putImageData(headPixels, 0, 0);
   hair.ctx.putImageData(hairPixels, 0, 0);
-  const nearLeg = leg(0, [a.feet[0] - 2, hipY, split, 173]),
-    farLeg = leg(1, [split, hipY, a.feet[1] + 27, 173]);
+  // Follow the gap between the original legs rather than bisecting a foot vertically.
+  const seam: number[] = [];
+  let previous = Math.round((a.pants[0] + a.pants[2]) / 2);
+  for (let y = hipY - 4; y < 173; y++) {
+    let best = previous,
+      cost = Infinity;
+    for (
+      let x = Math.max(a.feet[0] + 10, previous - 3);
+      x <= Math.min(a.feet[1] + 12, previous + 3);
+      x++
+    ) {
+      const p = (y * 128 + x) * 4;
+      const pixelCost =
+        remaining.data[p + 3] * (skinPixel(remaining.data, p) ? 4 : 1) + Math.abs(x - previous) * 5;
+      if (pixelCost < cost) {
+        cost = pixelCost;
+        best = x;
+      }
+    }
+    seam[y] = best;
+    previous = best;
+  }
+  // The textured roots overlap the trousers beneath the torso, so a bent hip cannot open a gap.
+  const nearLeg = leg(0, [a.feet[0] - 2, hipY - 4, a.feet[1] + 27, 173]),
+    farLeg = leg(1, [a.feet[0] - 2, hipY - 4, a.feet[1] + 27, 173]);
   // The torso owns neither feet nor the original arm outlines outside its clothing.
   for (let y = a.shirt[1]; y < 176; y++)
     for (let x = 0; x < 128; x++)
-      if (y >= hipY || x < a.shirt[0] - 3 || x > a.shirt[2] + 3)
+      if (y >= a.pants[3] || x < a.shirt[0] - 3 || x > a.shirt[2] + 3)
         remaining.data[(y * 128 + x) * 4 + 3] = 0;
   body.ctx.putImageData(remaining, 0, 0);
   if (hat) {
@@ -223,6 +234,7 @@ export async function buildAvatarRig(
   const skinIndex = ((a.eyes[0][1] + 9) * 128 + a.eyes[0][0] + 2) * 4;
   const skin = `rgb(${original.data[skinIndex]},${original.data[skinIndex + 1]},${original.data[skinIndex + 2]})`;
   return {
+    original: originalPose.canvas,
     body: body.canvas,
     heads: {
       neutral: head.canvas,
@@ -319,30 +331,81 @@ function rotate(ctx: CanvasRenderingContext2D, pivot: Point, degrees: number) {
   ctx.rotate((degrees * Math.PI) / 180);
   ctx.translate(-pivot[0], -pivot[1]);
 }
-/** One-pixel texture strips overlap slightly: no antialiased triangle seams through hair or joints. */
+const meshLayers = new WeakMap<
+  HTMLCanvasElement,
+  {
+    canvas: HTMLCanvasElement;
+    ctx: CanvasRenderingContext2D;
+    source: ImageData;
+    pixels: ImageData;
+  }
+>();
+/** Rasterize shared texel edges, so bending never opens seams between texture strips. */
 function mesh(
   ctx: CanvasRenderingContext2D,
   image: HTMLCanvasElement,
   bounds: Box,
   map: (p: Point) => Point,
 ) {
-  const width = bounds[2] - bounds[0];
-  for (let y = bounds[1]; y < bounds[3]; y++) {
-    const p = map([bounds[0], y]),
-      q = map([bounds[2], y]),
-      r = map([bounds[0], y + 1]);
-    ctx.save();
-    ctx.transform(
-      (q[0] - p[0]) / width,
-      (q[1] - p[1]) / width,
-      r[0] - p[0],
-      r[1] - p[1],
-      p[0],
-      p[1],
-    );
-    ctx.drawImage(image, bounds[0], y, width, 1, 0, -0.3, width, 1.6);
-    ctx.restore();
+  let layer = meshLayers.get(image);
+  if (!layer) {
+    const scratch = surface();
+    layer = {
+      ...scratch,
+      source: image.getContext('2d')!.getImageData(0, 0, 128, 176),
+      pixels: scratch.ctx.createImageData(128, 176),
+    };
+    meshLayers.set(image, layer);
   }
+  const { source, pixels } = layer;
+  pixels.data.fill(0);
+  const vertices = new Map<number, Point>();
+  const vertex = (x: number, y: number) => {
+    const key = y * 129 + x;
+    let p = vertices.get(key);
+    if (!p) {
+      p = map([x, y]);
+      vertices.set(key, p);
+    }
+    return p;
+  };
+  const triangle = (a: Point, b: Point, c: Point, color: number) => {
+    const cross = (p: Point, q: Point, x: number, y: number) =>
+      (q[0] - p[0]) * (y - p[1]) - (q[1] - p[1]) * (x - p[0]);
+    const area = cross(a, b, c[0], c[1]);
+    if (Math.abs(area) < 0.000001) return;
+    const left = Math.max(0, Math.floor(Math.min(a[0], b[0], c[0])));
+    const right = Math.min(127, Math.ceil(Math.max(a[0], b[0], c[0])));
+    const top = Math.max(0, Math.floor(Math.min(a[1], b[1], c[1])));
+    const bottom = Math.min(175, Math.ceil(Math.max(a[1], b[1], c[1])));
+    for (let y = top; y <= bottom; y++)
+      for (let x = left; x <= right; x++) {
+        const px = x + 0.5,
+          py = y + 0.5;
+        if (
+          cross(a, b, px, py) / area < -0.000001 ||
+          cross(b, c, px, py) / area < -0.000001 ||
+          cross(c, a, px, py) / area < -0.000001
+        )
+          continue;
+        const dest = (y * 128 + x) * 4;
+        if (source.data[color + 3] < pixels.data[dest + 3]) continue;
+        pixels.data.set(source.data.subarray(color, color + 4), dest);
+      }
+  };
+  for (let y = bounds[1]; y < bounds[3]; y++)
+    for (let x = bounds[0]; x < bounds[2]; x++) {
+      const color = (y * 128 + x) * 4;
+      if (!source.data[color + 3]) continue;
+      const a = vertex(x, y),
+        b = vertex(x + 1, y),
+        c = vertex(x, y + 1),
+        d = vertex(x + 1, y + 1);
+      triangle(a, b, c, color);
+      triangle(b, d, c, color);
+    }
+  layer.ctx.putImageData(pixels, 0, 0);
+  ctx.drawImage(layer.canvas, 0, 0);
 }
 function limb(
   ctx: CanvasRenderingContext2D,
@@ -351,8 +414,8 @@ function limb(
   skin: string,
   foot = false,
 ) {
-  // The resting sprite hides skin under hands and clothes. Reconstruct that narrow joint core
-  // beneath its original texture so bending can never reveal a transparent knee or shoulder.
+  // Only the occluded arm needs a narrow connection beneath its original texture.
+  // Legs retain their painted silhouette: a second skin stroke would create phantom limbs.
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -361,11 +424,11 @@ function limb(
   ctx.lineTo(...target[1]);
   ctx.lineTo(...target[2]);
   ctx.strokeStyle = '#79503b';
-  ctx.lineWidth = foot ? 8 : 7;
-  ctx.stroke();
+  ctx.lineWidth = 6;
+  if (!foot) ctx.stroke();
   ctx.strokeStyle = skin;
-  ctx.lineWidth = foot ? 6 : 5;
-  ctx.stroke();
+  ctx.lineWidth = 4;
+  if (!foot) ctx.stroke();
   ctx.restore();
   const [a, b, c] = part.joints,
     [p, q, r] = target;
@@ -418,6 +481,14 @@ export function paintAvatarPose(canvas: HTMLCanvasElement, rig: AvatarRig, pose:
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false;
+  if (
+    Object.entries(pose).every(([key, value]) =>
+      key === 'expression' ? value === 'neutral' : value === 0,
+    )
+  ) {
+    ctx.drawImage(rig.original, 24, 26);
+    return;
+  }
   ctx.save();
   ctx.translate(24, 26 - pose.lift);
   // Hair follows the head with a delayed flexible tip, and stays behind the limbs.

@@ -4,7 +4,7 @@ import { useCurrentAccount } from '../auth/queries';
 import { getPendingCommandEpoch } from '../learning/pendingCommands';
 import { errorMessage } from '../../lib/http';
 import { useRouteHeadingFocus } from '../../lib/useRouteHeadingFocus';
-import { GameAvatar } from './GameAvatar';
+import { WardrobePlayground } from './WardrobePlayground';
 import { EquipmentCategoryIcon, EquipmentIcon } from './EquipmentIcon';
 import { useGame } from './queries';
 import { useAppearance } from './useAppearance';
@@ -88,7 +88,6 @@ export function ClosetPage() {
         </h1>
         <p>회차를 처음 통과하면 장비를 모을 수 있어요. 미보유 장비도 미리 볼 수 있어요.</p>
         <nav className="game-page-nav" aria-label="꾸미기 메뉴">
-          <Link to="/student/learning">학습 홈</Link>
           <Link to="/student/character">캐릭터 선택</Link>
         </nav>
         {game.isPending ? <p role="status">옷장을 불러오고 있어요.</p> : null}
@@ -108,14 +107,13 @@ export function ClosetPage() {
                 className="game-appearance-preview"
                 aria-label="외형 미리보기"
               >
-                <div className="game-wardrobe-room">
-                  <span className="game-tag">{item ? '미리 입어보는 중' : '나의 여행 친구'}</span>
-                  <GameAvatar
-                    characterId={view.characterId}
-                    equippedBySlot={equipment}
-                    label={label}
-                  />
-                </div>
+                <WardrobePlayground
+                  key={`${owner}:${location.key}`}
+                  characterId={view.characterId}
+                  equipment={equipment}
+                  label={label}
+                  preview={!!item}
+                />
                 <div className="game-preview-controls">
                   {item ? (
                     <>
@@ -188,13 +186,11 @@ export function ClosetPage() {
                   <p className="learning-eyebrow">나의 장비 상자</p>
                   <h2>{slotNames[selectedSlot]}</h2>
                   <p>잠긴 장비도 눌러서 미리 입어볼 수 있어요.</p>
-                </div>
-                <div className="game-wardrobe-grid">
                   <button
-                    className="game-item-option game-base-option"
+                    className="game-base-reset"
                     aria-label={`${slotNames[selectedSlot]} 기본 모습`}
                     data-equipped={!view.equippedBySlot[selectedSlot] || undefined}
-                    disabled={appearance.busy}
+                    disabled={appearance.busy || !view.equippedBySlot[selectedSlot]}
                     onClick={() => {
                       setPreview(null);
                       void appearance.save(view.characterId, {
@@ -203,14 +199,13 @@ export function ClosetPage() {
                       });
                     }}
                   >
-                    <span className="game-item-art">
-                      <EquipmentIcon itemId={null} />
-                    </span>
-                    <strong>{slotNames[selectedSlot]} 기본 모습</strong>
-                    <span className="game-item-state">
-                      {!view.equippedBySlot[selectedSlot] ? '착용 중' : '기본으로 돌아가기'}
-                    </span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M8 5 3 10l5 5M3 10h11a6 6 0 1 1 0 12" />
+                    </svg>
+                    <span>{view.equippedBySlot[selectedSlot] ? '장비 벗기' : '기본 모습'}</span>
                   </button>
+                </div>
+                <div className="game-wardrobe-grid">
                   {view.items
                     .filter((entry) => entry.slot === selectedSlot)
                     .map((entry) => {

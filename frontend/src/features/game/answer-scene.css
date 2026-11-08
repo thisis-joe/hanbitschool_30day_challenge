@@ -1,68 +1,110 @@
-.game-learning-page .game-learning-scene.game-answer-scene,
 .game-learning-scene.game-answer-scene {
-  height: 304px;
+  --traveler-width: 154px;
+  --scene-ground: 26.5%;
+  --landmark-width: clamp(128px, 16vw, 176px);
+  --answer-o-x: max(calc(var(--landmark-width) / 2 + 4px), 20%);
+  height: 360px;
   margin-block: 18px 8px;
+  background-position: center bottom;
 }
-.game-answer-track {
-  position: absolute;
-  bottom: 54px;
-  left: 15%;
-  right: 15%;
-  height: 20px;
-  background: #ead0a7b8;
-  border-block: 3px solid #8c785b66;
-  border-radius: 50%;
+.game-learning-scene.game-answer-scene.game-scene-forest {
+  --landmark-width: 128px;
+  --scene-image-rendering: pixelated;
+  background-image: url('/game/scenes/forest-clearing.svg');
+}
+.game-scene-forest.game-answer-scene .game-answer-destination {
+  height: 116px;
+}
+.game-scene-forest.game-answer-scene .game-answer-destination b {
+  width: 48px;
+  height: 48px;
+}
+.game-scene-forest.game-answer-scene .game-answer-destination span {
+  font-size: 1rem;
 }
 .game-answer-destination {
   position: absolute;
-  bottom: 20px;
-  width: 76px;
-  height: 76px;
+  bottom: calc(var(--scene-ground) - 6px);
+  width: var(--landmark-width);
+  height: calc(var(--landmark-width) * 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 2px;
-  border: 3px solid #314a3d;
-  border-radius: 50%;
-  background: #f6ffe1;
+  gap: 3px;
+  padding: 10px 0 16px;
+  border: 0;
+  border-radius: 0;
   color: #263d35;
-  box-shadow: 0 5px 0 #314a3d;
+  background: transparent;
+  box-shadow: none;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+.game-answer-landmark-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+.game-answer-destination b,
+.game-answer-destination span {
+  position: absolute;
+  left: 50%;
   transform: translateX(-50%);
 }
 .game-answer-destination b {
-  font-size: 1.9rem;
+  display: block;
+  top: 25%;
+  width: clamp(48px, 4.4vw, 56px);
+  height: clamp(48px, 4.4vw, 56px);
   line-height: 1;
 }
+.game-answer-destination b svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
 .game-answer-destination span {
-  font-size: 0.75rem;
+  top: 68%;
+  font-size: clamp(1rem, 2vw, 1.25rem);
   font-weight: 800;
+  line-height: 1.2;
 }
 .game-answer-o {
-  left: 22%;
+  left: var(--answer-o-x);
 }
 .game-answer-x {
-  left: 78%;
-  background: #ffedc6;
+  left: calc(100% - var(--answer-o-x));
 }
-.game-answer-destination[data-selected='true'] {
-  outline: 4px solid #fff5b3;
-  outline-offset: 3px;
+.game-answer-destination[data-selected='true'] span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .game-answer-traveler {
   position: absolute;
   left: 50%;
-  bottom: 70px;
-  width: 154px;
+  bottom: calc(var(--scene-ground) - var(--traveler-width) * 0.113636);
+  width: var(--traveler-width);
   transform: translateX(-50%);
   transition: left var(--answer-walk-duration, 480ms) cubic-bezier(0.25, 0.1, 0.35, 1);
-  z-index: 1;
+  z-index: 2;
+  pointer-events: none;
 }
 .game-answer-scene[data-choice='O'] .game-answer-traveler {
-  left: 22%;
+  left: min(
+    calc(var(--answer-o-x) + var(--landmark-width) / 2 + var(--traveler-width) * 0.28 + 8px),
+    calc(50% - 8px)
+  );
 }
 .game-answer-scene[data-choice='X'] .game-answer-traveler {
-  left: 78%;
+  left: max(
+    calc(100% - var(--answer-o-x) - var(--landmark-width) / 2 - var(--traveler-width) * 0.28 - 8px),
+    calc(50% + 8px)
+  );
 }
 .game-answer-scene[data-animate='false'] .game-answer-traveler {
   transition: none;
@@ -77,18 +119,9 @@
 }
 .game-answer-traveler .game-avatar-articulated {
   display: block;
-  width: 154px;
+  width: var(--traveler-width);
   aspect-ratio: 176 / 216;
   filter: none;
-}
-.game-answer-shadow {
-  position: absolute;
-  bottom: 12px;
-  left: 34%;
-  width: 34%;
-  height: 9px;
-  border-radius: 50%;
-  background: #263d354a;
 }
 .game-answer-message {
   position: absolute;
@@ -96,20 +129,12 @@
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
-  padding: 6px 12px;
   width: max-content;
   max-width: calc(100% - 20px);
-  border: 2px solid #34483b;
-  border-radius: 12px;
-  background: #fffdeff2;
-  color: #263d35;
   font-size: 0.85rem;
   font-weight: 800;
   text-align: center;
   z-index: 2;
-}
-.game-answer-scene[data-phase='correct'] .game-answer-message {
-  background: #f5eda9;
 }
 .game-answer-progress {
   position: absolute;
@@ -118,67 +143,38 @@
   margin: 0;
   padding: 2px 6px;
   background: #fffdeff0;
-  border-radius: 5px;
   color: #263d35;
   font-size: 0.65rem;
+  z-index: 5;
 }
-@media (max-width: 480px) {
-  .game-learning-page .game-learning-scene.game-answer-scene,
+.game-answer-traveler .game-avatar-motion-fallback {
+  display: block;
+  width: 73%;
+  margin: 12% auto 7%;
+}
+.game-answer-scene .learning-choices {
+  display: contents;
+}
+.game-answer-scene .learning-choices .game-answer-destination:active:not(:disabled) {
+  transform: translate(-50%, 3px);
+}
+.game-answer-scene .learning-choices .game-answer-destination:focus-visible {
+  outline: 3px solid #263d35;
+  outline-offset: 3px;
+}
+.game-answer-scene .learning-choices .game-answer-destination:disabled {
+  opacity: 0.8;
+}
+@media (max-width: 640px) {
   .game-learning-scene.game-answer-scene {
-    height: 250px;
-  }
-  .game-answer-traveler,
-  .game-answer-traveler .game-avatar-articulated {
-    width: 124px;
+    --traveler-width: 124px;
   }
   .game-answer-message {
     font-size: 0.75rem;
-  }
-  .game-answer-destination {
-    width: 64px;
-    height: 68px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .game-answer-traveler {
     transition: none;
   }
-}
-
-.game-answer-traveler .game-avatar-motion-fallback {
-  display: block;
-  width: 112px;
-  margin: 23px auto 12px;
-}
-@media (max-width: 480px) {
-  .game-answer-traveler .game-avatar-motion-fallback {
-    width: 90px;
-    margin: 18px auto 10px;
-  }
-}
-
-.game-answer-scene .learning-choices {
-  display: contents;
-}
-.game-answer-scene .learning-choices .game-answer-destination {
-  width: 76px;
-  min-height: 76px;
-  padding: 6px;
-  font-size: 1rem;
-  border-radius: 50%;
-  border: 3px solid #314a3d;
-  background: #f6ffe1;
-  color: #263d35;
-  z-index: 4;
-}
-.game-answer-scene .learning-choices .game-answer-x {
-  background: #ffedc6;
-}
-.game-answer-scene .learning-choices .game-answer-destination:active:not(:disabled) {
-  transform: translate(-50%, 3px);
-}
-.game-answer-scene .learning-choices .game-answer-destination:focus-visible {
-  outline: 3px solid #fffdf3;
-  outline-offset: 4px;
-  box-shadow: 0 0 0 7px #314a3d;
 }

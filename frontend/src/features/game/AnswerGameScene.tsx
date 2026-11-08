@@ -5,6 +5,8 @@ import { AnimatedGameAvatar } from './motion/AnimatedGameAvatar';
 import type { GameView, JourneyView } from './types';
 import type { AnswerChoice, AnswerOutcome } from '../learning/types';
 import './answer-scene.css';
+import { useSceneGround } from './useSceneGround';
+import { PixelAnswerArt } from './PixelAnswerArt';
 
 const WALK_MS = MOTION_MS.walk;
 export function AnswerGameScene({
@@ -60,6 +62,8 @@ export function AnswerGameScene({
           : 'idle';
   const position = journey?.journeyPosition ?? 0;
   const region = position < 50 ? 'forest' : position < 100 ? 'village' : 'beach';
+  const landmark = region === 'forest' ? 'forest-rock.svg' : `${region}.png`;
+  const scene = useSceneGround<HTMLElement>(region);
   const messages = {
     idle: appearance ? 'O와 X 중 어디로 갈까요?' : '여행 장면을 준비하고 있어요',
     walking: `${choice} 쪽으로 걸어가요`,
@@ -70,6 +74,7 @@ export function AnswerGameScene({
   };
   return (
     <section
+      ref={scene}
       className={`game-learning-scene game-answer-scene game-scene-${region}${children ? ' game-answer-immersive' : ''}`}
       aria-label="학습 여행 장면"
       style={{ '--answer-walk-duration': `${WALK_MS}ms` } as import('react').CSSProperties}
@@ -79,7 +84,6 @@ export function AnswerGameScene({
     >
       {children ? <div className="game-answer-content">{children}</div> : null}
       {children ? <div className="game-answer-clearing" aria-hidden="true" /> : null}
-      <div className="game-answer-track" aria-hidden="true" />
       <div
         className={onChoose ? 'learning-choices' : undefined}
         role={onChoose ? 'group' : undefined}
@@ -89,7 +93,16 @@ export function AnswerGameScene({
           const label = destination === 'O' ? '사실' : '해석';
           const content = (
             <>
-              <b>{destination}</b>
+              <img
+                className="game-answer-landmark-art"
+                src={`/game/answers/${landmark}`}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+              />
+              <b>
+                <PixelAnswerArt choice={destination} />
+              </b>
               <span>{label}</span>
             </>
           );
@@ -118,7 +131,6 @@ export function AnswerGameScene({
         })}
       </div>
       <div className="game-answer-traveler">
-        <span className="game-answer-shadow" aria-hidden="true" />
         <div className="game-answer-facing">
           <AnimatedGameAvatar
             characterId={appearance?.characterId ?? null}

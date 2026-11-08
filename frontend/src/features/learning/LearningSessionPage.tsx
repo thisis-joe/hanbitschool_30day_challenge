@@ -64,7 +64,8 @@ export function LearningSessionPage() {
   }, [accountId, sessionId, waitingForServer, refetch]);
 
   useEffect(() => {
-    heading.current?.focus();
+    heading.current?.focus({ preventScroll: true });
+    heading.current?.scrollIntoView?.({ block: 'start', behavior: 'instant' });
   }, [accountId, view?.state, question?.questionId, view?.lastAnswer?.attemptAnswerId]);
 
   useEffect(() => {
@@ -196,6 +197,14 @@ export function LearningSessionPage() {
               max={view.questionCount}
             />
             {active && question ? (
+              <progress
+                className="learning-time-progress"
+                aria-label="남은 시간"
+                value={seconds}
+                max={Math.max(1, question.timeLimitSeconds)}
+              />
+            ) : null}
+            {active && question ? (
               <>
                 <div className="learning-question-header">
                   <h1 ref={heading} tabIndex={-1}>
@@ -203,7 +212,7 @@ export function LearningSessionPage() {
                   </h1>
                   <time
                     className="learning-timer"
-                    data-urgent={seconds <= 5 || undefined}
+                    data-urgent={(seconds > 0 && seconds <= 5) || undefined}
                     dateTime={question.deadlineAt}
                   >
                     남은 시간 {seconds}초
@@ -287,12 +296,11 @@ export function LearningSessionPage() {
           </button>
         </div>
       ) : null}
-      <div className="learning-exit">
-        {active ? <p>현재 문항의 제한시간은 계속 흘러요</p> : null}
-        <Link className="button secondary" to="/student/learning">
-          학습 홈으로
-        </Link>
-      </div>
+      {active ? (
+        <div className="learning-exit">
+          <p>다른 메뉴로 이동해도 현재 문항의 제한시간은 계속 흘러요.</p>
+        </div>
+      ) : null}
     </section>
   );
 }

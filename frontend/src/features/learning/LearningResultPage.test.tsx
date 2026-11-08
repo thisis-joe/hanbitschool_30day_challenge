@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -254,7 +254,7 @@ it('fifthFeedbackLeavesWithoutFinishAndRestoresGift', async () => {
     }),
   );
   const first = setup(`/student/learning/sessions/${sessionId}`);
-  await userEvent.click(await screen.findByRole('link', { name: '학습 홈으로' }));
+  await userEvent.click(await screen.findByRole('link', { name: '한빛학교 배움터' }));
   first.unmount();
   setup();
   expect(await screen.findByText('새 선물')).toBeVisible();
@@ -366,6 +366,7 @@ function setup(
     ...render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[path]}>
+          <Link to="/student/learning">한빛학교 배움터</Link>
           {controls}
           <Routes>
             <Route path="/student/learning/sessions/:sessionId" element={<LearningSessionPage />} />

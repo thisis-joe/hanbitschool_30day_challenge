@@ -247,9 +247,9 @@ test('X arrival waits for a delayed answer before showing the confirmed XP', asy
   await expect(scene.locator('.game-character-xp')).toBeVisible();
   const character = (await scene.locator('.game-answer-traveler').boundingBox())!;
   const destination = (await scene.locator('.game-answer-x').boundingBox())!;
-  expect(
-    Math.abs(character.x + character.width / 2 - destination.x - destination.width / 2),
-  ).toBeLessThan(1);
+  expect(destination.x + destination.width / 2 - character.x - character.width / 2).toBeGreaterThan(
+    destination.width / 2,
+  );
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(scene.locator('.game-character-xp')).toHaveCount(0);
 });
