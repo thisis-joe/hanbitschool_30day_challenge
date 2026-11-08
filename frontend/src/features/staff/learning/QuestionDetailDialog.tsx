@@ -5,7 +5,7 @@ import { useCurrentAccount } from '../../auth/queries';
 import { errorMessage } from '../../../lib/http';
 import { useTeacherQuestion } from './queries';
 import { rate } from './StatisticsCharts';
-import type { TeacherRespondent } from './types';
+import type { StatisticsListContext, TeacherRespondent } from './types';
 
 type Props = { classroomId: string; questionId: number | null; onClose: () => void };
 export function QuestionDetailDialog({ classroomId, questionId, onClose }: Props) {
@@ -35,7 +35,7 @@ function Respondents({
   rows: TeacherRespondent[];
   label: string;
   classroomId: string;
-  listContext: { listUrl: string; ownerId: string; classroomId: string };
+  listContext: StatisticsListContext;
 }) {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -81,11 +81,7 @@ function OpenQuestionDialog({ classroomId, questionId, onClose }: Props & { ques
   const { data: me } = useCurrentAccount();
   const location = useLocation();
   const basePath = `/staff/classrooms/${encodeURIComponent(classroomId)}/learning`;
-  const candidate = location.state as {
-    listUrl?: unknown;
-    ownerId?: unknown;
-    classroomId?: unknown;
-  } | null;
+  const candidate = location.state as Partial<StatisticsListContext> | null;
   const params = new URLSearchParams(location.search);
   params.delete('question');
   const listUrl =
@@ -97,7 +93,14 @@ function OpenQuestionDialog({ classroomId, questionId, onClose }: Props & { ques
           (candidate.listUrl === basePath || candidate.listUrl.startsWith(basePath + '?'))
         ? candidate.listUrl
         : basePath;
-  const listContext = { listUrl, ownerId: me!.accountId, classroomId };
+  const listFocus =
+    candidate?.ownerId === me?.accountId &&
+    candidate?.classroomId === classroomId &&
+    candidate.listUrl === listUrl &&
+    typeof candidate.listFocus === 'string'
+      ? candidate.listFocus
+      : undefined;
+  const listContext = { listUrl, ownerId: me!.accountId, classroomId, listFocus };
   const detail = useTeacherQuestion(classroomId, questionId);
   const dialog = useRef<HTMLDivElement>(null);
   const close = useRef<HTMLButtonElement>(null);

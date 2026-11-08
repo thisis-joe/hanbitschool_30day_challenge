@@ -3,11 +3,22 @@ import type { Distinction, TeacherLearningSummary, TeacherStudentRow } from './t
 export function rate(value: number | null) {
   return value === null ? '—' : `${Math.round(value * 100)}%`;
 }
-function Metric({ label, value }: { label: string; value: number | string }) {
+function Metric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: number | string;
+  detail?: string;
+}) {
   return (
     <div className="stats-metric">
       <dt>{label}</dt>
-      <dd>{value}</dd>
+      <dd>
+        {value}
+        {detail ? <small>{detail}</small> : null}
+      </dd>
     </div>
   );
 }
@@ -55,11 +66,19 @@ export function ClassSummaryCharts({ summary }: { summary: TeacherLearningSummar
     ['완료', summary.completeCount],
   ] as const;
   return (
-    <section aria-label="학급 요약" className="stats-summary">
+    <section aria-label="학급 요약" id="class-summary" tabIndex={-1} className="stats-summary">
+      <h2>학급 전체 통계</h2>
+      <p>목록의 검색이나 필터와 별개로 학급 전체의 첫 답변을 집계합니다.</p>
       <dl className="stats-metrics">
         <Metric label="가입 학생" value={`${summary.studentCount}명`} />
         <Metric label="첫 응답" value={`${summary.answered}개`} />
-        <Metric label="첫 정답률" value={rate(summary.accuracy)} />
+        <Metric
+          label="첫 정답률"
+          value={rate(summary.accuracy)}
+          detail={
+            summary.answered ? `정답 ${summary.correct} / 응답 ${summary.answered}개` : '응답 없음'
+          }
+        />
         <Metric label="미개선 오답" value={`${summary.pendingWrong}개`} />
       </dl>
       <div className="stats-chart-grid">
@@ -106,7 +125,13 @@ export function StudentSummaryCharts({
     <section aria-label="학생 요약">
       <dl className="stats-metrics">
         <Metric label="첫 응답" value={`${student.answered} / 150개`} />
-        <Metric label="첫 정답률" value={rate(student.accuracy)} />
+        <Metric
+          label="첫 정답률"
+          value={rate(student.accuracy)}
+          detail={
+            student.answered ? `정답 ${student.correct} / 응답 ${student.answered}개` : '응답 없음'
+          }
+        />
         <Metric label="통과 회차" value={`${student.passedDayCount} / 30회`} />
         <Metric label="미개선 오답" value={`${student.pendingWrong}개`} />
       </dl>

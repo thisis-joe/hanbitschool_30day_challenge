@@ -56,6 +56,75 @@
   font-size: 1.65rem;
   font-weight: 750;
 }
+.stats-metric dd small,
+.stats-overview-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #4e685a;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.stats-overview-header {
+  margin-bottom: 16px;
+}
+.stats-overview-header h1 {
+  margin: 2px 0 6px;
+}
+.stats-overview-header p {
+  margin: 0;
+  color: #4e685a;
+}
+.stats-overview-header .stats-back {
+  color: #4e685a;
+  font-size: 0.875rem;
+}
+.stats-participation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 24px;
+  align-items: end;
+  padding: 14px 18px;
+  border: 2px solid #b5c8bc;
+  border-radius: 12px;
+  background: #eef4ef;
+}
+.stats-participation h2 {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.stats-participation dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.stats-participation dt {
+  color: #4e685a;
+  font-size: 0.8rem;
+}
+.stats-participation dd {
+  margin: 4px 0 0;
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  font-weight: 800;
+}
+.stats-participation button {
+  margin: 0;
+  justify-self: start;
+}
+.stats-overview .stats-tabs {
+  margin-top: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.stats-overview .stats-tabs a {
+  margin-inline-start: auto;
+  color: #4e685a;
+  font-size: 0.875rem;
+}
+.stats-overview .stats-summary {
+  margin-top: 32px;
+}
 .stats-card {
   padding: 24px;
   border: 3px solid var(--line);
@@ -173,6 +242,20 @@
   min-width: 760px;
   text-align: left;
   font-size: 0.9rem;
+}
+.stats-overview-table table {
+  min-width: 0;
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+}
+.stats-roster-table th:first-child {
+  width: 25%;
+}
+.stats-questions-table th:first-child {
+  width: 28%;
+}
+.stats-overview-table td .stats-compact {
+  display: none;
 }
 .teacher-stats caption {
   text-align: left;
@@ -367,6 +450,23 @@
   border-bottom: 2px solid var(--line);
 }
 @media (max-width: 940px) {
+  .stats-overview-table th:first-child {
+    width: 62%;
+  }
+  .stats-roster-table :is(th, td):nth-child(n + 3),
+  .stats-questions-table :is(th, td):nth-child(n + 2):nth-child(-n + 7) {
+    display: none;
+  }
+  .stats-overview-table :is(th, td) {
+    padding: 8px;
+  }
+  .stats-overview-table td .stats-compact {
+    display: block;
+  }
+  .stats-overview-table .stats-student .game-avatar {
+    width: 30px;
+    height: auto;
+  }
   .stats-scroll-hint {
     display: block;
   }
@@ -428,6 +528,26 @@
   }
 }
 @media (max-width: 480px) {
+  .stats-overview-header {
+    margin-bottom: 10px;
+  }
+  .stats-participation {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 10px 12px;
+  }
+  .stats-participation button {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+  .stats-overview .stats-tabs {
+    gap: 6px;
+  }
+  .stats-overview .stats-tabs button {
+    padding: 6px 9px;
+  }
+  .stats-overview .stats-tabs a {
+    margin-inline-start: 0;
+  }
   .stats-day-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

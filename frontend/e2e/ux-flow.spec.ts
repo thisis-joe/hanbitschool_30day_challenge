@@ -44,6 +44,8 @@ async function scenario(
         text: `${i + 1}. 나무는 햇빛을 받아 자랍니다.`,
       }));
   const requests: { path: string; body: unknown }[] = [];
+  const sampleQuestion = { ...question, text: '교실 창가에 화분이 놓여 있습니다.' };
+  const sampleStudent = { ...overview.students.items[0], name: '예시 학생' };
   await page.route('**/api/**', async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
@@ -111,10 +113,15 @@ async function scenario(
     } else if (path === `/api/student/learning/sessions/${sessionId}`) body = session;
     else if (path === '/api/staff/classrooms')
       body = [{ ...classroom, canManage: true, joinCode: 'UXTEST01' }];
-    else if (path.endsWith('/learning/students')) body = overview;
-    else if (path.includes('/learning/students/')) body = studentDetail;
+    else if (path.endsWith('/learning/students'))
+      body = {
+        summary: { ...overview.summary, hardQuestions: [sampleQuestion] },
+        students: { ...overview.students, items: [sampleStudent] },
+      };
+    else if (path.includes('/learning/students/'))
+      body = { ...studentDetail, student: { ...studentDetail.student, name: sampleStudent.name } };
     else if (path.endsWith('/learning/questions'))
-      body = { items: [question], page: 0, size: 10, total: 1 };
+      body = { items: [sampleQuestion], page: 0, size: 10, total: 1 };
     else if (path.includes('/learning/questions/')) body = questionDetail;
     else if (path.endsWith('/students'))
       body = [{ accountId: 'student-a', studentNumber: 1, name: '예시 학생' }];
@@ -182,6 +189,55 @@ test('a confirmed answer presents the reason before routine XP', async ({ page }
   if (output) await page.screenshot({ path: output.file('answer-reason-390.png') });
   await page.getByRole('link', { name: '완료하기', exact: true }).click();
   await expect(page.getByRole('heading', { name: '회차 통과', exact: true })).toBeVisible();
+});
+
+test('teacher decisions are reachable on the first small screen', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await scenario(page, 'teacher');
+  await page.goto('/staff/classrooms/class-a/learning');
+  const tabs = page.getByRole('navigation', { name: '통계 종류' });
+  await expect(tabs.getByRole('button', { name: '학생 현황' })).toBeInViewport({
+    ratio: 1,
+    timeout: 2000,
+  });
+  await expect(tabs.getByRole('button', { name: '문항 분석' })).toBeInViewport({ ratio: 1 });
+  const newStudents = page.getByRole('button', { name: '미참여 학생 보기' });
+  await expect(newStudents).toBeInViewport({ ratio: 1 });
+  const output = evidenceOutput();
+  if (output) await page.screenshot({ path: output.file('teacher-first-screen-320.png') });
+  await newStudents.click();
+  await expect(page.getByLabel('학생 상태')).toHaveValue('NEW');
+  await tabs.getByRole('button', { name: '문항 분석' }).click();
+  const table = page.getByRole('table', { name: '문항 분석', exact: true });
+  await expect(table.getByText('오답 2 / 응답 3명')).toBeVisible();
+  expect(await table.evaluate((el) => el.parentElement!.scrollWidth)).toBeLessThanOrEqual(
+    await table.evaluate((el) => el.parentElement!.clientWidth),
+  );
+  const trigger = table.getByRole('button', { name: '7번 문항 상세' });
+  await trigger.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+});
+
+test('teacher returns to the selected student and list settings', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await scenario(page, 'teacher');
+  await page.goto(
+    '/staff/classrooms/class-a/learning?search=예시&status=IN_PROGRESS&sort=PENDING_WRONG_DESC',
+  );
+  const studentLink = page.getByRole('link', { name: /학생 상세/ });
+  await studentLink.click();
+  await page.getByRole('link', { name: '목록으로 돌아가기' }).click();
+  await expect(page.getByLabel('이름·번호 검색')).toHaveValue('예시');
+  await expect(page.getByLabel('학생 상태')).toHaveValue('IN_PROGRESS');
+  await expect(page.getByLabel('학생 정렬')).toHaveValue('PENDING_WRONG_DESC');
+  await expect(studentLink).toBeFocused({ timeout: 2000 });
+  await expect(studentLink).toBeInViewport();
+  const status = page.getByLabel('학생 상태');
+  await status.focus();
+  await status.selectOption('ALL');
+  await expect(status).toBeFocused();
 });
 
 for (const width of [320, 390, 768, 1280]) {
