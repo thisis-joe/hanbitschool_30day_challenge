@@ -531,29 +531,6 @@
   text-align: center;
   color: #52644d;
 }
-.game-base-reset {
-  gap: 7px;
-  min-height: 44px;
-  margin-top: 10px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  font-size: 0.8rem;
-}
-.game-base-reset svg {
-  width: 19px;
-  height: 19px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-}
-.game-base-reset:disabled {
-  box-shadow: none;
-  text-decoration: none;
-}
 @media (max-width: 720px) {
   .game-wardrobe-playground {
     height: 250px;
@@ -562,5 +539,128 @@
   }
   .game-wardrobe-walker {
     width: 116px;
+  }
+}
+@media (min-height: 500px) {
+  .game-closet-card,
+  .game-wardrobe-left,
+  .game-wardrobe-inventory,
+  .game-appearance-preview {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .game-closet-card,
+  .game-wardrobe-studio,
+  .game-appearance-preview,
+  .game-wardrobe-playground,
+  .game-closet-slot {
+    flex: 1;
+    min-height: 0;
+  }
+  .game-closet-card {
+    padding: clamp(10px, 2vw, 22px);
+  }
+  .game-wardrobe-studio {
+    align-items: stretch;
+  }
+  .game-wardrobe-left {
+    position: static;
+  }
+  .game-wardrobe-playground {
+    container-type: size;
+    height: auto;
+  }
+  .game-wardrobe-walker {
+    width: min(172px, 64cqh);
+  }
+  .game-closet-slot {
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+}
+@media (max-width: 720px) and (min-height: 500px) {
+  .game-wardrobe-studio {
+    grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 12px;
+  }
+  .game-wardrobe-walker {
+    width: min(116px, 64cqh);
+  }
+  .game-wardrobe-note,
+  .game-inventory-heading {
+    display: none;
+  }
+  .game-preview-controls,
+  .game-walk-hint {
+    padding: 5px 6px;
+  }
+  .game-walk-hint {
+    font-size: 0.72rem;
+  }
+  .game-wardrobe-categories {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin-bottom: 8px;
+  }
+  .game-wardrobe-categories button {
+    flex-direction: column;
+    gap: 2px;
+    min-height: 48px;
+    padding: 3px 1px;
+  }
+  .game-equipment-category-icon {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+  }
+  .game-closet-slot {
+    padding: 8px;
+  }
+  .game-wardrobe-grid {
+    gap: 8px;
+  }
+  .game-item-option {
+    min-height: 100px;
+    gap: 4px;
+    padding: 6px 3px;
+  }
+  .game-item-art {
+    width: 52px;
+    height: 52px;
+  }
+}
+@media (max-width: 720px) and (min-height: 500px) and (max-height: 650px) {
+  .game-closet-card {
+    padding: 8px;
+  }
+  .game-wardrobe-studio {
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .game-walk-hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .game-preview-controls:not(:has(button, [role='alert'])) {
+    display: none;
+  }
+  .button.game-wardrobe-choice {
+    gap: 4px;
+    padding-inline: 5px;
+    font-size: 0.75rem;
+  }
+  .game-closet-slot {
+    padding-block: 4px;
+  }
+  .game-item-option {
+    min-height: 88px;
+    gap: 2px;
+  }
+  .game-item-art {
+    width: 44px;
+    height: 44px;
   }
 }

@@ -322,8 +322,12 @@ test('privateQueueBookmarkAndConsentRemainIndependent', async ({ page }) => {
   );
   await expect(page.getByRole('button', { name: '선택한 문제 복습하기', exact: true })).toHaveCount(
     0,
-  ); // No queued questions: show the active-session recovery, without a dead action.
-  await page.getByRole('link', { name: '진행 중인 학습 이어풀기', exact: true }).click();
+  );
+  await expect(
+    page.getByRole('link', { name: '진행 중인 학습 이어풀기', exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole('link', { name: '오늘', exact: true }).click();
+  await page.getByRole('link', { name: '이어풀기', exact: true }).click();
   await finishDay(page, await advance(page, replay.sessionId), [true, true, true, true]);
   await resultPage(page, replay.sessionId, '회차 통과');
   await page.getByRole('link', { name: '학습 홈으로', exact: true }).click();

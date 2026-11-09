@@ -256,7 +256,6 @@ export function LearningDashboardPage() {
               <div>
                 <span>다음 여행 선물</span>
                 <strong>{reward.name}</strong>
-                <small>{reward.rewardDay}회차 첫 통과</small>
               </div>
             </aside>
           ) : null}

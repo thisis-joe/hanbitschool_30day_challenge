@@ -46,7 +46,7 @@ it('homeShowsTheCanonicalNextActionAndGiftInTheScene', async () => {
   );
   const gift = await screen.findByRole('complementary', { name: '다음 여행 선물' });
   expect(gift).toHaveTextContent('동그란 안경');
-  expect(gift).toHaveTextContent('1회차 첫 통과');
+  expect(gift).not.toHaveTextContent('첫 통과');
   expect(gift.parentElement).toHaveClass('game-camp-scene');
   expect(camp).toContainElement(screen.getByRole('heading', { name: '오늘의 탐험', level: 1 }));
   expect(screen.queryByRole('region', { name: '여행 선물' })).toBeNull();

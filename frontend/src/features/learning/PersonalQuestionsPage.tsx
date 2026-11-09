@@ -194,14 +194,6 @@ function QuestionList({
           </button>
         </div>
       ) : null}
-      {active ? (
-        <Link
-          className="button secondary learning-recovery"
-          to={`/student/learning/sessions/${active.sessionId}`}
-        >
-          진행 중인 학습 이어풀기
-        </Link>
-      ) : null}
       {questions.isSuccess && !rows.length ? (
         <div className="learning-empty">
           <h2>

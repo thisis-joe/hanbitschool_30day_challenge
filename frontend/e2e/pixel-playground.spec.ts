@@ -446,7 +446,7 @@ for (const width of [390, 1280]) {
     expect(writes).toEqual([]);
     expect(errors).toEqual([]);
     await expect(page.locator('.game-wardrobe-grid .game-base-option')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: '얼굴 기본 모습' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '얼굴 기본 모습' })).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready);
     expect(
       await page.evaluate(
