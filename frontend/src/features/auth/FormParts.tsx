@@ -42,22 +42,12 @@ export function AuthFrame({
     heading.current?.focus();
   }, [title]);
   return (
-    <div className="auth-frame">
-      <aside className="intro">
-        <img className="auth-mark" src="/brand/school-mark.svg" width="48" height="48" alt="" />
-        <h2>
-          함께 배우는
-          <br />
-          한빛학교
-        </h2>
-      </aside>
-      <section className="form-panel">
-        <h1 ref={heading} tabIndex={-1}>
-          {title}
-        </h1>
-        <p className="description">{description}</p>
-        {children}
-      </section>
-    </div>
+    <section className="auth-frame form-panel">
+      <h1 ref={heading} tabIndex={-1}>
+        {title}
+      </h1>
+      <p className="description">{description}</p>
+      {children}
+    </section>
   );
 }
