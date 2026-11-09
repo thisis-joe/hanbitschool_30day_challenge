@@ -122,9 +122,11 @@ export function ClosetPage() {
                 className="game-appearance-preview"
                 aria-label="외형 미리보기"
               >
-                <Link className="button secondary game-wardrobe-choice" to="/student/character">
-                  <PixelIcon name="people" />
-                  캐릭터 선택
+                <Link className="game-wardrobe-choice" to="/student/character">
+                  <span className="button secondary game-wardrobe-choice-label">
+                    <PixelIcon name="people" />
+                    캐릭터 선택
+                  </span>
                 </Link>
                 <WardrobePlayground
                   key={`${owner}:${location.key}`}

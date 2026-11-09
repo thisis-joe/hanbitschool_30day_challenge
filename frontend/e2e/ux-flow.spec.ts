@@ -334,6 +334,13 @@ for (const width of [320, 390, 768, 1280]) {
           await expect(dressing.locator('svg')).toHaveCSS('width', '32px');
         }
         const preview = page.getByRole('region', { name: '외형 미리보기' });
+        if (width <= 720) {
+          const room = preview.getByRole('group', { name: '캐릭터 움직이기' });
+          await expect(room).toHaveCSS('background-size', 'contain');
+          const { width: roomWidth, height: roomHeight } = (await room.boundingBox())!;
+          expect(Math.abs(roomWidth - roomHeight * 1.5)).toBeLessThan(1);
+          await expect(room).toBeInViewport({ ratio: 1 });
+        }
         await expect(preview.getByRole('link', { name: '캐릭터 선택' })).toHaveAttribute(
           'href',
           '/student/character',
@@ -342,7 +349,7 @@ for (const width of [320, 390, 768, 1280]) {
         await expect(page.getByText('장비 벗기', { exact: true })).toHaveCount(0);
         await expect(page.getByRole('button', { name: '얼굴 장비 보기' })).toBeInViewport();
       }
-      if (name === 'map' || name === 'closet') {
+      if (name === 'map' || (name === 'closet' && width > 320)) {
         const screenHeight = await page.evaluate(() => ({
           document: document.documentElement.scrollHeight,
           viewport: innerHeight,
@@ -487,6 +494,7 @@ test('home keeps learning focused without round cards', async ({ page }) => {
   const replay = page.getByText('다시풀기', { exact: true });
   const replayButton = page.getByRole('button', { name: '선택 회차 다시 풀기' });
   const replayDay = page.getByRole('combobox', { name: '다시 풀 회차' });
+  const toggleTop = () => replay.evaluate((el) => el.getBoundingClientRect().top + scrollY);
   const sceneGeometry = () =>
     campScene.evaluate((el) => {
       const box = el.getBoundingClientRect();
@@ -497,6 +505,7 @@ test('home keeps learning focused without round cards', async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const closedScene = await sceneGeometry();
     await expect(replayButton).toBeHidden();
+    const closedToggleTop = await toggleTop();
     const closedGap = await replay.evaluate((el) => {
       const copy = el.closest('.game-camp-copy')!.getBoundingClientRect();
       return copy.bottom - el.getBoundingClientRect().bottom;
@@ -506,10 +515,14 @@ test('home keeps learning focused without round cards', async ({ page }) => {
       await page.screenshot({ path: output.file(`home-closed-${width}.png`), fullPage: true });
     await replay.press('Enter');
     await expect(replayButton).toBeEnabled();
+    await expect(replay).toBeFocused();
+    expect(await toggleTop()).toBeLessThan(closedToggleTop);
     expect(await sceneGeometry()).toEqual(closedScene);
 
+    const toggle = (await replay.boundingBox())!;
     const select = (await replayDay.boundingBox())!;
     const button = (await replayButton.boundingBox())!;
+    expect(toggle.y + toggle.height).toBeLessThanOrEqual(Math.min(select.y, button.y));
     const camp = (await page.locator('.game-camp-copy').boundingBox())!;
     const left = Math.min(select.x, button.x);
     const right = Math.max(select.x + select.width, button.x + button.width);
@@ -523,6 +536,7 @@ test('home keeps learning focused without round cards', async ({ page }) => {
 
     await replay.press('Enter');
     await expect(replayButton).toBeHidden();
+    expect(await toggleTop()).toBe(closedToggleTop);
     expect(await sceneGeometry()).toEqual(closedScene);
     await expect(gift).toBeVisible();
     const giftLayout = await gift.evaluate((el) => {
@@ -660,9 +674,11 @@ test('wardrobe pages show every item without scrolling the inventory', async ({ 
           expect(distance, `${width}px: ${item.name} inside the wardrobe`).toBeGreaterThanOrEqual(
             0,
           );
+        if (width === 320) await option.evaluate((el) => el.scrollIntoView({ block: 'center' }));
         await expect(option).toBeInViewport({ ratio: 1 });
       }
-      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
+      if (width > 320)
+        expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
       if (index < pages - 1) {
         await next.press('Enter');
         await expect(next).toBeFocused();

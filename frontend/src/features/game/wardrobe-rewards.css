@@ -217,16 +217,22 @@
   image-rendering: pixelated;
 }
 .game-wardrobe-room > .game-tag,
-.button.game-wardrobe-choice {
+.game-wardrobe-choice {
   position: absolute;
   top: 14px;
 }
 .game-wardrobe-room > .game-tag {
   right: 14px;
 }
-.button.game-wardrobe-choice {
+.game-wardrobe-choice {
   left: 14px;
   z-index: 3;
+  display: flex;
+  align-items: flex-start;
+  min-height: 48px;
+  text-decoration: none;
+}
+.button.game-wardrobe-choice-label {
   gap: 6px;
   padding: 5px 8px;
   font-size: 0.8rem;
@@ -479,9 +485,15 @@
     font-size: 0.7rem;
     padding: 3px 6px;
   }
-  .button.game-wardrobe-choice {
+  .game-wardrobe-choice {
     top: 8px;
     left: 8px;
+  }
+  .game-wardrobe-choice > .button.game-wardrobe-choice-label {
+    gap: 4px;
+    min-height: 34px;
+    padding: 3px 5px;
+    font-size: 0.75rem;
   }
   .game-preview-controls {
     padding: 10px;
@@ -578,9 +590,9 @@
 }
 @media (max-width: 720px) {
   .game-wardrobe-playground {
-    height: 250px;
-    min-height: 0;
-    padding: 0;
+    height: auto;
+    aspect-ratio: 3 / 2;
+    background-size: contain;
   }
   .game-wardrobe-walker {
     width: 116px;
@@ -643,8 +655,11 @@
 }
 @media (max-width: 720px) and (min-height: 500px) {
   .game-wardrobe-studio {
-    grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
+    grid-template-rows: max-content auto;
     gap: 12px;
+  }
+  .game-wardrobe-playground {
+    flex: none;
   }
   .game-wardrobe-walker {
     width: min(116px, 64cqh);
@@ -668,6 +683,7 @@
     height: 16px;
   }
   .game-closet-slot {
+    container-type: inline-size;
     padding: 8px;
   }
   .game-wardrobe-grid {
@@ -687,9 +703,6 @@
   .game-closet-card {
     padding: 8px;
   }
-  .game-wardrobe-studio {
-    grid-template-rows: minmax(0, 1fr) minmax(172px, 1fr);
-  }
   .game-walk-hint {
     position: absolute;
     width: 1px;
@@ -697,11 +710,6 @@
     padding: 0;
     overflow: hidden;
     clip-path: inset(50%);
-  }
-  .button.game-wardrobe-choice {
-    gap: 4px;
-    padding-inline: 5px;
-    font-size: 0.75rem;
   }
   .game-closet-slot {
     padding-block: 4px;

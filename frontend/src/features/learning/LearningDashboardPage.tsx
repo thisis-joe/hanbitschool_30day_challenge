@@ -212,39 +212,41 @@ export function LearningDashboardPage() {
           ) : null}
           {view && view.passedDayCount > 0 ? (
             <div className="learning-replay-picker">
-              <button
-                type="button"
-                className="learning-replay-toggle"
-                aria-expanded={replayOpen}
-                aria-controls="learning-replay-controls"
-                onClick={() => setReplayOpen((open) => !open)}
-              >
-                다시풀기
-              </button>
-              <div
-                id="learning-replay-controls"
-                className="learning-replay-controls"
-                inert={!replayOpen}
-              >
-                <select
-                  aria-label="다시 풀 회차"
-                  value={replayDay}
-                  disabled={blocked || !!view.activeSession}
-                  onChange={(event) => setReplayDay(Number(event.target.value))}
-                >
-                  {Array.from({ length: Math.min(30, view.passedDayCount) }, (_, index) => (
-                    <option key={index + 1} value={index + 1}>
-                      {index + 1}회차
-                    </option>
-                  ))}
-                </select>
+              <div className="learning-replay-panel">
                 <button
-                  className="secondary"
-                  disabled={blocked || !!view.activeSession || replayDay > view.passedDayCount}
-                  onClick={() => void startDay(replayDay, 'REPLAY')}
+                  type="button"
+                  className="learning-replay-toggle"
+                  aria-expanded={replayOpen}
+                  aria-controls="learning-replay-controls"
+                  onClick={() => setReplayOpen((open) => !open)}
                 >
-                  선택 회차 다시 풀기
+                  다시풀기
                 </button>
+                <div
+                  id="learning-replay-controls"
+                  className="learning-replay-controls"
+                  inert={!replayOpen}
+                >
+                  <select
+                    aria-label="다시 풀 회차"
+                    value={replayDay}
+                    disabled={blocked || !!view.activeSession}
+                    onChange={(event) => setReplayDay(Number(event.target.value))}
+                  >
+                    {Array.from({ length: Math.min(30, view.passedDayCount) }, (_, index) => (
+                      <option key={index + 1} value={index + 1}>
+                        {index + 1}회차
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="secondary"
+                    disabled={blocked || !!view.activeSession || replayDay > view.passedDayCount}
+                    onClick={() => void startDay(replayDay, 'REPLAY')}
+                  >
+                    선택 회차 다시 풀기
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
