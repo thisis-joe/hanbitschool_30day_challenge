@@ -225,10 +225,11 @@
 }
 .acquisition-caption {
   position: absolute;
-  top: 70%;
+  top: 64%;
   left: 5%;
   width: 90%;
   text-align: center;
+  padding-bottom: 12px;
   animation: acquisition-caption 650ms calc(var(--reveal-at) + 180ms) cubic-bezier(0.16, 1, 0.3, 1)
     both;
 }
@@ -238,43 +239,35 @@
 .acquisition-eyebrow {
   font-size: clamp(11px, 2vmin, 14px);
   font-weight: 800;
-  letter-spacing: 0.22em;
-  color: #c6eedb;
+  color: var(--muted);
+  padding: 8px 8px 2px;
 }
 .acquisition-caption h2 {
-  margin: 10px 0 6px;
-  color: #fff2bc;
-  font-size: clamp(26px, 5.4vmin, 44px);
+  margin: 0;
+  justify-content: center;
+  font-size: clamp(1.125rem, 3.5vmin, 1.5rem);
   line-height: 1.2;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-shadow:
-    0 3px 0 #78572e,
-    0 0 30px #f3c56470;
 }
 .acquisition-name {
-  color: #fffdf1;
-  font-size: clamp(24px, 5vmin, 40px);
-  font-weight: 900;
+  font-size: clamp(1.25rem, 4.5vmin, 2rem);
+  font-weight: 700;
   line-height: 1.3;
-  text-shadow: 0 0 25px #ffdb8b80;
 }
 .acquisition-xp .acquisition-caption {
   top: 63%;
 }
 .acquisition-xp .acquisition-name {
-  font-size: clamp(52px, 10vmin, 86px);
+  font-size: clamp(2rem, 6vmin, 3.25rem);
   letter-spacing: -0.03em;
-  color: #ffe798;
 }
 .acquisition-name span {
   font-size: 0.45em;
   letter-spacing: 0.05em;
 }
 .acquisition-caption .acquisition-detail {
-  margin-top: 12px;
+  margin: 4px 8px 0;
   font-size: clamp(11px, 2vmin, 14px);
-  color: #d2ddde;
+  color: var(--muted);
 }
 .acquisition-xp .acquisition-aura {
   animation-duration: 1450ms;
@@ -310,18 +303,12 @@
   position: absolute;
   top: max(22px, env(safe-area-inset-top));
   right: max(22px, env(safe-area-inset-right));
-  min-height: 44px;
+  gap: 6px;
   padding: 10px 16px;
-  border: 1px solid #b8cec766;
-  border-radius: var(--pixel-corner);
-  background: #0c1d29c9;
-  color: #eff8ef;
-  box-shadow: none;
+  background-color: var(--paper);
+  color: var(--ink);
   font-size: 13px;
   font-weight: 600;
-}
-.acquisition-skip span {
-  margin-left: 10px;
 }
 .acquisition-cinematic .acquisition-skip:focus-visible {
   outline: 2px solid #fff1b0;

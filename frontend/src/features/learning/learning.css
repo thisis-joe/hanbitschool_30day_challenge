@@ -319,6 +319,9 @@
   flex-wrap: wrap;
   align-items: center;
 }
+.learning-tool-buttons {
+  justify-content: center;
+}
 .learning-filters {
   margin: 24px 0;
   display: grid;

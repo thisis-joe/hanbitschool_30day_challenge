@@ -141,7 +141,7 @@
   width: fit-content;
   padding: 2px 8px;
   border: 1px solid var(--line);
-  background: var(--rose);
+  background: var(--accent);
 }
 .learning-card.game-camp {
   display: grid;
@@ -179,7 +179,7 @@
 }
 .game-tag {
   border: 2px solid var(--ink);
-  background: var(--rose);
+  background: var(--accent);
   border-radius: var(--pixel-corner);
   padding: 5px 10px;
   font-size: 0.8rem;
@@ -353,15 +353,8 @@
   pointer-events: none;
 }
 .game-page-nav {
-  justify-content: flex-start;
+  justify-content: center;
   gap: 10px;
-}
-.game-page-nav a {
-  min-width: 48px;
-  min-height: 48px;
-  padding: 4px 12px;
-  border: 3px solid var(--line);
-  border-radius: var(--pixel-corner);
 }
 @media (max-width: 720px) {
   .game-home-page .game-home-intro {

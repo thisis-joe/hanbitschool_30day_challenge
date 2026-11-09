@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
+import { PixelIcon } from '../../../app/PixelIcon';
 import { useCurrentAccount } from '../../auth/queries';
 import { errorMessage } from '../../../lib/http';
 import { useTeacherQuestion } from './queries';
@@ -170,57 +171,63 @@ function OpenQuestionDialog({ classroomId, questionId, onClose }: Props & { ques
     <div className="stats-modal-backdrop">
       <div
         ref={dialog}
-        className="stats-dialog"
+        className="stats-dialog pixel-window"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
       >
-        <header>
-          <h2 id={titleId}>{questionId}번 문항 상세</h2>
+        <header className="pixel-window-bar">
+          <h2 id={titleId}>
+            <PixelIcon name="journal" />
+            {questionId}번 문항 상세
+          </h2>
           <button ref={close} className="secondary" onClick={onClose}>
+            <PixelIcon name="close" />
             닫기
           </button>
         </header>
-        {detail.isPending ? <p role="status">문항을 불러오고 있습니다.</p> : null}
-        {detail.isError ? (
-          <div>
-            <p role="alert">{errorMessage(detail.error)}</p>
-            <button onClick={() => void detail.refetch()}>다시 시도</button>
-          </div>
-        ) : null}
-        {data ? (
-          <>
-            <p>
-              {data.question.dayNumber}회차 · 첫 응답 {data.question.answered}명 · 오답률{' '}
-              {rate(data.question.wrongRate)}
-            </p>
-            <p className="stats-dialog-question">{data.question.text}</p>
-            <p>
-              정답 <strong>{data.question.correctChoice}</strong>
-            </p>
-            <section className="stats-explanation">
-              <h3>해설</h3>
-              <p>{data.explanation}</p>
-            </section>
-            <p>
-              미응답 {data.unanswered}명 · 선택 오답 {data.question.choiceWrong}명 · 시간초과{' '}
-              {data.question.timedOut}명
-            </p>
-            <Respondents
-              rows={data.correct}
-              label="정답자"
-              classroomId={classroomId}
-              listContext={listContext}
-            />
-            <Respondents
-              rows={data.wrong}
-              label="오답자 (시간초과 포함)"
-              classroomId={classroomId}
-              listContext={listContext}
-            />
-          </>
-        ) : null}
+        <div className="stats-dialog-body">
+          {detail.isPending ? <p role="status">문항을 불러오고 있습니다.</p> : null}
+          {detail.isError ? (
+            <div>
+              <p role="alert">{errorMessage(detail.error)}</p>
+              <button onClick={() => void detail.refetch()}>다시 시도</button>
+            </div>
+          ) : null}
+          {data ? (
+            <>
+              <p>
+                {data.question.dayNumber}회차 · 첫 응답 {data.question.answered}명 · 오답률{' '}
+                {rate(data.question.wrongRate)}
+              </p>
+              <p className="stats-dialog-question">{data.question.text}</p>
+              <p>
+                정답 <strong>{data.question.correctChoice}</strong>
+              </p>
+              <section className="stats-explanation">
+                <h3>해설</h3>
+                <p>{data.explanation}</p>
+              </section>
+              <p>
+                미응답 {data.unanswered}명 · 선택 오답 {data.question.choiceWrong}명 · 시간초과{' '}
+                {data.question.timedOut}명
+              </p>
+              <Respondents
+                rows={data.correct}
+                label="정답자"
+                classroomId={classroomId}
+                listContext={listContext}
+              />
+              <Respondents
+                rows={data.wrong}
+                label="오답자 (시간초과 포함)"
+                classroomId={classroomId}
+                listContext={listContext}
+              />
+            </>
+          ) : null}
+        </div>
       </div>
     </div>,
     document.body,

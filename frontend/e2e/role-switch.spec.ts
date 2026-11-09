@@ -12,7 +12,7 @@ test('teacher logout student login back and protected route', async ({ page }) =
   page.on('request', (request) => {
     if (request.url().endsWith('/api/auth/logout')) logoutRequests++;
   });
-  await page.getByRole('link', { name: /한빛학교.*배움터/ }).click();
+  await page.getByRole('link', { name: '사실일까? 해석일까?', exact: true }).click();
   await expect(page).toHaveURL(/\/student\/learning$/);
   await expect(page.getByRole('heading', { name: '나의 학습', exact: true })).toBeVisible();
   expect((await page.request.get('/api/auth/me')).status()).toBe(200);

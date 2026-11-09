@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { PixelIcon } from '../../app/PixelIcon';
 import { errorMessage } from '../../lib/http';
 import { useRouteHeadingFocus } from '../../lib/useRouteHeadingFocus';
 import { useCurrentAccount } from '../auth/queries';
@@ -24,8 +25,14 @@ export function CharacterSelectionPage() {
         </h1>
         <p>함께 여행할 친구를 고르세요. 새 친구도 지금 장비를 입어요.</p>
         <nav className="game-page-nav" aria-label="꾸미기 메뉴">
-          <Link to="/student/learning">학습 홈</Link>
-          <Link to="/student/closet">옷장</Link>
+          <Link to="/student/learning">
+            <PixelIcon name="home" />
+            학습 홈
+          </Link>
+          <Link to="/student/closet">
+            <PixelIcon name="clothes" />
+            옷장
+          </Link>
         </nav>
         {game.isPending ? <p role="status">캐릭터를 불러오고 있어요.</p> : null}
         {game.error ? (

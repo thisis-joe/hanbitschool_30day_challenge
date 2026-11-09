@@ -196,11 +196,6 @@
   gap: 10px;
   margin: 20px 0 28px;
 }
-.game-closet-card .game-page-nav a {
-  display: inline-flex;
-  align-items: center;
-  background: #fff9dc;
-}
 .game-wardrobe-studio {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
@@ -288,10 +283,10 @@
   margin: 4px;
 }
 .game-wardrobe-categories [aria-pressed='true'] {
-  background: var(--rose);
+  background: var(--accent);
   box-shadow:
     0 3px 0 var(--shadow),
-    inset 0 2px 0 var(--rose-soft);
+    inset 0 2px 0 var(--accent-soft);
 }
 .game-wardrobe-note {
   font-size: 0.8rem;

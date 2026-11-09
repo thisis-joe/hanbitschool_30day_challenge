@@ -20,7 +20,7 @@ it('studentLogoReturnsToLearningWithoutLoggingOut', async () => {
   );
   renderPage(<App />, '/account/password');
   await screen.findByRole('heading', { name: '비밀번호 변경' });
-  await userEvent.click(screen.getByRole('link', { name: /한빛학교.*배움터/ }));
+  await userEvent.click(screen.getByRole('link', { name: '사실일까? 해석일까?' }));
   expect(await screen.findByRole('heading', { name: '나의 학습' })).toBeVisible();
   await userEvent.click(screen.getByRole('link', { name: '내 정보' }));
   expect(await screen.findByRole('heading', { name: '숲친구' })).toBeVisible();
@@ -35,7 +35,7 @@ it.each(['TEACHER', 'ADMIN'])('staffLogoReturnsToClassroomsFor%s', async (role) 
   );
   renderPage(<App />, '/account/password');
   await screen.findByRole('heading', { name: '비밀번호 변경' });
-  await userEvent.click(screen.getByRole('link', { name: /한빛학교.*배움터/ }));
+  await userEvent.click(screen.getByRole('link', { name: '사실일까? 해석일까?' }));
   expect(await screen.findByRole('heading', { name: '우리 학교 학급' })).toBeVisible();
   expect(screen.queryByRole('heading', { name: '학생 로그인' })).not.toBeInTheDocument();
 });
@@ -46,7 +46,7 @@ it('logoKeepsIssuedTeacherOnRequiredPasswordChange', async () => {
   );
   renderPage(<App />, '/account/password');
   await screen.findByRole('heading', { name: '비밀번호 변경' });
-  await userEvent.click(screen.getByRole('link', { name: /한빛학교.*배움터/ }));
+  await userEvent.click(screen.getByRole('link', { name: '사실일까? 해석일까?' }));
   expect(await screen.findByRole('heading', { name: '비밀번호 변경' })).toBeVisible();
   expect(screen.queryByRole('heading', { name: '학생 로그인' })).not.toBeInTheDocument();
 });

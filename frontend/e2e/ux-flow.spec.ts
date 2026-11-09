@@ -122,7 +122,12 @@ async function scenario(
       body = { ...studentDetail, student: { ...studentDetail.student, name: sampleStudent.name } };
     else if (path.endsWith('/learning/questions'))
       body = { items: [sampleQuestion], page: 0, size: 10, total: 1 };
-    else if (path.includes('/learning/questions/')) body = questionDetail;
+    else if (path.includes('/learning/questions/'))
+      body = {
+        ...questionDetail,
+        question: { ...questionDetail.question, text: sampleQuestion.text },
+        explanation: '화분이 놓여 있는지는 교실에서 직접 확인할 수 있어요.',
+      };
     else if (path.endsWith('/students'))
       body = [{ accountId: 'student-a', studentNumber: 1, name: '예시 학생' }];
     else if (path === '/api/admin/teachers')
@@ -153,6 +158,41 @@ for (const viewport of [
   { width: 320, height: 568 },
   { width: 390, height: 844 },
 ]) {
+  test(`colored travel tabs stay in one row at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await scenario(page);
+    await page.goto('/student/learning');
+    const brand = page.getByRole('link', { name: '사실일까? 해석일까?', exact: true });
+    await expect(brand).toBeVisible();
+    const nav = page.getByRole('navigation', { name: '학생 여행 메뉴' });
+    const tabs = nav.getByRole('link');
+    await expect(tabs).toHaveCount(4);
+    const icons = await tabs.evaluateAll((links) =>
+      links.map((link) => {
+        const icon = link.querySelector('svg')!;
+        return {
+          colors: [
+            ...new Set([...icon.querySelectorAll('path')].map((path) => path.getAttribute('fill'))),
+          ],
+          size: icon.getBoundingClientRect().width,
+          height: link.getBoundingClientRect().height,
+        };
+      }),
+    );
+    expect(
+      icons.every(({ colors, size, height }) => colors.length >= 3 && size === 16 && height >= 48),
+    ).toBe(true);
+    expect(new Set(icons.map(({ colors }) => colors.join())).size).toBe(4);
+    await sameRow(tabs.first(), tabs.last());
+    const output = evidenceOutput();
+    if (output) await page.screenshot({ path: output.file(`travel-header-${viewport.width}.png`) });
+    const map = nav.getByRole('link', { name: '탐험', exact: true });
+    await map.click();
+    await expect(map).toHaveAttribute('aria-current', 'page');
+    await expect(map).toHaveCSS('background-color', 'rgb(194, 217, 231)');
+    await expect(page.getByRole('heading', { name: '탐험 지도' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
+  });
   for (const continuing of [false, true]) {
     test(`primary learning action fits at ${viewport.width}px (continuing=${continuing})`, async ({
       page,
@@ -215,7 +255,16 @@ test('teacher decisions are reachable on the first small screen', async ({ page 
   );
   const trigger = table.getByRole('button', { name: '7번 문항 상세' });
   await trigger.click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: '7번 문항 상세' });
+  await expect(dialog).toBeVisible();
+  const close = dialog.getByRole('button', { name: '닫기' });
+  await expect(close).toBeFocused();
+  await expect(dialog.getByRole('heading', { name: '해설', exact: true })).toBeVisible();
+  if (output) await page.screenshot({ path: output.file('teacher-window-320.png') });
+  const body = dialog.locator('.stats-dialog-body');
+  await body.evaluate((element) => element.scrollTo(0, element.scrollHeight));
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect(close).toBeInViewport({ ratio: 1 });
   await page.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
 });
@@ -447,7 +496,7 @@ for (const width of [320, 390, 768, 1280]) {
         name,
       ).toBe(true);
       if (name === 'stafflogin') {
-        const brand = page.getByRole('link', { name: '한빛학교 배움터' }).locator('img');
+        const brand = page.getByRole('link', { name: '사실일까? 해석일까?' }).locator('img');
         await expect
           .poll(() => brand.evaluate((image: HTMLImageElement) => image.naturalWidth))
           .toBe(24);
