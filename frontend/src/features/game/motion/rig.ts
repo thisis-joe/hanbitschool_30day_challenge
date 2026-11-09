@@ -1,4 +1,9 @@
-import { renderAvatar, avatarAnchor, avatarHatPlacement } from '../avatarRenderer';
+import {
+  renderAvatar,
+  avatarAnchor,
+  avatarHatPlacement,
+  tuckHairUnderHat,
+} from '../avatarRenderer';
 import { equipmentArt, equipmentSvg, handEquipmentFit, parseItemId } from '../artwork';
 import type { CharacterId, Equipment } from '../types';
 import type { AvatarPose } from './poses';
@@ -228,11 +233,8 @@ export async function buildAvatarRig(
       if (y >= a.pants[3] || x < a.shirt[0] - 3 || x > a.shirt[2] + 3)
         remaining.data[(y * 128 + x) * 4 + 3] = 0;
   body.ctx.putImageData(remaining, 0, 0);
-  if (hat) {
-    const fit = avatarHatPlacement(character, hat.value);
-    if (!fit.crown)
-      head.ctx.clearRect(fit.scalp[0], 0, fit.scalp[1] - fit.scalp[0], fit.scalpBottom);
-  }
+  const fittedHat = hat && { ...hat, fit: avatarHatPlacement(character, hat.value) };
+  if (fittedHat) tuckHairUnderHat(head.ctx, fittedHat.image, fittedHat.fit);
   const skinIndex = ((a.eyes[0][1] + 9) * 128 + a.eyes[0][0] + 2) * 4;
   const skin = `rgb(${original.data[skinIndex]},${original.data[skinIndex + 1]},${original.data[skinIndex + 2]})`;
   return {
@@ -254,7 +256,7 @@ export async function buildAvatarRig(
     headBottom,
     skin,
     face,
-    hat: hat && { ...hat, fit: avatarHatPlacement(character, hat.value) },
+    hat: fittedHat,
     held,
   };
 }
@@ -527,7 +529,9 @@ export function paintAvatarPose(canvas: HTMLCanvasElement, rig: AvatarRig, pose:
   ctx.save();
   rotate(ctx, rig.neck, pose.head);
   const hairLine = Math.min(...rig.anchor.eyes.map((p) => p[1])) - 14;
-  if (!pose.hair) ctx.drawImage(rig.heads[pose.expression], 0, 0);
+  // The covered roots follow the hat and head. Loose strands still swing in the hair layer.
+  if (!pose.hair || (rig.hat && !rig.hat.fit.crown))
+    ctx.drawImage(rig.heads[pose.expression], 0, 0);
   else
     mesh(ctx, rig.heads[pose.expression], [0, 0, 128, rig.headBottom], ([x, y]) => {
       const weight = Math.max(0, Math.min(1, (hairLine - y) / 28));

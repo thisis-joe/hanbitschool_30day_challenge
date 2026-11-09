@@ -164,9 +164,37 @@ export function avatarHatPlacement(characterId: CharacterId, value: number) {
     width: 112 * sx,
     height: 64 * sy,
     scalp: HAT_SCALP_BOUNDS[index],
-    scalpBottom: fit.seat - 5,
     crown,
   };
+}
+
+export function tuckHairUnderHat(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  fit: ReturnType<typeof avatarHatPlacement>,
+) {
+  if (fit.crown) return;
+  const mask = document.createElement('canvas');
+  mask.width = 128;
+  mask.height = Math.ceil(fit.y + fit.height);
+  const maskCtx = context(mask);
+  maskCtx.drawImage(
+    image,
+    Math.round(fit.x),
+    Math.round(fit.y),
+    Math.round(fit.width),
+    Math.round(fit.height),
+  );
+  const { data } = maskCtx.getImageData(0, 0, mask.width, mask.height);
+  const [left, right] = fit.scalp;
+  // Only tuck hair in columns covered by the hat. End the cut behind its top edge.
+  for (let x = left; x < right; x++) {
+    for (let y = 0; y < mask.height; y++) {
+      if (data[(y * mask.width + x) * 4 + 3] < 128) continue;
+      ctx.clearRect(x, 0, 1, y);
+      break;
+    }
+  }
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -282,11 +310,9 @@ export async function renderAvatar(
   ctx.clearRect(0, 0, 128, 176);
   ctx.drawImage(base, 0, 0, 128, 176);
   const a = ANCHORS[index];
-  if (gear.hat && gear.hat !== 5) {
-    const [left, right] = HAT_SCALP_BOUNDS[index],
-      edge = HAT_FITS[index].seat - 5;
-    ctx.clearRect(left, 0, right - left, edge);
-  }
+  const hatFit = gear.hat ? avatarHatPlacement(characterId, gear.hat) : undefined;
+  const hatLayer = gear.hat ? bitmap('hat', gear.hat) : undefined;
+  if (hatFit && hatLayer) tuckHairUnderHat(ctx, hatLayer.image, hatFit);
   const draw = (
     slot: Slot,
     value: number | undefined,
@@ -346,9 +372,8 @@ export async function renderAvatar(
       ctx.restore();
     }
   }
-  if (gear.hat) {
-    const fit = avatarHatPlacement(characterId, gear.hat);
-    draw('hat', gear.hat, fit.x, fit.y, fit.width, fit.height);
+  if (hatFit) {
+    draw('hat', gear.hat, hatFit.x, hatFit.y, hatFit.width, hatFit.height);
   }
   if (!current()) return;
   const visible = context(canvas);

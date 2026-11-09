@@ -139,6 +139,20 @@ test('nine characters keep their fists in front of fitted bags and render every 
     });
   });
   expect(shoulderSeams.filter((site) => !site.covered)).toEqual([]);
+  const hair = await page.evaluate(() => {
+    // Bora's green hat used to leave a flat ledge of hair above its right brim.
+    const pixel = (outfit: number, x: number, y: number) =>
+      Array.from(
+        document
+          .querySelector<HTMLCanvasElement>(`canvas[data-character="7"][data-outfit="${outfit}"]`)!
+          .getContext('2d')!
+          .getImageData(x, y, 1, 1).data,
+      );
+    return { above: pixel(2, 112, 50), below: pixel(2, 112, 73), originalBelow: pixel(0, 112, 73) };
+  });
+  expect(hair.above[3]).toBe(0);
+  expect(hair.originalBelow[3]).toBeGreaterThan(180);
+  expect(hair.below).toEqual(hair.originalBelow);
   expect(errors).toEqual([]);
   const output = evidenceOutput();
   if (output)
