@@ -9,7 +9,11 @@ import { useSceneGround } from './useSceneGround';
 import { PixelAnswerArt } from './PixelAnswerArt';
 
 const WALK_MS = MOTION_MS.walk;
-const landmarks = { forest: 'forest-rock', village: 'village-sign', beach: 'beach-shell' } as const;
+const landmarks = {
+  forest: 'forest-pixel-rock',
+  village: 'village-sign',
+  beach: 'beach-shell',
+} as const;
 export function AnswerGameScene({
   appearance,
   journey,

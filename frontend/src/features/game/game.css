@@ -196,7 +196,7 @@
 }
 .game-scene-forest {
   --region-sky: #2b4b40;
-  --region-art: url('/game/pixels/forest.svg');
+  --region-art: url('/game/pixels/forest-clearing.svg');
 }
 .game-scene-village {
   --region-sky: #414b3d;

@@ -183,7 +183,7 @@ for (const width of [320, 390, 768, 1280]) {
         await scene.locator('.game-avatar-articulated[data-ready="true"]').waitFor();
         const marker = scene.locator(`.game-answer-${choice.toLowerCase()}`);
         const art = marker.locator('.game-answer-landmark-art');
-        const file = { forest: 'forest-rock', village: 'village-sign', beach: 'beach-shell' }[
+        const file = { forest: 'forest-pixel-rock', village: 'village-sign', beach: 'beach-shell' }[
           region
         ];
         await expect(art).toHaveAttribute('src', `/game/answers/${file}.svg`);
