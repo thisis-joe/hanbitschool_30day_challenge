@@ -20,7 +20,7 @@ export function StudentLoginPage() {
   const accept = useAcceptAccount();
   const submit = useSubmission();
   return (
-    <AuthFrame title="학생 로그인" description="학교와 반을 고른 뒤 번호와 비밀번호를 입력하세요.">
+    <AuthFrame title="학생 로그인">
       {saved?.registered === true ? (
         <p className="form-success" role="status">
           가입이 완료되었어요. 방금 정한 비밀번호로 로그인해 주세요.

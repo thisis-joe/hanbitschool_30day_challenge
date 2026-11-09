@@ -312,6 +312,9 @@ main:has(> .auth-frame) {
   background: var(--accent);
   box-shadow: inset 0 2px 0 var(--accent-soft);
 }
+.form-panel h1 {
+  text-align: center;
+}
 .description {
   color: var(--muted);
   font-size: 0.92rem;

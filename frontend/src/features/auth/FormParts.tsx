@@ -34,7 +34,7 @@ export function AuthFrame({
   children,
 }: {
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -46,7 +46,7 @@ export function AuthFrame({
       <h1 ref={heading} tabIndex={-1}>
         {title}
       </h1>
-      <p className="description">{description}</p>
+      {description ? <p className="description">{description}</p> : null}
       {children}
     </section>
   );
