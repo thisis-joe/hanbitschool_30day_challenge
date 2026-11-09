@@ -465,7 +465,10 @@ for (const width of [390, 1280]) {
 test('exploration is a map with no next-learning or round-card commands', async ({ page }) => {
   const writes = await scenario(page);
   await page.goto('/student/map');
-  await expect(page.getByRole('heading', { name: '탐험 지도', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '탐험 지도', exact: true })).toHaveCSS(
+    'clip-path',
+    'inset(50%)',
+  );
   await expect(page.getByRole('region', { name: '탐험 경로' })).toBeVisible();
   await expect(page.getByRole('heading', { name: '다음 배움' })).toHaveCount(0);
   await expect(page.getByRole('list', { name: '회차별 학습' })).toHaveCount(0);

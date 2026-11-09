@@ -31,10 +31,9 @@ export function PersonalQuestionsPage() {
   const heading = useRouteHeadingFocus(account?.accountId, !!account);
   return (
     <section className="learning-page game-personal-page">
-      <h1 ref={heading} tabIndex={-1}>
+      <h1 className="game-route-title" ref={heading} tabIndex={-1}>
         나의 문제
       </h1>
-      <p>다시 볼 문제를 골라 복습하거나 별표한 문제를 찾아보세요.</p>
       <nav className="learning-filters" aria-label="개인 문제 필터">
         {(Object.keys(filters) as PersonalQuestionFilter[]).map((key) => (
           <Link
@@ -56,9 +55,6 @@ export function PersonalQuestionsPage() {
       ) : (
         <p role="status">문제를 불러오고 있어요</p>
       )}
-      <Link className="button secondary" to="/student/learning">
-        학습 홈으로
-      </Link>
     </section>
   );
 }
@@ -272,15 +268,17 @@ function QuestionList({
                   </label>
                 ) : null}
               </div>
-              <p className="learning-personal-text">{row.text}</p>
-              <p className="learning-question-status">
-                최근 결과:{' '}
-                {row.lastOutcome === null ? '미답변' : lastOutcomeLabels[row.lastOutcome]}
-              </p>
-              <p className="learning-question-status">
-                {row.mastered ? '복습 완료' : '복습 미완료'}
-                {row.inReviewQueue ? ' · 다시 볼 목록에 있어요' : ''}
-              </p>
+              <div className="learning-question-body">
+                <p className="learning-personal-text">{row.text}</p>
+                <p className="learning-question-status">
+                  최근 결과:{' '}
+                  {row.lastOutcome === null ? '미답변' : lastOutcomeLabels[row.lastOutcome]}
+                </p>
+                <p className="learning-question-status">
+                  {row.mastered ? '복습 완료' : '복습 미완료'}
+                  {row.inReviewQueue ? ' · 다시 볼 목록에 있어요' : ''}
+                </p>
+              </div>
               <div className="learning-question-actions">
                 <QuestionFeedbackActions questionId={row.questionId} result={null} />
                 {row.inReviewQueue ? (

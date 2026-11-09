@@ -147,7 +147,7 @@ export function WardrobePlayground({
         }}
         onPointerCancel={stop}
       >
-        <span className="game-tag">{preview ? '미리 입어보는 중' : '나의 여행 친구'}</span>
+        {preview ? <span className="game-tag">미리 입어보는 중</span> : null}
         <div
           className="game-wardrobe-walker"
           data-moving={moving}

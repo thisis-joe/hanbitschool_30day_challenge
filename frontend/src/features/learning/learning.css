@@ -319,7 +319,7 @@
   justify-content: center;
 }
 .learning-filters {
-  margin: 24px 0;
+  margin: 0 0 16px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
@@ -342,12 +342,17 @@
 }
 .learning-personal-heading {
   justify-content: space-between;
-  padding-bottom: 14px;
+  gap: 4px 8px;
+  padding-bottom: 8px;
   border-bottom: 2px solid var(--line);
 }
 .learning-personal-text {
+  margin: 10px 0;
   white-space: pre-wrap;
   line-height: 1.85;
+}
+.learning-question-body {
+  grid-column: 1;
 }
 .learning-select {
   display: inline-flex;
@@ -408,7 +413,11 @@
   margin: 0;
 }
 .learning-question-list .learning-card {
-  padding: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0 12px;
+  padding: 16px;
 }
 .learning-question-status {
   font-size: 0.85rem;
@@ -416,17 +425,21 @@
   margin: 6px 0;
 }
 .learning-question-actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
   display: flex;
-  flex-wrap: wrap;
-  align-items: start;
-  gap: 8px;
-  margin-top: 16px;
+  flex-direction: column;
+  align-items: end;
+  gap: 6px;
+  max-width: 8rem;
 }
 .learning-question-actions .learning-feedback-tools {
   margin: 0;
 }
 .learning-question-actions button {
-  padding-inline: 12px;
+  min-width: 48px;
+  max-width: 100%;
+  padding: 5px 8px;
   font-size: 0.85rem;
 }
 .learning-empty {
@@ -532,7 +545,15 @@
     font-size: 1.1rem;
   }
   .learning-question-list .learning-card {
-    padding: 16px;
+    column-gap: 8px;
+    padding: 12px;
+  }
+  .learning-question-body {
+    grid-column: 1 / -1;
+  }
+  .learning-question-actions {
+    grid-row: 1;
+    max-width: 6.25rem;
   }
   .learning-selection {
     gap: 8px;
@@ -556,6 +577,7 @@
 }
 
 .learning-replay-picker {
+  position: relative;
   width: 100%;
   margin-top: 8px;
   padding-top: 4px;
@@ -582,14 +604,20 @@
   transform: rotate(90deg);
 }
 .learning-replay-controls {
+  position: absolute;
+  z-index: 2;
+  inset-inline: -4px;
+  inset-block-end: calc(100% + 4px);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding-block: 8px 12px;
+  padding: 6px 2px;
+  border: 2px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 2px 0 var(--shadow);
 }
-/* The closed controls keep their space so the neighboring scene stays fixed. */
 .learning-replay-controls[inert] {
   visibility: hidden;
 }
