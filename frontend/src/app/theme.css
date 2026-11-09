@@ -14,7 +14,6 @@
   font-style: normal;
   font-display: swap;
 }
-/* Paper tabs keep the student's four destinations visible at every width. */
 .game-student-nav {
   position: sticky;
   top: 0;
@@ -23,66 +22,19 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   max-width: 1060px;
   margin: 0 auto;
-  padding: 8px 32px;
-  gap: 8px;
+  padding: 6px 16px 8px;
+  gap: 6px;
   background: var(--panel);
   border-bottom: 2px solid var(--line);
 }
-.game-student-nav a {
-  justify-content: center;
-  min-height: 48px;
-  border: 2px solid var(--line);
-  border-radius: var(--pixel-corner);
-  gap: 8px;
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: 0 2px 0 var(--edge);
-  font-weight: 700;
-}
-.game-student-nav a.active {
-  background: var(--rose);
-  border-color: var(--ink);
-  box-shadow: 0 2px 0 var(--shadow);
-}
-.game-student-nav a:hover:not(.active) {
-  background: var(--rose-soft);
-}
-.game-student-nav svg {
-  width: 24px;
-  height: 24px;
+.pixel-icon {
   flex: none;
   pointer-events: none;
 }
-.student-header nav a,
-.student-header .nav-button {
-  min-width: 48px;
-  min-height: 48px;
-}
-.site-header nav a,
-.site-header .nav-button {
-  min-width: 48px;
-  min-height: 48px;
-}
 @media (max-width: 720px) {
   .game-student-nav {
-    padding: 8px 12px;
+    padding-inline: 8px;
     gap: 4px;
-  }
-  .game-student-nav a {
-    gap: 4px;
-    padding: 6px 1px;
-    font-size: 0.75rem;
-  }
-  .game-student-nav svg {
-    width: 16px;
-    height: 16px;
-  }
-  .student-header {
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .student-header nav {
-    gap: 8px;
   }
 }
 :root {
@@ -91,8 +43,8 @@
   --panel: #f5e9cf;
   --edge: #d7be94;
   --butter: #f4d78c;
-  --rose: #f2b6c3;
-  --rose-soft: #fae1e6;
+  --accent: #c2d9e7;
+  --accent-soft: #e2eff4;
   --action: #a5cf93;
   --action-soft: #e4efd8;
   --ink: #3d2725;
@@ -101,7 +53,9 @@
   --muted: #655145;
   --focus: #365d4b;
   --pixel-corner: 0px;
-  --pixel-depth: 3px;
+  --pixel-rim: url('./pixel-rim.svg') 3 stretch;
+  --pixel-depth: 2px;
+  --pixel-bevel: inset 0 2px 0 #ffffff99, inset 0 -2px 0 #3d27252b;
   font-family: 'Galmuri11', sans-serif;
   color: var(--ink);
   background: var(--cream);
@@ -149,15 +103,15 @@ textarea {
   color: inherit;
 }
 button,
-.button {
+.button,
+:is(.site-menu, .game-student-nav, .game-page-nav) > a {
   min-height: 48px;
   background: var(--action);
-  border: 2px solid var(--ink);
+  border: 3px solid var(--ink);
+  border-image: var(--pixel-rim);
   border-radius: var(--pixel-corner);
-  box-shadow:
-    0 var(--pixel-depth) 0 var(--shadow),
-    inset 0 2px 0 #ffffff80,
-    inset 0 -2px 0 #3d272526;
+  background-clip: padding-box;
+  box-shadow: 0 var(--pixel-depth) 0 var(--shadow), var(--pixel-bevel);
   padding: 10px 18px;
   font-weight: 700;
   cursor: pointer;
@@ -165,6 +119,40 @@ button,
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+/* Navigation reads as a row of game controls while the text stays visible. */
+:is(.site-menu, .game-student-nav, .game-page-nav) > a,
+.site-menu > button {
+  min-width: 48px;
+  background-color: var(--paper);
+  padding: 6px 10px;
+  gap: 6px;
+  text-align: center;
+  line-height: 1.25;
+}
+:is(.site-menu, .game-student-nav) > a[aria-current='page'] {
+  background-color: var(--accent);
+  box-shadow: 0 var(--pixel-depth) 0 var(--shadow), inset 0 0 0 2px var(--accent-soft);
+}
+:is(.site-menu, .game-student-nav, .game-page-nav) > a:hover:not([aria-current='page']) {
+  background-color: var(--accent-soft);
+}
+.pixel-window {
+  border: 3px solid var(--ink);
+  border-image: var(--pixel-rim);
+  background-color: var(--paper);
+  background-clip: padding-box;
+  box-shadow: 0 4px 0 var(--shadow);
+  color: var(--ink);
+}
+.pixel-window-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 2px solid var(--line);
+  background-color: var(--accent);
+  box-shadow: inset 0 2px 0 var(--accent-soft);
 }
 button:disabled {
   opacity: 0.68;
@@ -176,7 +164,8 @@ button:hover:not(:disabled),
   filter: brightness(0.97);
 }
 button:active:not(:disabled),
-.button:active {
+.button:active,
+:is(.site-menu, .game-student-nav, .game-page-nav) > a:active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--shadow);
 }
@@ -252,10 +241,9 @@ fieldset {
   border-bottom: 2px solid var(--line);
   background: var(--paper);
 }
-.site-header nav a[aria-current='page'] {
-  font-weight: 800;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
+.site-menu {
+  gap: 6px;
+  justify-content: center;
 }
 .brand {
   display: inline-flex;
@@ -264,13 +252,8 @@ fieldset {
   text-decoration: none;
   font-size: 1.5rem;
   font-weight: 700;
-  white-space: nowrap;
-}
-.brand-caption {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 400;
-  color: var(--muted);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .brand-mark,
 .auth-mark {
@@ -289,14 +272,6 @@ nav a {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
-}
-.nav-button {
-  border: 2px solid var(--line);
-  padding: 0 8px;
-  background: var(--panel);
-  font-size: 0.87rem;
-  min-height: 48px;
-  box-shadow: none;
 }
 main {
   max-width: 1184px;
@@ -337,8 +312,8 @@ main {
 .account-panel > h1 {
   padding: 8px 12px;
   border: 2px solid var(--line);
-  background: var(--rose);
-  box-shadow: inset 0 2px 0 var(--rose-soft);
+  background: var(--accent);
+  box-shadow: inset 0 2px 0 var(--accent-soft);
 }
 .description {
   color: var(--muted);
@@ -390,13 +365,14 @@ main {
 }
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
   margin-top: 24px;
 }
 .form-panel .form-actions button[type='submit'] {
   width: auto;
   margin: 0;
-  flex: 1;
 }
 .form-actions > .button,
 .form-actions > button {
@@ -442,6 +418,7 @@ main {
 .actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
 }
 footer {
@@ -455,11 +432,12 @@ footer {
     min-height: 0;
     padding: 8px 16px;
     gap: 6px 12px;
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
     flex-wrap: wrap;
   }
   .brand {
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     line-height: 1.2;
   }
   nav {
@@ -467,8 +445,18 @@ footer {
     font-size: 0.78rem;
     justify-content: flex-end;
   }
-  .nav-button {
-    font-size: 0.78rem;
+  .site-header .site-menu {
+    justify-content: center;
+    gap: 6px;
+  }
+  .site-menu > :is(a, button),
+  .game-student-nav > a {
+    gap: 4px;
+    padding: 4px 5px;
+    font-size: 0.75rem;
+  }
+  .game-student-nav > a {
+    padding-inline: 1px;
   }
   main {
     padding: 12px 16px 36px;
@@ -577,6 +565,8 @@ footer {
 }
 .scope-controls {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
   margin: 24px 0;
 }
@@ -655,6 +645,9 @@ footer {
   .class-row-main {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .class-row-actions {
+    width: 100%;
   }
   .scope-controls {
     gap: 8px;

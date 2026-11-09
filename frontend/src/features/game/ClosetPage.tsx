@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { PixelIcon } from '../../app/PixelIcon';
 import { useCurrentAccount } from '../auth/queries';
 import { getPendingCommandEpoch } from '../learning/pendingCommands';
 import { errorMessage } from '../../lib/http';
@@ -88,7 +89,10 @@ export function ClosetPage() {
         </h1>
         <p>장비를 골라 입어 보고, 마음에 들면 착용해 보세요.</p>
         <nav className="game-page-nav" aria-label="꾸미기 메뉴">
-          <Link to="/student/character">캐릭터 선택</Link>
+          <Link to="/student/character">
+            <PixelIcon name="people" />
+            캐릭터 선택
+          </Link>
         </nav>
         {game.isPending ? <p role="status">옷장을 불러오고 있어요.</p> : null}
         {game.error ? (

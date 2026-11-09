@@ -8,6 +8,7 @@ import { FormError, useSubmission } from '../features/auth/FormParts';
 import { refreshCsrf, setUnauthorizedHandler } from '../lib/http';
 import { clearAllPendingCommands } from '../features/learning/pendingCommands';
 import { StudentGameNav } from '../features/game/StudentGameNav';
+import { PixelIcon } from './PixelIcon';
 export function App() {
   const client = useQueryClient();
   const session = useCurrentAccount();
@@ -30,28 +31,37 @@ export function App() {
       <a className="skip-link" href="#main-content">
         본문으로 바로가기
       </a>
-      <header className={`site-header${me?.role === 'STUDENT' ? ' student-header' : ''}`}>
-        <Link className="brand" to="/" aria-label="한빛학교 배움터">
+      <header className="site-header">
+        <Link className="brand" to="/">
           <img className="brand-mark" src="/brand/school-mark.svg" width="24" height="24" alt="" />
-          <span>
-            한빛학교<span className="brand-caption">배움터</span>
-          </span>
+          <span>사실일까? 해석일까?</span>
         </Link>
-        <nav aria-label="주 메뉴">
+        <nav className="site-menu" aria-label="주 메뉴">
           {me?.role === 'STUDENT' ? (
-            <>
-              <NavLink to="/student/account">내 정보</NavLink>
-            </>
+            <NavLink to="/student/account">
+              <PixelIcon name="badge" />내 정보
+            </NavLink>
           ) : null}
           {staff && !me.mustChangePassword ? (
             <>
-              <NavLink to="/staff/classrooms">학급</NavLink>
-              {me.role === 'ADMIN' ? <NavLink to="/admin/teachers">교사 계정</NavLink> : null}
+              <NavLink to="/staff/classrooms">
+                <PixelIcon name="board" />
+                학급
+              </NavLink>
+              {me.role === 'ADMIN' ? (
+                <NavLink to="/admin/teachers">
+                  <PixelIcon name="people" />
+                  교사 계정
+                </NavLink>
+              ) : null}
             </>
           ) : null}
           {me ? (
             <>
-              <NavLink to="/account/password">비밀번호 변경</NavLink>
+              <NavLink to="/account/password">
+                <PixelIcon name="key" />
+                비밀번호 변경
+              </NavLink>
               <button
                 className="nav-button"
                 disabled={submit.pending}
@@ -63,11 +73,15 @@ export function App() {
                   })
                 }
               >
+                <PixelIcon name="exit" />
                 로그아웃
               </button>
             </>
           ) : (
-            <Link to="/signup">회원가입</Link>
+            <Link to="/signup">
+              <PixelIcon name="signup" />
+              회원가입
+            </Link>
           )}
         </nav>
       </header>

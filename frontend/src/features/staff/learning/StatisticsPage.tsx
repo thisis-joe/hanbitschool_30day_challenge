@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { PixelIcon } from '../../../app/PixelIcon';
 import { useCurrentAccount } from '../../auth/queries';
 import { GameAvatar } from '../../game/GameAvatar';
 import { errorMessage } from '../../../lib/http';
@@ -202,6 +203,7 @@ function StatisticsWorkspace({
             })
           }
         >
+          <PixelIcon name="people" />
           학생 현황
         </button>
         <button
@@ -217,9 +219,15 @@ function StatisticsWorkspace({
             })
           }
         >
+          <PixelIcon name="journal" />
           문항 분석
         </button>
-        {summary ? <a href="#class-summary">학급 전체 통계</a> : null}
+        {summary ? (
+          <a href="#class-summary">
+            <PixelIcon name="board" />
+            학급 전체 통계
+          </a>
+        ) : null}
       </nav>
       <div className="stats-card">
         <form

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
+import { PixelIcon } from '../../app/PixelIcon';
 import { EquipmentIcon } from './EquipmentIcon';
 import type { GameItem } from './types';
 import { acquisitionDuration } from './useAcquisitionSequence';
@@ -163,11 +164,14 @@ export function AcquisitionCinematic({
           </div>
         )}
       </div>
-      <div className="acquisition-caption">
+      <div className="acquisition-caption pixel-window">
+        <h2 className="pixel-window-bar">
+          <PixelIcon name={prize.kind === 'item' ? 'chest' : 'journal'} />
+          {prize.kind === 'item' ? '아이템 획득!' : '경험치 획득!'}
+        </h2>
         <p className="acquisition-eyebrow">
           {prize.kind === 'item' ? '새로운 여행 선물' : '정답의 빛이 모였어요'}
         </p>
-        <h2>{prize.kind === 'item' ? '아이템 획득!' : '경험치 획득!'}</h2>
         <p className="acquisition-name">
           {prize.kind === 'item' ? (
             prize.item.name
@@ -186,7 +190,8 @@ export function AcquisitionCinematic({
       </div>
       {prize.kind === 'item' ? (
         <button className="acquisition-skip" onClick={onComplete} autoFocus>
-          연출 건너뛰기 <span aria-hidden="true">→</span>
+          <PixelIcon name="forward" />
+          연출 건너뛰기
         </button>
       ) : null}
     </dialog>,

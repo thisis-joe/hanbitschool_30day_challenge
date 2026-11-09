@@ -77,8 +77,8 @@
   max-width: 100%;
   padding: 6px 10px;
   border: 2px solid var(--line);
-  background: var(--rose);
-  box-shadow: inset 0 2px 0 var(--rose-soft);
+  background: var(--accent);
+  box-shadow: inset 0 2px 0 var(--accent-soft);
 }
 .stats-overview-header p {
   margin: 0;
@@ -128,7 +128,7 @@
   flex-wrap: wrap;
 }
 .stats-overview .stats-tabs a {
-  margin-inline-start: auto;
+  gap: 6px;
   color: var(--muted);
   font-size: 0.875rem;
 }
@@ -214,7 +214,10 @@
   display: flex;
   gap: 8px;
   margin-top: 26px;
-  justify-content: flex-start;
+  justify-content: center;
+}
+.stats-tabs button {
+  gap: 6px;
 }
 .stats-scroll-hint {
   display: none;
@@ -226,7 +229,7 @@
   background: var(--paper);
 }
 .stats-tabs button[aria-pressed='true'] {
-  background: var(--rose);
+  background: var(--accent);
 }
 .stats-filters {
   display: grid;
@@ -436,29 +439,31 @@
   padding: 24px;
 }
 .stats-dialog {
-  border: 4px solid var(--ink);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(700px, 100%);
   max-height: calc(100dvh - 48px);
-  overflow-y: auto;
-  padding: 28px;
-  border-radius: var(--pixel-corner);
-  background: var(--paper);
-  color: var(--ink);
   overflow-wrap: anywhere;
 }
 .stats-dialog header {
-  display: flex;
   justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  padding: 8px 12px;
-  border: 2px solid var(--line);
-  background: var(--rose);
-  box-shadow: inset 0 2px 0 var(--rose-soft);
 }
 .stats-dialog h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 4vw, 1.25rem);
+}
+.stats-dialog header button {
+  flex: none;
+  gap: 4px;
+  padding-inline: 8px;
+}
+.stats-dialog-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px clamp(12px, 4vw, 24px) 20px;
 }
 .stats-dialog-question {
   font-size: 1.15rem;
@@ -558,7 +563,6 @@
     padding: 12px;
   }
   .stats-dialog {
-    padding: 18px;
     max-height: calc(100dvh - 24px);
   }
   .stats-neighbors span {
@@ -591,9 +595,6 @@
   }
   .stats-overview .stats-tabs button {
     padding: 6px 9px;
-  }
-  .stats-overview .stats-tabs a {
-    margin-inline-start: 0;
   }
   .stats-day-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
