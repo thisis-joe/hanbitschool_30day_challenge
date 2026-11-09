@@ -221,7 +221,7 @@
   justify-content: center;
   min-height: 390px;
   padding: 28px 20px 32px;
-  background: #dac7a0 url('/game/pixels/room.svg') center bottom / 760px 470px no-repeat;
+  background: #dac7a0 url('/game/pixels/original-room.png') center bottom / cover no-repeat;
   image-rendering: pixelated;
 }
 .game-wardrobe-room > .game-tag {

@@ -8,11 +8,6 @@ import './answer-scene.css';
 import { PixelAnswerArt } from './PixelAnswerArt';
 
 const WALK_MS = MOTION_MS.walk;
-const landmarks = {
-  forest: 'forest-pixel-rock',
-  village: 'village-sign',
-  beach: 'beach-shell',
-} as const;
 export function AnswerGameScene({
   appearance,
   journey,
@@ -95,7 +90,7 @@ export function AnswerGameScene({
             <>
               <img
                 className="game-answer-landmark-art"
-                src={`/game/answers/${landmarks[region]}.svg`}
+                src={`/game/answers/original-${region}.png`}
                 alt=""
                 aria-hidden="true"
                 draggable={false}

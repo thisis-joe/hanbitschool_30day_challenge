@@ -31,7 +31,7 @@
   background: #efeddf;
 }
 .game-map-world {
-  width: 1050px;
+  width: max(1050px, 100%);
   aspect-ratio: 1 / 3;
   margin-inline: auto;
   position: relative;
@@ -40,7 +40,7 @@
 }
 .game-map-world,
 .game-map-art {
-  background: #829e78 url('/game/pixels/journey.svg') center / 1050px 3150px no-repeat;
+  background: #829e78 url('/game/pixels/original-journey.png') center / 100% 100% no-repeat;
   image-rendering: pixelated;
 }
 .game-map-terrain {
@@ -64,11 +64,11 @@
   inset: 0;
 }
 .game-map-art {
-  filter: saturate(0.17) contrast(0.84) brightness(1.18);
+  filter: saturate(0.22) contrast(0.72) brightness(1.17);
 }
 .game-map-clouds {
-  background: url('/game/pixels/clouds.svg') left top / 288px 152px repeat;
-  opacity: 0.56;
+  background: url('/game/pixels/clouds.svg') left top / 576px 304px repeat;
+  opacity: 0.34;
 }
 .game-map-terrain[data-revealed='false'] {
   opacity: 1;
@@ -102,29 +102,52 @@
   stroke-dasharray: 0.2 0.7;
 }
 .game-map-day {
+  --marker-fill: #f5f3e9;
+  --marker-shadow: #334a344d;
+  /* The original circular pin, drawn on a 16 × 16 grid. */
+  --marker-shape: polygon(
+    31.25% 0, 68.75% 0, 68.75% 6.25%, 81.25% 6.25%, 81.25% 12.5%,
+    87.5% 12.5%, 87.5% 18.75%, 93.75% 18.75%, 93.75% 31.25%, 100% 31.25%,
+    100% 68.75%, 93.75% 68.75%, 93.75% 81.25%, 87.5% 81.25%, 87.5% 87.5%,
+    81.25% 87.5%, 81.25% 93.75%, 68.75% 93.75%, 68.75% 100%, 31.25% 100%,
+    31.25% 93.75%, 18.75% 93.75%, 18.75% 87.5%, 12.5% 87.5%, 12.5% 81.25%,
+    6.25% 81.25%, 6.25% 68.75%, 0 68.75%, 0 31.25%, 6.25% 31.25%,
+    6.25% 18.75%, 12.5% 18.75%, 12.5% 12.5%, 18.75% 12.5%, 18.75% 6.25%, 31.25% 6.25%
+  );
   position: absolute;
   z-index: 3;
   transform: translate(-50%, -50%);
   width: 48px;
   min-height: 48px;
-  border-radius: var(--pixel-corner);
   display: grid;
   place-items: center;
-  text-decoration: none;
-  border: 3px solid var(--ink);
-  background: #f5f3e9;
   color: #54665b;
   font-weight: 800;
-  box-shadow: 0 4px 0 #334a3440;
+  filter: drop-shadow(0 4px 0 var(--marker-shadow));
+}
+.game-map-day::before,
+.game-map-day::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  clip-path: var(--marker-shape);
+}
+.game-map-day::before {
+  inset: 0;
+  background: var(--ink);
+}
+.game-map-day::after {
+  inset: 3px;
+  background: var(--marker-fill);
 }
 .game-map-passed {
-  background: #70955e;
+  --marker-fill: #70955e;
   color: white;
 }
 .game-map-current {
-  background: var(--butter);
+  --marker-fill: var(--butter);
+  --marker-shadow: #967735;
   color: var(--ink);
-  box-shadow: 0 5px 0 #967735;
 }
 .game-map-day:focus-visible {
   outline: 4px solid #fffce9;
