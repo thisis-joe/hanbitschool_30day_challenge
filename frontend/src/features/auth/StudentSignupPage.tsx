@@ -75,9 +75,7 @@ export function StudentSignupPage() {
             required
             autoComplete="off"
             spellCheck={false}
-            aria-describedby="code-help"
           />
-          <small id="code-help">학교·학년·반과 코드가 일치해야 가입할 수 있어요.</small>
           <FormError message={submit.error} />
           <button type="submit">{submit.pending ? '가입 중…' : '가입하기'}</button>
         </fieldset>
