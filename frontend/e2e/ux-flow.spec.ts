@@ -446,6 +446,24 @@ for (const width of [320, 390, 768, 1280]) {
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
         name,
       ).toBe(true);
+      if (name === 'stafflogin') {
+        const loaded = await page.evaluate(async () => {
+          const fonts = await Promise.all([
+            document.fonts.load('400 16px Galmuri11', '학생 로그인'),
+            document.fonts.load('700 16px Galmuri11', '교직원 로그인'),
+          ]);
+          return fonts.every((faces) => faces.some((face) => face.status === 'loaded'));
+        });
+        expect(loaded).toBe(true);
+        const submit = (await page
+          .getByRole('button', { name: '로그인', exact: true })
+          .boundingBox())!;
+        const back = (await page
+          .getByRole('link', { name: '학생 로그인으로 돌아가기' })
+          .boundingBox())!;
+        expect(back.y - (submit.y + submit.height)).toBeGreaterThanOrEqual(24);
+        expect(back.height).toBeGreaterThanOrEqual(44);
+      }
       const output = evidenceOutput();
       if (output)
         await page.screenshot({ path: output.file(`${name}-${width}.png`), fullPage: true });

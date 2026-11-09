@@ -8,7 +8,7 @@
   min-height: max(660px, var(--scene-required-height, 0px));
   margin: 0;
   border-width: 2px;
-  border-radius: 20px;
+  border-radius: var(--pixel-corner);
   background-position: center bottom;
   image-rendering: var(--scene-image-rendering, auto);
   box-shadow: 0 3px 0 var(--ink);
@@ -112,10 +112,9 @@
 .game-answer-content .learning-reading-panel {
   padding: clamp(14px, 2.2vw, 20px);
   border: 1px solid #43574866;
-  border-radius: 14px;
-  background: #fffef4ed;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 3px 12px #263d3512;
+  border-radius: var(--pixel-corner);
+  background: var(--paper);
+  box-shadow: 0 2px 0 #263d3540;
   color: #263d35;
 }
 .game-answer-content .learning-reading-panel .learning-source {
@@ -142,7 +141,7 @@
   max-width: 100%;
   margin: 6px auto 0;
   padding: 4px 10px;
-  border-radius: 8px;
+  border-radius: var(--pixel-corner);
   background: #fffef4;
   color: #263d35;
   font-size: 0.8rem;
@@ -235,7 +234,7 @@
   .game-learning-session .game-learning-scene.game-answer-immersive {
     --traveler-width: 124px;
     min-height: max(620px, var(--scene-required-height, 0px));
-    border-radius: 16px;
+    border-radius: var(--pixel-corner);
   }
   .game-answer-immersive .game-answer-clearing {
     min-height: 240px;
@@ -311,11 +310,11 @@
 }
 .game-answer-content .learning-progress::-webkit-progress-bar {
   background: #fffdf34d;
-  border-radius: 6px;
+  border-radius: var(--pixel-corner);
 }
 .game-answer-content .learning-progress::-webkit-progress-value {
   background: #f4d66e;
-  border-radius: 6px;
+  border-radius: var(--pixel-corner);
 }
 .game-answer-content .learning-progress::-moz-progress-bar {
   background: #f4d66e;
@@ -356,7 +355,7 @@
 
 .game-answer-content .learning-feedback-tools > [role='alert'] {
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--pixel-corner);
   background: #fffef4ed;
   color: #7b3225;
   font-size: 0.85rem;

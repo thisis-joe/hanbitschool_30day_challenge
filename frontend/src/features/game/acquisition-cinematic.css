@@ -327,7 +327,7 @@
   min-height: 44px;
   padding: 10px 16px;
   border: 1px solid #b8cec766;
-  border-radius: 999px;
+  border-radius: var(--pixel-corner);
   background: #0c1d29c9;
   color: #eff8ef;
   box-shadow: none;

@@ -195,7 +195,7 @@
   display: inline-block;
   padding: 6px 12px;
   border: 1px solid #ad8732;
-  border-radius: 6px;
+  border-radius: var(--pixel-corner);
   color: #60471c;
   background: #ffed9f;
   font-weight: 900;

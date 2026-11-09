@@ -342,10 +342,12 @@ for (const width of [390, 1280]) {
     await expect(page.getByRole('button', { name: '얼굴 기본 모습' })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     expect(
-      await page.evaluate(() => document.fonts.check('16px NanumSquareRound', '한빛학교')),
-    ).toBe(true);
+      await page.evaluate(
+        async () => (await document.fonts.load('16px Galmuri11', '한빛학교')).length,
+      ),
+    ).toBe(1);
     expect(await page.locator('body').evaluate((el) => getComputedStyle(el).fontFamily)).toContain(
-      'NanumSquareRound',
+      'Galmuri11',
     );
     const output = evidenceOutput();
     if (output)
