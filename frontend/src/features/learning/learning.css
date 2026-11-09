@@ -556,13 +556,15 @@
 }
 
 .learning-replay-picker {
-  margin-top: 24px;
-  padding-top: 16px;
+  width: 100%;
+  margin-top: 8px;
+  padding-top: 4px;
   border-top: 1px solid var(--line);
   font-size: 0.9rem;
 }
 .learning-replay-picker summary {
   cursor: pointer;
+  min-height: 44px;
   padding-block: 10px;
 }
 .learning-replay-picker > div {

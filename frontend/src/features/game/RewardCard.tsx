@@ -6,9 +6,8 @@ import {
   useAcquisitionSequence,
 } from './useAcquisitionSequence';
 import { EquipmentIcon } from './EquipmentIcon';
-import { GameAvatar } from './GameAvatar';
 import { useSeenTransition } from './useSeenTransition';
-import type { GameItem, GameView } from './types';
+import type { GameItem } from './types';
 import type { ReactNode } from 'react';
 import { CelebrationBurst } from './CelebrationBurst';
 import './celebrations.css';
@@ -21,7 +20,6 @@ export function RewardCard({
   wearDisabled = false,
   owner,
   contentVersion,
-  appearance,
   preview,
   acquisitionId,
 }: {
@@ -32,7 +30,6 @@ export function RewardCard({
   wearDisabled?: boolean;
   owner: string | undefined;
   contentVersion: string;
-  appearance?: GameView;
   preview?: ReactNode;
   /** A server-confirmed grant, including its acquisition time; never inferred from ownership. */
   acquisitionId?: string;
@@ -52,7 +49,10 @@ export function RewardCard({
     contentVersion,
     'item-awards',
     acquisitionId && owned ? { [acquisitionId]: true } : {},
-    { celebrateInitial: true, durationMs: acquisitionDuration.item + inlineAcquisitionDuration.item },
+    {
+      celebrateInitial: true,
+      durationMs: acquisitionDuration.item + inlineAcquisitionDuration.item,
+    },
   ).includes(acquisitionId ?? '');
   const identity = JSON.stringify([owner, contentVersion, acquisitionId ?? item.itemId]);
   const sequence = useAcquisitionSequence(transitioned || acquired, identity);
@@ -103,21 +103,7 @@ export function RewardCard({
           </button>
         ) : null}
       </div>
-      {preview ? (
-        <div className="game-reward-character game-reward-preview">{preview}</div>
-      ) : appearance ? (
-        <div className="game-reward-character">
-          <GameAvatar
-            characterId={appearance.characterId}
-            equippedBySlot={
-              owned
-                ? { ...appearance.equippedBySlot, [item.slot]: item.itemId }
-                : appearance.equippedBySlot
-            }
-          />
-          <p>{owned ? '선물을 입은 모습' : '나의 여행 친구'}</p>
-        </div>
-      ) : null}
+      {preview ? <div className="game-reward-character game-reward-preview">{preview}</div> : null}
     </section>
   );
 }

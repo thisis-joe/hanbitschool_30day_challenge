@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { PixelIcon } from '../../app/PixelIcon';
 import { meKey, useCurrentAccount } from '../auth/queries';
 import type { AccountMe } from '../auth/types';
 import { errorMessage } from '../../lib/http';
@@ -11,7 +12,6 @@ import { useLearningActions } from './useLearningActions';
 import type { LearningMode } from './types';
 import { useGame, useJourney } from '../game/queries';
 import { GameAvatar } from '../game/GameAvatar';
-import { RewardCard } from '../game/RewardCard';
 import { REGIONS } from '../game/journeyGeometry';
 
 const messages = {
@@ -149,14 +149,26 @@ export function LearningDashboardPage() {
         : 'forest';
   return (
     <section className="learning-page game-journey-page game-home-page">
-      <div className="game-home-intro">
-        <p className="learning-eyebrow">
-          {account?.role === 'STUDENT' ? `${account.nickname}의 배움` : '30회차 배움'}
-        </p>
-        <h1 ref={heading} tabIndex={-1}>
-          나의 학습
-        </h1>
-        <p>하루에 다섯 문제씩 풀며 숲에서 등대까지 여행해요.</p>
+      <div className="game-home-intro game-home-heading">
+        <div className="game-home-title">
+          <p className="learning-eyebrow">
+            {account?.role === 'STUDENT' ? `${account.nickname}의 배움` : '30회차 배움'}
+          </p>
+          <h1 ref={heading} tabIndex={-1}>
+            나의 학습
+          </h1>
+        </div>
+        {reward ? (
+          <aside className="game-next-gift pixel-window" aria-label="다음 여행 선물">
+            <PixelIcon name="chest" />
+            <div>
+              <span>다음 여행 선물</span>
+              <strong>{reward.name}</strong>
+              <small>{reward.rewardDay}회차 첫 통과</small>
+            </div>
+          </aside>
+        ) : null}
+        <p className="game-home-description">하루에 다섯 문제씩 풀며 숲에서 등대까지 여행해요.</p>
       </div>
       <section className="learning-card game-camp" aria-label="오늘의 탐험">
         <div className="game-camp-copy">
@@ -187,6 +199,61 @@ export function LearningDashboardPage() {
               </Link>
             </div>
           ) : null}
+          {journey.isError ? (
+            <div className="learning-error">
+              <p role="alert">여정 정보를 불러오지 못했어요. {errorMessage(journey.error)}</p>
+              <button disabled={journey.isFetching} onClick={() => void journey.refetch()}>
+                지도 다시 불러오기
+              </button>
+            </div>
+          ) : null}
+          {error ? (
+            <div className="learning-error">
+              <p role="alert">{error}</p>
+              <button
+                className="secondary"
+                disabled={status.isFetching || actions.busy || isChecking}
+                onClick={() => void status.refetch()}
+              >
+                최신 상태 다시 불러오기
+              </button>
+            </div>
+          ) : null}
+          {actions.pendingCommand && !actions.busy && !isChecking ? (
+            <div className="learning-pending">
+              <p>이전 요청의 결과가 아직 확인되지 않았어요. 같은 요청으로 다시 확인해 주세요.</p>
+              <button className="secondary" onClick={() => void retryPending()}>
+                같은 요청 다시 확인
+              </button>
+            </div>
+          ) : null}
+          {view && view.passedDayCount > 0 ? (
+            <details className="learning-replay-picker">
+              <summary>지나온 배움 다시 풀기</summary>
+              <div>
+                <label htmlFor="replay-day">다시 풀 회차</label>
+                <select
+                  id="replay-day"
+                  value={replayDay}
+                  disabled={blocked || !!view.activeSession}
+                  onChange={(event) => setReplayDay(Number(event.target.value))}
+                >
+                  {Array.from({ length: Math.min(30, view.passedDayCount) }, (_, index) => (
+                    <option key={index + 1} value={index + 1}>
+                      {index + 1}회차
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="secondary"
+                  disabled={blocked || !!view.activeSession || replayDay > view.passedDayCount}
+                  onClick={() => void startDay(replayDay, 'REPLAY')}
+                >
+                  선택 회차 다시 풀기
+                </button>
+              </div>
+            </details>
+          ) : null}
         </div>
         <div className={`game-camp-scene game-scene-${sceneRegion}`}>
           {appearance ? (
@@ -210,14 +277,6 @@ export function LearningDashboardPage() {
           </Link>
         </div>
       </section>
-      {journey.isError ? (
-        <div className="learning-error">
-          <p role="alert">여정 정보를 불러오지 못했어요. {errorMessage(journey.error)}</p>
-          <button disabled={journey.isFetching} onClick={() => void journey.refetch()}>
-            지도 다시 불러오기
-          </button>
-        </div>
-      ) : null}
       {view ? (
         <dl className="learning-result-stats learning-home-stats game-home-stats">
           <div>
@@ -237,95 +296,6 @@ export function LearningDashboardPage() {
             <dd>레벨 {view.level}</dd>
           </div>
         </dl>
-      ) : null}
-      <div className="game-home-under">
-        {reward ? (
-          <RewardCard
-            owner={accountId}
-            contentVersion={appearance!.contentVersion}
-            appearance={appearance}
-            item={reward}
-            owned={appearance!.inventory.some(
-              (item) => item.itemId === reward.itemId && item.owned,
-            )}
-          />
-        ) : (
-          <section className="game-reward-card">
-            <p>각 회차를 처음 통과할 때 여행 선물을 받아요.</p>
-            <Link className="game-reward-fallback-link" to="/student/closet">
-              옷장 둘러보기
-            </Link>
-          </section>
-        )}
-        <nav className="game-regions" aria-label="여행 지역">
-          {REGIONS.map((name, index) => (
-            <Link
-              key={name}
-              className={regionIndex !== null && index <= regionIndex ? 'game-region-reached' : ''}
-              to="/student/map"
-            >
-              <span>{index + 1}</span>
-              {name}
-            </Link>
-          ))}
-        </nav>
-      </div>
-      {error ? (
-        <div className="learning-error">
-          <p role="alert">{error}</p>
-          <button
-            className="secondary"
-            disabled={status.isFetching || actions.busy || isChecking}
-            onClick={() => void status.refetch()}
-          >
-            최신 상태 다시 불러오기
-          </button>
-        </div>
-      ) : null}
-      {actions.pendingCommand ? (
-        <div className="learning-pending">
-          <p>이전 요청의 결과가 아직 확인되지 않았어요. 같은 요청으로 다시 확인해 주세요.</p>
-          <button
-            className="secondary"
-            disabled={actions.busy || isChecking}
-            onClick={() => void retryPending()}
-          >
-            같은 요청 다시 확인
-          </button>
-        </div>
-      ) : null}
-      <Link
-        className="button secondary learning-recovery"
-        to="/student/questions?filter=REVIEW_QUEUE"
-      >
-        나의 문제 보기
-      </Link>
-      {view && view.passedDayCount > 0 ? (
-        <details className="learning-replay-picker">
-          <summary>지나온 배움 다시 풀기</summary>
-          <div>
-            <label htmlFor="replay-day">다시 풀 회차</label>
-            <select
-              id="replay-day"
-              value={replayDay}
-              disabled={blocked || !!view.activeSession}
-              onChange={(event) => setReplayDay(Number(event.target.value))}
-            >
-              {Array.from({ length: Math.min(30, view.passedDayCount) }, (_, index) => (
-                <option key={index + 1} value={index + 1}>
-                  {index + 1}회차
-                </option>
-              ))}
-            </select>
-            <button
-              className="secondary"
-              disabled={blocked || !!view.activeSession || replayDay > view.passedDayCount}
-              onClick={() => void startDay(replayDay, 'REPLAY')}
-            >
-              선택 회차 다시 풀기
-            </button>
-          </div>
-        </details>
       ) : null}
     </section>
   );
