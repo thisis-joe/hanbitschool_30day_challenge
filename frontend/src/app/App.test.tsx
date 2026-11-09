@@ -21,7 +21,7 @@ it('studentLogoReturnsToLearningWithoutLoggingOut', async () => {
   renderPage(<App />, '/account/password');
   await screen.findByRole('heading', { name: '비밀번호 변경' });
   await userEvent.click(screen.getByRole('link', { name: '사실일까? 해석일까?' }));
-  expect(await screen.findByRole('heading', { name: '나의 학습' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '오늘의 탐험' })).toBeVisible();
   await userEvent.click(screen.getByRole('link', { name: '내 정보' }));
   expect(await screen.findByRole('heading', { name: '숲친구' })).toBeVisible();
   expect(screen.queryByRole('heading', { name: '학생 로그인' })).not.toBeInTheDocument();
@@ -66,7 +66,7 @@ it('homeWaitsForSessionBeforeChoosingDestination', async () => {
   );
   renderPage(<App />);
   expect(screen.queryByRole('heading', { name: '학생 로그인' })).not.toBeInTheDocument();
-  expect(await screen.findByRole('heading', { name: '나의 학습' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '오늘의 탐험' })).toBeVisible();
 });
 
 it('homeOffersRetryForSessionNetworkFailureInsteadOfLogin', async () => {
@@ -80,7 +80,7 @@ it('homeOffersRetryForSessionNetworkFailureInsteadOfLogin', async () => {
     http.get('*/api/student/learning/status', () => HttpResponse.json(learningStatus)),
   );
   await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
-  expect(await screen.findByRole('heading', { name: '나의 학습' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '오늘의 탐험' })).toBeVisible();
 });
 
 it.each([

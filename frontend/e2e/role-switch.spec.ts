@@ -14,13 +14,13 @@ test('teacher logout student login back and protected route', async ({ page }) =
   });
   await page.getByRole('link', { name: '사실일까? 해석일까?', exact: true }).click();
   await expect(page).toHaveURL(/\/student\/learning$/);
-  await expect(page.getByRole('heading', { name: '나의 학습', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '오늘의 탐험', exact: true })).toBeVisible();
   expect((await page.request.get('/api/auth/me')).status()).toBe(200);
   expect(logoutRequests).toBe(0);
   await page.goto('/');
   await expect(page).toHaveURL(/\/student\/learning$/);
   await page.reload();
-  await expect(page.getByRole('heading', { name: '나의 학습', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '오늘의 탐험', exact: true })).toBeVisible();
   await page.getByRole('link', { name: '내 정보', exact: true }).click();
   await expect(page).toHaveURL(/\/student\/account$/);
   await expect(page.getByRole('heading', { name: '숲친구', exact: true })).toBeVisible();
