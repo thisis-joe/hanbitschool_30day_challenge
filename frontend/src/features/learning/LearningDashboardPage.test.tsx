@@ -32,9 +32,11 @@ function renderHome() {
   );
 }
 
-// The camp must expose canonical learning action and six real regions, not local demo progress.
-it('homeUsesAReferenceWithCanonicalNextAction', async () => {
-  server.use(http.get('*/api/student/learning/status', () => HttpResponse.json(ready)));
+it('homeShowsTheCanonicalNextActionAndGiftInTheHeading', async () => {
+  server.use(
+    http.get('*/api/student/learning/status', () => HttpResponse.json(ready)),
+    http.get('*/api/student/game', () => HttpResponse.json(gameView)),
+  );
   renderHome();
   const camp = await screen.findByRole('region', { name: '오늘의 탐험' });
   expect(await within(camp).findByRole('button', { name: '오늘 학습 시작' })).toBeEnabled();
@@ -42,8 +44,12 @@ it('homeUsesAReferenceWithCanonicalNextAction', async () => {
     'href',
     '/student/map',
   );
-  expect(screen.getByRole('navigation', { name: '여행 지역' })).toHaveTextContent('숲 입구');
-  expect(screen.getByRole('navigation', { name: '여행 지역' })).toHaveTextContent('작은 섬');
+  const gift = await screen.findByRole('complementary', { name: '다음 여행 선물' });
+  expect(gift).toHaveTextContent('동그란 안경');
+  expect(gift).toHaveTextContent('1회차 첫 통과');
+  expect(gift.parentElement).toContainElement(screen.getByRole('heading', { name: '나의 학습' }));
+  expect(screen.queryByRole('region', { name: '여행 선물' })).toBeNull();
+  expect(screen.queryByRole('navigation', { name: '여행 지역' })).toBeNull();
 });
 
 // A fallback portrait must not imply a saved choice or gate a real start.
