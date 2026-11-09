@@ -90,7 +90,6 @@ export function App() {
         <FormError message={submit.error} />
         <AppRoutes />
       </main>
-      <footer>한빛학교와 함께하는 배움</footer>
     </>
   );
 }

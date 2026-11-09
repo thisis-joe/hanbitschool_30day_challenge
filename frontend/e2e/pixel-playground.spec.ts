@@ -11,7 +11,12 @@ import { evidenceOutput } from './evidence-output';
 
 test.use({ hasTouch: true });
 
-async function scenario(page: Page, position = 0, seconds = 60) {
+async function scenario(
+  page: Page,
+  position = 0,
+  seconds = 60,
+  explanation = answerResult.explanation,
+) {
   let session: LearningSessionView = {
     ...activeSession,
     question: {
@@ -41,7 +46,11 @@ async function scenario(page: Page, position = 0, seconds = 60) {
       body = { ...learningStatus, activeSession: session };
     else if (path === '/api/student/learning/questions') body = [];
     else if (path.endsWith('/answers')) {
-      const result = { ...answerResult, correctChoice: route.request().postDataJSON().choice };
+      const result = {
+        ...answerResult,
+        explanation,
+        correctChoice: route.request().postDataJSON().choice,
+      };
       session = {
         ...session,
         state: 'AWAITING_ADVANCE',
@@ -49,11 +58,114 @@ async function scenario(page: Page, position = 0, seconds = 60) {
         lastAnswer: result,
       };
       body = result;
+    } else if (path.endsWith('/advance')) {
+      session = {
+        ...session,
+        state: 'QUESTION_ACTIVE',
+        lastAnswer: null,
+        question: {
+          ...session.question!,
+          position: 2,
+          questionId: 2,
+          text: '숲에서 관찰한 내용을 차근차근 다시 확인해 보세요. '.repeat(24),
+        },
+      };
+      body = session;
     } else if (path === `/api/student/learning/sessions/${sessionId}`) body = session;
     else throw new Error(`Unexpected synthetic request: ${path}`);
     await route.fulfill({ json: body });
   });
   return writes;
+}
+
+for (const [width, height] of [
+  [320, 568],
+  [390, 844],
+  [1280, 900],
+] as const) {
+  test(`forest stage stays fixed through a delayed answer, retry and next question at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await scenario(page, 0, 60, '햇빛이 드는 쪽을 보고 자료를 함께 살펴보세요. '.repeat(20));
+    await page.route('**/api/student/game', (route) =>
+      route.fulfill({
+        json: {
+          ...gameView,
+          characterId: 'arin',
+          equippedBySlot: {
+            face: 'face-1',
+            hat: 'hat-1',
+            top: 'top-1',
+            bottom: 'bottom-1',
+            shoes: 'shoes-1',
+            hand: 'hand-1',
+          },
+        },
+      }),
+    );
+    const requests: unknown[] = [];
+    let disconnect!: () => void;
+    const delay = new Promise<void>((done) => {
+      disconnect = done;
+    });
+    await page.route('**/answers', async (route) => {
+      requests.push(route.request().postDataJSON());
+      if (requests.length === 1) {
+        await delay;
+        await route.abort('failed');
+      } else await route.fallback();
+    });
+    await page.goto(`/student/learning/sessions/${sessionId}`);
+    const stage = page.getByRole('region', { name: '학습 여행 장면' });
+    await stage.locator('canvas[data-ready="true"]').waitFor();
+    await page.evaluate(() => document.fonts.ready);
+    const geometry = () =>
+      stage.evaluate((el) => {
+        const box = el.getBoundingClientRect();
+        const landmark = el.querySelector('.game-answer-o')!.getBoundingClientRect();
+        const actor = el.querySelector('canvas')!.getBoundingClientRect();
+        const title = el.querySelector('h1')!.getBoundingClientRect();
+        return [
+          box.width,
+          box.height,
+          Math.round(box.top + scrollY),
+          Math.round(landmark.bottom - box.top),
+          Math.round(actor.top - box.top),
+          Math.round(title.top - box.top),
+        ];
+      });
+    const initial = await geometry();
+    const output = evidenceOutput();
+    if (output) await stage.screenshot({ path: output.file(`forest-idle-${width}.png`) });
+    try {
+      await page.getByRole('button', { name: 'O · 사실', exact: true }).tap();
+      await expect(stage.getByText('답변을 확인하고 있어요', { exact: true })).toHaveCount(1);
+      await expect(page.getByRole('button', { name: '같은 답변 다시 확인' })).toHaveCount(0);
+      expect(await geometry()).toEqual(initial);
+    } finally {
+      disconnect();
+    }
+    const retry = stage.getByRole('button', { name: '같은 답변 다시 확인' });
+    await expect(retry).toBeEnabled();
+    expect(await geometry()).toEqual(initial);
+    await retry.tap();
+    const next = stage.getByRole('button', { name: '다음 문제' });
+    await expect(next).toBeEnabled();
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toEqual(requests[0]);
+    const explanation = stage.getByRole('region', { name: '문항과 해설' });
+    await explanation.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await expect.poll(() => explanation.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    expect(await geometry()).toEqual(initial);
+    await expect(stage).toHaveAttribute('data-phase', 'correct');
+    if (output) await stage.screenshot({ path: output.file(`forest-cheer-${width}.png`) });
+    await next.tap();
+    await expect(stage.getByRole('heading', { name: '문항 2 / 5' })).toBeVisible();
+    expect(await geometry()).toEqual(initial);
+    await expect(page.getByText('한빛학교와 함께하는 배움', { exact: true })).toHaveCount(0);
+  });
 }
 
 for (const width of [320, 390, 768, 1280]) {
@@ -99,6 +211,10 @@ for (const density of [1, 2]) {
       await page.goto(`/student/learning/sessions/${sessionId}`);
       const scene = page.getByRole('region', { name: '학습 여행 장면' });
       await expect(scene.locator('canvas[data-ready="true"]')).toBeVisible();
+      await expect(scene.locator('canvas')).toHaveAttribute('width', '88');
+      expect(
+        await scene.evaluate((el) => getComputedStyle(el, '::after').backgroundImage),
+      ).toContain('/game/pixels/forest-dawn.svg');
       expect(await page.evaluate(() => devicePixelRatio)).toBe(density);
       await expect(scene).toHaveCSS('image-rendering', 'pixelated');
       const rock = scene.locator('.game-answer-o .game-answer-landmark-art');

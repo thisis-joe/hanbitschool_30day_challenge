@@ -5,7 +5,6 @@ import { AnimatedGameAvatar } from './motion/AnimatedGameAvatar';
 import type { GameView, JourneyView } from './types';
 import type { AnswerChoice, AnswerOutcome } from '../learning/types';
 import './answer-scene.css';
-import { useSceneGround } from './useSceneGround';
 import { PixelAnswerArt } from './PixelAnswerArt';
 
 const WALK_MS = MOTION_MS.walk;
@@ -67,7 +66,6 @@ export function AnswerGameScene({
           : 'idle';
   const position = journey?.journeyPosition ?? 0;
   const region = position < 50 ? 'forest' : position < 100 ? 'village' : 'beach';
-  const scene = useSceneGround<HTMLElement>();
   const messages = {
     idle: appearance ? 'O와 X 중 어디로 갈까요?' : '여행 장면을 준비하고 있어요',
     walking: `${choice} 쪽으로 걸어가요`,
@@ -78,7 +76,6 @@ export function AnswerGameScene({
   };
   return (
     <section
-      ref={scene}
       className={`game-learning-scene game-answer-scene game-scene-${region}${children ? ' game-answer-immersive' : ''}`}
       aria-label="학습 여행 장면"
       style={{ '--answer-walk-duration': `${WALK_MS}ms` } as import('react').CSSProperties}
@@ -87,7 +84,6 @@ export function AnswerGameScene({
       data-animate={String(travel.animate)}
     >
       {children ? <div className="game-answer-content">{children}</div> : null}
-      {children ? <div className="game-answer-clearing" aria-hidden="true" /> : null}
       <div
         className={onChoose ? 'learning-choices' : undefined}
         role={onChoose ? 'group' : undefined}
@@ -141,6 +137,7 @@ export function AnswerGameScene({
             equippedBySlot={appearance?.equippedBySlot}
             motion={motion}
             animate={travel.animate}
+            pixelSize={2}
           />
         </div>
         {experience ? (
@@ -150,12 +147,12 @@ export function AnswerGameScene({
           />
         ) : null}
       </div>
-      {!children || !appearance || phase === 'walking' || phase === 'waiting' ? (
+      {!children || !appearance ? (
         <p className="game-answer-message" role="status">
           {messages[phase]}
         </p>
       ) : null}
-      {journey ? (
+      {!children && journey ? (
         <p className="game-answer-progress">여행 {journey.firstAnswerCount} / 150문항</p>
       ) : null}
     </section>

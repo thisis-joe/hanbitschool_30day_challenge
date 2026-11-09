@@ -21,6 +21,7 @@ test('all nine characters keep their limbs connected throughout walking, jumping
     canvas.height = 216;
     const ctx = canvas.getContext('2d')!;
     const samples = {
+      idle: [0],
       walk: [0, 60, 180, 300, 420, 480],
       happy: [90, 150, 255, 410, 450, 620, 900],
       sad: [180, 360],
@@ -37,7 +38,13 @@ test('all nine characters keep their limbs connected throughout walking, jumping
             const pixels = ctx.getImageData(0, 0, 176, 216).data,
               seen = new Uint8Array(176 * 216);
             const parts: { size: number; skin: number }[] = [];
+            let hitsEdge = false;
             for (let start = 0; start < seen.length; start++) {
+              if (pixels[start * 4 + 3] >= 100) {
+                const x = start % 176;
+                const y = Math.floor(start / 176);
+                if (x <= 1 || x >= 174 || y <= 1 || y >= 214) hitsEdge = true;
+              }
               if (seen[start] || pixels[start * 4 + 3] < 100) continue;
               const stack = [start];
               seen[start] = 1;
@@ -80,6 +87,8 @@ test('all nine characters keep their limbs connected throughout walking, jumping
               failures.push(
                 `${id}/${set} ${motion}@${time}: detached skin ${JSON.stringify(parts.slice(1))}`,
               );
+            if (hitsEdge || !parts.length)
+              failures.push(`${id}/${set} ${motion}@${time}: frame bounds`);
           }
       }
     return failures;
