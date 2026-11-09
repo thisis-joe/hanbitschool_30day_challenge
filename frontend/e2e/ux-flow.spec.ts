@@ -487,6 +487,7 @@ test('home keeps learning focused without round cards', async ({ page }) => {
   const replay = page.getByText('다시풀기', { exact: true });
   const replayButton = page.getByRole('button', { name: '선택 회차 다시 풀기' });
   const replayDay = page.getByRole('combobox', { name: '다시 풀 회차' });
+  const toggleTop = () => replay.evaluate((el) => el.getBoundingClientRect().top + scrollY);
   const sceneGeometry = () =>
     campScene.evaluate((el) => {
       const box = el.getBoundingClientRect();
@@ -497,6 +498,7 @@ test('home keeps learning focused without round cards', async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const closedScene = await sceneGeometry();
     await expect(replayButton).toBeHidden();
+    const closedToggleTop = await toggleTop();
     const closedGap = await replay.evaluate((el) => {
       const copy = el.closest('.game-camp-copy')!.getBoundingClientRect();
       return copy.bottom - el.getBoundingClientRect().bottom;
@@ -506,10 +508,14 @@ test('home keeps learning focused without round cards', async ({ page }) => {
       await page.screenshot({ path: output.file(`home-closed-${width}.png`), fullPage: true });
     await replay.press('Enter');
     await expect(replayButton).toBeEnabled();
+    await expect(replay).toBeFocused();
+    expect(await toggleTop()).toBeLessThan(closedToggleTop);
     expect(await sceneGeometry()).toEqual(closedScene);
 
+    const toggle = (await replay.boundingBox())!;
     const select = (await replayDay.boundingBox())!;
     const button = (await replayButton.boundingBox())!;
+    expect(toggle.y + toggle.height).toBeLessThanOrEqual(Math.min(select.y, button.y));
     const camp = (await page.locator('.game-camp-copy').boundingBox())!;
     const left = Math.min(select.x, button.x);
     const right = Math.max(select.x + select.width, button.x + button.width);
@@ -523,6 +529,7 @@ test('home keeps learning focused without round cards', async ({ page }) => {
 
     await replay.press('Enter');
     await expect(replayButton).toBeHidden();
+    expect(await toggleTop()).toBe(closedToggleTop);
     expect(await sceneGeometry()).toEqual(closedScene);
     await expect(gift).toBeVisible();
     const giftLayout = await gift.evaluate((el) => {
