@@ -244,9 +244,11 @@ test('teacherClassShowsActualFirstAnswerAndReviewImprovement', async ({ page, br
     await staff.reload();
     const data = await overview(staff, c);
     summaryIsFour(data, true);
-    await protectedText(staff.getByRole('region', { name: '학급 요약' }), '복습 개선 1개', {
-      contains: true,
-    });
+    await protectedText(
+      staff.getByRole('region', { name: '학급 요약' }),
+      '복습에서 맞힌 문항은 1개예요',
+      { contains: true },
+    );
     await protectedText(staff.getByRole('region', { name: '학급 요약' }), '80%', {
       contains: true,
     });
