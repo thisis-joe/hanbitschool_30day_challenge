@@ -3,9 +3,12 @@
   max-width: 1060px;
 }
 .game-learning-session .game-learning-scene.game-answer-immersive {
-  height: auto;
-  --traveler-width: 184px;
-  min-height: max(660px, var(--scene-required-height, 0px));
+  --traveler-width: 192px;
+  --reading-height: max(20rem, clamp(320px, 46svh, 408px));
+  --forest-light-top: calc(var(--reading-height) - 22px);
+  /* Leave room above the sprite for its jump, including the tallest hat. */
+  --playfield-height: calc(var(--scene-ground) + var(--traveler-width) * 1.16 + 16px);
+  height: calc(var(--reading-height) + var(--playfield-height) + 4px);
   margin: 0;
   border-width: 2px;
   border-radius: var(--pixel-corner);
@@ -14,25 +17,25 @@
 .game-answer-immersive .game-answer-content {
   position: relative;
   z-index: 3;
+  display: flex;
+  flex-direction: column;
+  height: var(--reading-height);
   width: 100%;
   max-width: 900px;
   margin-inline: auto;
   padding: clamp(14px, 2.5vw, 24px);
   pointer-events: none;
 }
+.game-answer-content > * {
+  flex-shrink: 0;
+}
 .game-answer-content button,
 .game-answer-content a,
 .game-answer-content .learning-bookmark,
 .game-answer-content .learning-reading-panel,
-.game-answer-content .learning-consent {
+.game-answer-content .learning-consent,
+.game-answer-content .learning-scene-recovery {
   pointer-events: auto;
-}
-.game-answer-immersive .game-answer-clearing {
-  min-height: 300px;
-}
-.game-answer-immersive .game-answer-traveler,
-.game-answer-immersive .game-answer-traveler .game-avatar-articulated {
-  width: var(--traveler-width);
 }
 .game-answer-content .learning-session-meta {
   font-size: 0.8rem;
@@ -54,6 +57,10 @@
 }
 .game-learning-session .game-answer-content .learning-feedback {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-shrink: 1;
   margin: 0;
   padding: 0;
   border: 0;
@@ -80,9 +87,11 @@
   color: var(--ink);
 }
 .game-answer-content .learning-question-header {
+  align-items: flex-start;
   margin-bottom: 12px;
 }
 .game-answer-content .learning-timer {
+  align-self: center;
   padding: 3px 0;
   border: 0;
   border-radius: 0;
@@ -109,6 +118,9 @@
   }
 }
 .game-answer-content .learning-reading-panel {
+  min-height: 0;
+  flex-shrink: 1;
+  overflow-y: auto;
   padding: clamp(14px, 2.2vw, 20px);
   border: 2px solid var(--line);
   border-radius: var(--pixel-corner);
@@ -145,6 +157,23 @@
   background: var(--paper);
   color: var(--ink);
   font-size: 0.8rem;
+}
+.learning-scene-recovery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 12px;
+  margin: 8px auto 0;
+  padding: 4px 8px;
+  width: fit-content;
+  max-width: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+.learning-scene-recovery p {
+  margin: 0;
 }
 .game-answer-content .learning-description {
   margin: 8px 0 0;
@@ -212,35 +241,13 @@
     0 1px 2px #fffef1,
     0 0 8px #fffef1;
 }
-.game-learning-session .learning-exit {
-  margin-top: 12px;
-}
-.game-learning-session .learning-exit p {
-  margin: 0;
-  font-size: 0.75rem;
-}
-.game-learning-session .learning-exit .button {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  font-size: 0.85rem;
-  text-decoration: underline;
-}
 @media (max-width: 640px) {
   .game-learning-session .game-learning-scene.game-answer-immersive {
-    --traveler-width: 124px;
-    min-height: max(620px, var(--scene-required-height, 0px));
-    border-radius: var(--pixel-corner);
-  }
-  .game-answer-immersive .game-answer-clearing {
-    min-height: 240px;
+    --traveler-width: clamp(136px, 39vw, 156px);
+    --reading-height: max(18rem, clamp(296px, 52svh, 380px));
   }
   .game-answer-immersive .game-character-xp-amount {
     top: 40%;
-  }
-  .game-answer-immersive .game-answer-traveler,
-  .game-answer-immersive .game-answer-traveler .game-avatar-articulated {
-    width: var(--traveler-width);
   }
   .game-answer-immersive .game-answer-message {
     bottom: calc(var(--scene-ground) + var(--traveler-width) * 1.25);
@@ -323,17 +330,6 @@
   body:has(.game-learning-session) .game-student-nav {
     padding-block: 4px;
   }
-  .game-learning-session .game-learning-scene.game-answer-immersive {
-    --traveler-width: 112px;
-    min-height: max(420px, var(--scene-required-height, 0px));
-  }
-  .game-answer-immersive .game-answer-clearing {
-    min-height: 180px;
-  }
-  .game-answer-immersive .game-answer-traveler,
-  .game-answer-immersive .game-answer-traveler .game-avatar-articulated {
-    width: var(--traveler-width);
-  }
   .game-answer-immersive .game-answer-message {
     bottom: calc(var(--scene-ground) + var(--traveler-width) * 1.25);
   }
@@ -386,6 +382,9 @@
   border-radius: 0;
   background: #fffdf34d;
   color: #8ee0db;
+}
+.learning-time-progress[aria-hidden='true'] {
+  visibility: hidden;
 }
 .learning-time-progress::-webkit-progress-bar {
   background: #fffdf34d;

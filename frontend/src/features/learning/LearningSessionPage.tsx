@@ -135,13 +135,25 @@ export function LearningSessionPage() {
         ? '같은 다음 문제 다시 확인'
         : '같은 학습 시작 다시 확인';
   const activeSession = status.data?.activeSession;
-
-  return (
-    <section className="learning-page game-learning-page game-learning-session">
-      {error ? (
-        <div className="learning-error">
-          <p role="alert">{error}</p>
-          <p>최신 상태를 다시 불러오거나 학습 홈에서 진행 중인 학습을 확인해 주세요.</p>
+  const retry = pending && !actions.busy;
+  const busyMessage = actions.busy
+    ? pending?.kind === 'ANSWER'
+      ? '답변을 확인하고 있어요'
+      : pending?.kind === 'ADVANCE'
+        ? '다음 문제를 불러오고 있어요'
+        : '학습을 확인하고 있어요'
+    : waitingForServer && !error && !retry
+      ? '서버에서 답변을 확인하고 있어요'
+      : undefined;
+  const recovery =
+    error || retry ? (
+      <div className="learning-scene-recovery">
+        <p role="alert">{error ?? '답변 결과를 다시 확인해 주세요.'}</p>
+        {retry ? (
+          <button className="secondary" onClick={() => void retryPending()}>
+            {retryLabel}
+          </button>
+        ) : (
           <button
             className="secondary"
             disabled={session.isFetching || actions.busy}
@@ -149,8 +161,13 @@ export function LearningSessionPage() {
           >
             최신 상태 다시 불러오기
           </button>
-        </div>
-      ) : null}
+        )}
+      </div>
+    ) : null;
+
+  return (
+    <section className="learning-page game-learning-page game-learning-session">
+      {!view ? recovery : null}
       {activeSession && activeSession.sessionId !== sessionId ? (
         <Link
           className="button secondary learning-recovery"
@@ -196,14 +213,13 @@ export function LearningSessionPage() {
               value={view.answeredCount}
               max={view.questionCount}
             />
-            {active && question ? (
-              <progress
-                className="learning-time-progress"
-                aria-label="남은 시간"
-                value={seconds}
-                max={Math.max(1, question.timeLimitSeconds)}
-              />
-            ) : null}
+            <progress
+              className="learning-time-progress"
+              aria-label="남은 시간"
+              aria-hidden={!active || !question}
+              value={active ? seconds : 0}
+              max={Math.max(1, question?.timeLimitSeconds ?? 0)}
+            />
             {active && question ? (
               <>
                 <div className="learning-question-header">
@@ -218,17 +234,15 @@ export function LearningSessionPage() {
                     남은 시간 {seconds}초
                   </time>
                 </div>
-                <div className="learning-reading-panel">
+                <div
+                  className="learning-reading-panel"
+                  role="region"
+                  aria-label="문항 내용"
+                  tabIndex={0}
+                >
                   <p className="learning-source">{question.text}</p>
                   <p className="learning-description">문장을 읽고 사실인지 해석인지 골라 주세요.</p>
                 </div>
-                {waitingForServer || (actions.busy && pendingChoice) ? (
-                  <p className="learning-answer-status" role="status">
-                    {waitingForServer
-                      ? '서버에서 답변을 확인하고 있어요'
-                      : '답변을 확인하고 있어요'}
-                  </p>
-                ) : null}
               </>
             ) : feedback ? (
               <div className="learning-feedback" data-outcome={feedback.outcome}>
@@ -237,7 +251,12 @@ export function LearningSessionPage() {
                     {outcomes[feedback.outcome]}
                   </h1>
                 </div>
-                <div className="learning-reading-panel">
+                <div
+                  className="learning-reading-panel"
+                  role="region"
+                  aria-label="문항과 해설"
+                  tabIndex={0}
+                >
                   {question?.questionId === feedback.questionId ? (
                     <p className="learning-source">{question.text}</p>
                   ) : null}
@@ -278,29 +297,13 @@ export function LearningSessionPage() {
                 현재 문항을 찾지 못했어요. 다시 불러오면 풀던 위치를 확인할 수 있어요.
               </p>
             )}
+            {busyMessage ? (
+              <p className="learning-answer-status" role="status">
+                {busyMessage}
+              </p>
+            ) : null}
+            {recovery}
           </AnswerGameScene>
-        </div>
-      ) : null}
-      {actions.busy && !(active && pendingChoice) ? (
-        <p role="status">
-          {pending?.kind === 'ANSWER'
-            ? '답변을 확인하고 있어요'
-            : pending?.kind === 'ADVANCE'
-              ? '다음 문제를 불러오고 있어요'
-              : '학습을 확인하고 있어요'}
-        </p>
-      ) : null}
-      {pending ? (
-        <div className="learning-pending">
-          <p>이전 요청의 결과가 아직 확인되지 않았어요. 같은 요청으로 다시 확인해 주세요.</p>
-          <button className="secondary" disabled={actions.busy} onClick={() => void retryPending()}>
-            {retryLabel}
-          </button>
-        </div>
-      ) : null}
-      {active ? (
-        <div className="learning-exit">
-          <p>다른 화면으로 이동해도 이 문항의 타이머는 계속 흘러요.</p>
         </div>
       ) : null}
     </section>

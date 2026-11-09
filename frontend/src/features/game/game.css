@@ -195,6 +195,20 @@
   --region-sky: #2b4b40;
   --region-art: url('/game/pixels/forest-clearing.svg');
 }
+.game-scene-forest::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: var(--forest-light-top, 10px);
+  left: 0;
+  width: min(236px, 58%);
+  height: 180px;
+  background: url('/game/pixels/forest-dawn.svg') left top / 236px 180px no-repeat;
+  pointer-events: none;
+}
+:is(.game-learning-traveler, .game-learning-location, .game-scene-fallback, .game-camp-scene > .game-avatar) {
+  z-index: 1;
+}
 .game-scene-village {
   --region-sky: #414b3d;
   --region-art: url('/game/pixels/village.svg');

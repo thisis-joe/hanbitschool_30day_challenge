@@ -224,10 +224,6 @@
 .learning-error p:first-child {
   margin-top: 0;
 }
-.learning-exit {
-  margin-top: 24px;
-  text-align: center;
-}
 .learning-result-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

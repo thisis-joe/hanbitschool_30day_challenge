@@ -15,6 +15,7 @@ export function AnimatedGameAvatar({
   motion,
   animate = true,
   loopWalk = false,
+  pixelSize = 1,
   label,
 }: {
   characterId: CharacterId | null;
@@ -22,6 +23,7 @@ export function AnimatedGameAvatar({
   motion: AvatarMotion;
   animate?: boolean;
   loopWalk?: boolean;
+  pixelSize?: 1 | 2;
   label?: string;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -47,16 +49,22 @@ export function AnimatedGameAvatar({
     return () => controller.abort();
   }, [characterId, face, hat, top, bottom, shoes, hand]);
   useEffect(() => {
-    if (!rig || failed) return;
+    const output = canvas.current;
+    if (!rig || failed || !output) return;
+    // Compose on the original grid before sampling down, so gear and limbs share every dot.
+    const source = pixelSize === 1 ? output : document.createElement('canvas');
+    source.width = 176;
+    source.height = 216;
+    const target = pixelSize === 1 ? null : output.getContext('2d');
+    if (target) target.imageSmoothingEnabled = false;
     let frame = 0;
     const since = performance.now();
     const media = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const paint = (now: number) => {
-      if (!canvas.current) return;
       const elapsed = now - since,
         reduced = media?.matches || !animate;
       paintAvatarPose(
-        canvas.current,
+        source,
         rig,
         samplePose(
           motion,
@@ -64,7 +72,11 @@ export function AnimatedGameAvatar({
           reduced,
         ),
       );
-      canvas.current.dataset.ready = 'true';
+      if (target) {
+        target.clearRect(0, 0, output.width, output.height);
+        target.drawImage(source, 0, 0, output.width, output.height);
+      }
+      output.dataset.ready = 'true';
       const running =
         motion === 'walk' ||
         (motion === 'happy' && elapsed < MOTION_MS.happy) ||
@@ -81,7 +93,7 @@ export function AnimatedGameAvatar({
       cancelAnimationFrame(frame);
       media?.removeEventListener('change', refresh);
     };
-  }, [rig, failed, motion, animate, loopWalk]);
+  }, [rig, failed, motion, animate, loopWalk, pixelSize]);
   if (failed)
     return (
       <GameAvatar
@@ -95,8 +107,8 @@ export function AnimatedGameAvatar({
     <canvas
       ref={canvas}
       className="game-avatar game-avatar-articulated"
-      width={176}
-      height={216}
+      width={176 / pixelSize}
+      height={216 / pixelSize}
       data-motion={motion}
       role="img"
       aria-label={
