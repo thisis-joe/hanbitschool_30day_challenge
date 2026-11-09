@@ -68,7 +68,7 @@ export function ClassSummaryCharts({ summary }: { summary: TeacherLearningSummar
   return (
     <section aria-label="학급 요약" id="class-summary" tabIndex={-1} className="stats-summary">
       <h2>학급 전체 통계</h2>
-      <p>목록의 검색이나 필터와 별개로 학급 전체의 첫 답변을 집계합니다.</p>
+      <p>여기에는 현재 검색 조건과 관계없이 학급 전체의 첫 답변이 표시돼요.</p>
       <dl className="stats-metrics">
         <Metric label="가입 학생" value={`${summary.studentCount}명`} />
         <Metric label="첫 응답" value={`${summary.answered}개`} />
@@ -106,8 +106,8 @@ export function ClassSummaryCharts({ summary }: { summary: TeacherLearningSummar
         {summary.timedOut}개 · 미응답 {summary.unanswered}개
       </p>
       <p>
-        첫 오답 {summary.wrong}개 중 복습 개선 {summary.reviewedWrong}개. 미개선 오답은 첫 오답 중
-        아직 개선되지 않은 문항 수이며, 학생의 개인 복습 큐 수가 아닙니다.
+        처음 틀린 문항 {summary.wrong}개 중 복습에서 맞힌 문항은 {summary.reviewedWrong}개예요.
+        미개선 오답은 아직 복습에서 맞히지 못한 문항 수예요.
       </p>
     </section>
   );
@@ -140,8 +140,8 @@ export function StudentSummaryCharts({
         · 복습 개선 {student.reviewedWrong}개
       </p>
       <p>
-        미개선 오답은 학생의 개인 복습 큐 수가 아닙니다. 복습 개선은 첫 답변 정답률을 변경하지
-        않습니다.
+        미개선 오답은 처음 틀리고 복습에서 아직 맞히지 못한 문항이에요. 첫 답변 정답률에는 각
+        문항의 첫 응답 기록만 반영돼요.
       </p>
       <DistinctionChart facts={facts} interpretations={interpretations} />
     </section>

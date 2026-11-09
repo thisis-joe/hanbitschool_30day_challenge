@@ -161,7 +161,7 @@ export function JourneyMap({
           </div>
         </div>
       </div>
-      <p className="game-map-caption">지도를 위로 움직여 여행할 곳을 둘러보세요.</p>
+      <p className="game-map-caption">지도를 위로 스크롤해 다음 여행지를 살펴보세요.</p>
       {journey.journeyPosition === 150 && !journey.courseCompleted ? (
         <p>등대에 도착했어요. 아직 통과하지 못한 회차에 다시 도전해요.</p>
       ) : null}

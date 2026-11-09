@@ -274,7 +274,9 @@ export function LearningSessionPage() {
                 </div>
               </div>
             ) : (
-              <p role="alert">현재 문항을 확인할 수 없어요. 최신 상태를 다시 불러와 주세요.</p>
+              <p role="alert">
+                현재 문항을 찾지 못했어요. 다시 불러오면 풀던 위치를 확인할 수 있어요.
+              </p>
             )}
           </AnswerGameScene>
         </div>
@@ -298,7 +300,7 @@ export function LearningSessionPage() {
       ) : null}
       {active ? (
         <div className="learning-exit">
-          <p>다른 메뉴로 이동해도 현재 문항의 제한시간은 계속 흘러요.</p>
+          <p>다른 화면으로 이동해도 이 문항의 타이머는 계속 흘러요.</p>
         </div>
       ) : null}
     </section>

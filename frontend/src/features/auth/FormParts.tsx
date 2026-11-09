@@ -44,20 +44,16 @@ export function AuthFrame({
   return (
     <div className="auth-frame">
       <aside className="intro">
-        <div className="school-symbol" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        <img className="auth-mark" src="/brand/school-mark.svg" width="48" height="48" alt="" />
         <h2>
-          우리 반에서
+          함께 배우는
           <br />
-          시작하는 배움
+          한빛학교
         </h2>
         <p>
-          나의 이름으로 만나고,
+          학생은 하루에 다섯 문제를 풀고,
           <br />
-          나만의 별명으로 함께해요.
+          선생님은 우리 반의 학습을 살펴봐요.
         </p>
       </aside>
       <section className="form-panel">

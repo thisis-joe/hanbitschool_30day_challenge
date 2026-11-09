@@ -179,7 +179,7 @@ function StudentWorkspace({
           />
           <section className="stats-card" aria-label="30회차 학습 현황">
             <h2>30회차 학습 현황</h2>
-            <p>현재 회차 상태와 통과 시각입니다. 첫 답변 수와 현재 상태는 서로 다른 지표입니다.</p>
+            <p>회차를 선택하면 첫 답변과 통과 여부를 볼 수 있어요.</p>
             <div className="stats-day-grid">
               {data.days.map((day) => (
                 <div key={day.dayNumber}>
@@ -302,7 +302,9 @@ function StudentWorkspace({
                 </tbody>
               </table>
             </div>
-            {data.answers.items.length === 0 ? <p>선택한 조건의 문항이 없습니다.</p> : null}
+            {data.answers.items.length === 0 ? (
+              <p>이 조건에 맞는 문항이 없어요. 회차나 답변 필터를 바꿔 보세요.</p>
+            ) : null}
             <div className="stats-pagination" aria-label="답변 페이지">
               <button
                 aria-label="이전 페이지"

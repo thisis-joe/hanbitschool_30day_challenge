@@ -86,7 +86,7 @@ export function ClosetPage() {
         <h1 ref={heading} tabIndex={-1}>
           나의 옷장
         </h1>
-        <p>회차를 처음 통과하면 장비를 모을 수 있어요. 미보유 장비도 미리 볼 수 있어요.</p>
+        <p>장비를 골라 입어 보고, 마음에 들면 착용해 보세요.</p>
         <nav className="game-page-nav" aria-label="꾸미기 메뉴">
           <Link to="/student/character">캐릭터 선택</Link>
         </nav>
@@ -151,7 +151,7 @@ export function ClosetPage() {
                       </button>
                     </>
                   ) : (
-                    <p>저장된 모습이에요.</p>
+                    <p>지금 저장된 옷차림이에요.</p>
                   )}
                   {appearance.error ? <p role="alert">{appearance.error}</p> : null}
                 </div>
@@ -185,7 +185,7 @@ export function ClosetPage() {
                 <div className="game-inventory-heading">
                   <p className="learning-eyebrow">나의 장비 상자</p>
                   <h2>{slotNames[selectedSlot]}</h2>
-                  <p>잠긴 장비도 눌러서 미리 입어볼 수 있어요.</p>
+                  <p>잠긴 장비도 미리 입어 볼 수 있어요. 첫 통과로 얻은 뒤 착용할 수 있어요.</p>
                   <button
                     className="game-base-reset"
                     aria-label={`${slotNames[selectedSlot]} 기본 모습`}
@@ -199,8 +199,8 @@ export function ClosetPage() {
                       });
                     }}
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M8 5 3 10l5 5M3 10h11a6 6 0 1 1 0 12" />
+                    <svg viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden="true">
+                      <path d="M6 2v2H4v2H2m0 0v2h2v2h2M2 6h10v1h1v1h1v4h-1v1h-1v1H8" />
                     </svg>
                     <span>{view.equippedBySlot[selectedSlot] ? '장비 벗기' : '기본 모습'}</span>
                   </button>
@@ -235,8 +235,8 @@ export function ClosetPage() {
                         >
                           {!hasItem ? (
                             <span className="game-lock-badge" aria-hidden="true">
-                              <svg viewBox="0 0 16 18">
-                                <path d="M4 7V5a4 4 0 0 1 8 0v2M2 7h12v9H2zM8 10v3" />
+                              <svg viewBox="0 0 16 18" shapeRendering="crispEdges">
+                                <path d="M4 7V4h1V2h6v2h1v3M2 7h12v9H2zM8 10v3" />
                               </svg>
                             </span>
                           ) : null}

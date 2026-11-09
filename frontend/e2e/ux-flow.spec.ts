@@ -447,6 +447,14 @@ for (const width of [320, 390, 768, 1280]) {
         name,
       ).toBe(true);
       if (name === 'stafflogin') {
+        const brand = page.getByRole('link', { name: '한빛학교 배움터' }).locator('img');
+        await expect
+          .poll(() => brand.evaluate((image: HTMLImageElement) => image.naturalWidth))
+          .toBe(24);
+        await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+          'href',
+          '/brand/school-mark.svg',
+        );
         const loaded = await page.evaluate(async () => {
           const fonts = await Promise.all([
             document.fonts.load('400 16px Galmuri11', '학생 로그인'),

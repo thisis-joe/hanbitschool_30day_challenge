@@ -244,9 +244,9 @@ export function LearningResultPage() {
           ) : replayKeepsPass ? (
             <p>이 회차의 통과 상태는 그대로 유지돼요.</p>
           ) : result.attemptState === 'PASSED' ? (
-            <p>회차 통과가 저장되었어요.</p>
+            <p>이번 회차의 통과 결과를 저장했어요.</p>
           ) : (
-            <p>다섯 문항을 다시 풀며 3문항 이상 정답에 도전해요.</p>
+            <p>다섯 문제 중 세 문제 이상 맞히면 통과해요. 다시 풀어 볼까요?</p>
           )}
           <dl className="learning-result-stats">
             <div>

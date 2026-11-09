@@ -22,7 +22,7 @@ export function CharacterSelectionPage() {
         <h1 ref={heading} tabIndex={-1}>
           캐릭터 선택
         </h1>
-        <p>함께 배울 친구를 골라 주세요. 모은 장비는 그대로 입고 있어요.</p>
+        <p>함께 여행할 친구를 고르세요. 새 친구도 지금 장비를 입어요.</p>
         <nav className="game-page-nav" aria-label="꾸미기 메뉴">
           <Link to="/student/learning">학습 홈</Link>
           <Link to="/student/closet">옷장</Link>

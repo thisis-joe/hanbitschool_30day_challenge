@@ -22,7 +22,9 @@ export function ClassroomsPage() {
   return (
     <section className="workspace">
       <h1>우리 학교 학급</h1>
-      <p className="description">{me.schoolName}의 학급과 가입 학생을 확인합니다.</p>
+      <p className="description">
+        {me.schoolName}의 학급이에요. 학습 통계에서 진도를, 명단에서 가입 학생을 확인하세요.
+      </p>
       <details className="class-create" open>
         <summary>새 학급 만들기</summary>
         <form
