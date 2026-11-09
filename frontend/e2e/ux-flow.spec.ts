@@ -568,6 +568,88 @@ test('mobile wardrobe brings the preview into reach and returns to the chosen it
   expect(state.requests).toHaveLength(1);
 });
 
+test('wardrobe pages show every item without scrolling the inventory', async ({ page }) => {
+  const state = await scenario(page);
+  const faceItems = [
+    '동그란 안경',
+    '나뭇잎 안경',
+    '햇살 안경',
+    '바닷빛 안경',
+    '달빛 별무늬 안경',
+  ].map((name, index) => ({
+    ...gameView.items[0],
+    itemId: `face-${index + 1}`,
+    assetKey: `face-${index + 1}`,
+    rewardDay: index * 6 + 1,
+    value: index + 1,
+    name,
+  }));
+  await page.route('**/api/student/game', (route) =>
+    route.fulfill({ json: { ...gameView, items: [...faceItems, ...gameView.items.slice(1)] } }),
+  );
+  for (const [width, height, pageSize] of [
+    [320, 568, 1],
+    [390, 844, 2],
+    [1280, 900, 3],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/student/closet');
+    const inventory = page.getByRole('region', { name: '얼굴', exact: true });
+    const previous = inventory.getByRole('button', { name: '이전 장비 페이지' });
+    const next = inventory.getByRole('button', { name: '다음 장비 페이지' });
+    const count = inventory.getByRole('status', { name: '장비 페이지' });
+    await expect(previous).toBeDisabled();
+    await expect(inventory).toHaveCSS('overflow-y', 'clip');
+    const pages = Math.ceil(faceItems.length / pageSize);
+    for (let index = 0; index < pages; index++) {
+      await expect(count).toHaveText(`${index + 1} / ${pages}`);
+      const visible = faceItems.slice(index * pageSize, (index + 1) * pageSize);
+      await expect(inventory.getByRole('button', { name: /미리보기$/ })).toHaveCount(
+        visible.length,
+      );
+      const output = evidenceOutput();
+      if (output && width === 320 && index === pages - 1)
+        await page.screenshot({ path: output.file('wardrobe-page-320.png') });
+      for (const item of visible) {
+        const option = inventory.getByRole('button', { name: `${item.name} 미리보기` });
+        const bounds = await option.evaluate((el) => {
+          const card = el.getBoundingClientRect();
+          const panel = el.closest('.game-closet-slot')!.getBoundingClientRect();
+          return [card.left - panel.left, panel.right - card.right, panel.bottom - card.bottom];
+        });
+        for (const distance of bounds)
+          expect(distance, `${width}px: ${item.name} inside the wardrobe`).toBeGreaterThanOrEqual(
+            0,
+          );
+        await expect(option).toBeInViewport({ ratio: 1 });
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
+      if (index < pages - 1) {
+        await next.press('Enter');
+        await expect(next).toBeFocused();
+      }
+    }
+    await expect(next).toBeDisabled();
+    const last = inventory.getByRole('button', { name: '달빛 별무늬 안경 미리보기' });
+    await last.click();
+    if (width === 320) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(count).toHaveText('3 / 3');
+      await expect(last).toBeInViewport({ ratio: 1 });
+    }
+    await expect(page.getByRole('button', { name: '착용하기', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: '미리보기 취소' }).click();
+    await expect(last).toBeFocused();
+    await previous.click();
+    await expect(count).toHaveText(width === 1280 ? '1 / 2' : '2 / 3');
+    await page.getByRole('button', { name: '모자 장비 보기' }).click();
+    await expect(page.getByRole('button', { name: '다음 장비 페이지' })).toHaveCount(0);
+    await page.getByRole('button', { name: '얼굴 장비 보기' }).click();
+    await expect(count).toHaveText(width === 1280 ? '1 / 2' : '1 / 3');
+  }
+  expect(state.requests).toHaveLength(0);
+});
+
 test('signup confirms completion and carries classroom details to login', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await scenario(page, 'anonymous');
