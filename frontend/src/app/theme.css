@@ -121,7 +121,8 @@ html {
 .skip-link:focus {
   transform: none;
 }
-main:focus {
+main:focus,
+h1[tabindex='-1']:focus {
   outline: none;
 }
 a {
@@ -322,6 +323,7 @@ main {
   color: #526257;
   font-size: 0.92rem;
   margin: 0 0 24px;
+  word-break: keep-all;
 }
 .form-row {
   display: grid;
@@ -364,9 +366,6 @@ main {
   border-radius: var(--pixel-corner);
   background: #edf3e3;
   font-size: 0.9rem;
-}
-.form-panel h1:focus {
-  outline: none;
 }
 .form-actions {
   display: flex;

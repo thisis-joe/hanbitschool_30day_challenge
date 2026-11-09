@@ -74,6 +74,7 @@
 .stats-overview-header p {
   margin: 0;
   color: #4e685a;
+  word-break: keep-all;
 }
 .stats-overview-header .stats-back {
   color: #4e685a;

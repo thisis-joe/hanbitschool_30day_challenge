@@ -160,7 +160,7 @@ function StatisticsWorkspace({
               <dd>{summary.studentCount - summary.participatingCount}명</dd>
             </div>
             <div>
-              <dt>30회차 완료</dt>
+              <dt>30회 완료</dt>
               <dd>{summary.completeCount}명</dd>
             </div>
           </dl>
