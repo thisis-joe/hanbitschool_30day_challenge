@@ -31,8 +31,11 @@ export function App() {
         본문으로 바로가기
       </a>
       <header className={`site-header${me?.role === 'STUDENT' ? ' student-header' : ''}`}>
-        <Link className="brand" to="/">
-          한빛학교<span>배움터</span>
+        <Link className="brand" to="/" aria-label="한빛학교 배움터">
+          <img className="brand-mark" src="/brand/school-mark.svg" width="24" height="24" alt="" />
+          <span>
+            한빛학교<span className="brand-caption">배움터</span>
+          </span>
         </Link>
         <nav aria-label="주 메뉴">
           {me?.role === 'STUDENT' ? (

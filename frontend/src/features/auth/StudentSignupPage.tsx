@@ -13,7 +13,7 @@ export function StudentSignupPage() {
   const navigate = useNavigate();
   const submit = useSubmission();
   return (
-    <AuthFrame title="학생 회원가입" description="선생님께 받은 학급 가입 코드를 준비해 주세요.">
+    <AuthFrame title="학생 회원가입" description="선생님께 받은 가입 코드로 우리 반에 가입해요.">
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -14,31 +14,38 @@
 }
 
 .game-learning-scene {
+  --scene-ground: 64px;
   position: relative;
   min-width: 0;
   height: 272px;
   margin: 20px 0 14px;
   border: 4px solid var(--ink);
-  border-radius: 20px;
+  border-radius: var(--pixel-corner);
   box-shadow: 0 5px 0 var(--shadow);
   overflow: hidden;
-  background: url('/game/scenes/forest.webp') center 64% / cover;
+}
+.game-learning-scene,
+.game-camp-scene {
+  /* The native 1080 × 580 scene has its floor on row 442. Crop at 1×. */
+  --art-ground: 138px;
+  background: var(--region-sky) var(--region-art) center
+    calc(100% + var(--art-ground) - var(--scene-ground)) / 1080px 580px no-repeat;
   image-rendering: pixelated;
 }
 .game-learning-road {
   position: absolute;
   pointer-events: none;
-  bottom: 20%;
+  bottom: calc(var(--scene-ground) - 5px);
   left: 28%;
   right: 28%;
-  height: 18px;
-  border-radius: 50%;
+  height: 10px;
+  clip-path: polygon(0 30%, 8% 30%, 8% 0, 92% 0, 92% 30%, 100% 30%, 100% 70%, 92% 70%, 92% 100%, 8% 100%, 8% 70%, 0 70%);
   background: #263d354d;
 }
 .game-learning-traveler {
   position: absolute;
   left: calc(50% - 66px);
-  bottom: 20%;
+  bottom: var(--scene-ground);
 }
 .game-learning-travel {
   animation: game-hop 0.25s ease;
@@ -55,7 +62,7 @@
   width: fit-content;
   max-width: calc(100% - 24px);
   border: 2px solid var(--ink);
-  border-radius: 9px;
+  border-radius: var(--pixel-corner);
   padding: 6px 10px;
   background: #fffde8f5;
   color: #263d35;
@@ -147,7 +154,7 @@
   overflow: hidden;
   background: #edf3df;
   border: 4px solid var(--ink);
-  border-radius: 24px;
+  border-radius: var(--pixel-corner);
   box-shadow: 0 6px 0 var(--shadow);
 }
 .game-camp-copy {
@@ -176,23 +183,28 @@
 .game-tag {
   border: 2px solid var(--ink);
   background: #fff4bc;
-  border-radius: 8px;
+  border-radius: var(--pixel-corner);
   padding: 5px 10px;
   font-size: 0.8rem;
   font-weight: 800;
 }
 .game-camp-scene {
+  --scene-ground: 116px;
   position: relative;
   min-height: 440px;
   border-left: 3px solid var(--ink);
-  background: url('/game/scenes/forest.webp') center bottom / cover;
-  image-rendering: pixelated;
+}
+.game-scene-forest {
+  --region-sky: #2b4b40;
+  --region-art: url('/game/pixels/forest.svg');
 }
 .game-scene-village {
-  background-image: url('/game/scenes/village.webp');
+  --region-sky: #414b3d;
+  --region-art: url('/game/pixels/village.svg');
 }
 .game-scene-beach {
-  background-image: url('/game/scenes/beach.webp');
+  --region-sky: #315257;
+  --region-art: url('/game/pixels/beach.svg');
 }
 .game-camp-scene > .game-avatar {
   position: absolute;
@@ -206,7 +218,7 @@
   right: 5%;
   background: #efd49c;
   border: 3px solid #473e2d;
-  border-radius: 7px;
+  border-radius: var(--pixel-corner);
   box-shadow:
     0 4px 0 #473e2d,
     inset 0 0 0 3px #d8b775;
@@ -254,14 +266,14 @@
   font-size: 0.8rem;
   padding: 10px;
   border: 3px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--pixel-corner);
   background: #f0efdf;
 }
 .game-regions a span {
   border: 2px solid var(--ink);
   width: 26px;
   height: 26px;
-  border-radius: 50%;
+  border-radius: var(--pixel-corner);
   text-align: center;
 }
 .game-regions .game-region-reached {
@@ -272,7 +284,7 @@
 }
 .game-character-card,
 .game-closet-card {
-  border-radius: 24px;
+  border-radius: var(--pixel-corner);
 }
 .game-character-studio {
   display: grid;
@@ -291,8 +303,9 @@
   padding: 24px;
   gap: 12px;
   border: 4px solid var(--ink);
-  border-radius: 22px;
-  background: url('/game/scenes/room.webp') center / cover;
+  border-radius: var(--pixel-corner);
+  background: #dac7a0 url('/game/pixels/room.svg') center bottom / 760px 470px no-repeat;
+  image-rendering: pixelated;
   box-shadow: 0 6px 0 var(--shadow);
 }
 .game-character-portrait > .game-tag {
@@ -305,7 +318,7 @@
 }
 .game-character-portrait strong {
   border: 2px solid var(--ink);
-  border-radius: 9px;
+  border-radius: var(--pixel-corner);
   background: var(--paper);
   padding: 6px 16px;
 }
@@ -323,7 +336,7 @@
   padding: 14px 8px 10px;
   background: #f1f1df;
   border-color: var(--ink);
-  border-radius: 16px;
+  border-radius: var(--pixel-corner);
 }
 .game-character-option .game-avatar {
   width: 78px;
@@ -351,7 +364,7 @@
   min-height: 48px;
   padding: 4px 12px;
   border: 3px solid var(--line);
-  border-radius: 9px;
+  border-radius: var(--pixel-corner);
 }
 @media (max-width: 720px) {
   .game-home-page .game-home-intro {
@@ -384,6 +397,7 @@
     min-height: 52px;
   }
   .game-camp-scene {
+    --scene-ground: 66px;
     grid-row: 2;
     min-height: 210px;
     border-left: 0;

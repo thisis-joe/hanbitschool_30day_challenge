@@ -57,11 +57,7 @@ async function scenario(page: Page, position = 0, seconds = 60) {
 }
 
 for (const width of [320, 390, 768, 1280]) {
-  for (const [position, ground] of [
-    [0, 94 / 128],
-    [55, 0.75],
-    [110, 0.845],
-  ]) {
+  for (const position of [0, 55, 110]) {
     test(`ground contact at ${width}px, journey ${position}`, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 320 ? 568 : 900 });
       await scenario(page, position);
@@ -70,16 +66,13 @@ for (const width of [320, 390, 768, 1280]) {
       await page.evaluate(() => document.fonts.ready);
       const scene = page.getByRole('region', { name: '학습 여행 장면' });
       await expect(async () => {
-        const distance = await scene.evaluate((el, level) => {
-          const h = el.clientHeight,
-            w = el.clientWidth;
-          const imageHeight = Math.max(h, w / 1.5);
-          const floor =
-            el.getBoundingClientRect().bottom - el.clientTop - imageHeight * (1 - level);
+        const distance = await scene.evaluate((el) => {
+          // The authored image puts the ground at row 442 of 580, even after cropping.
+          const floor = el.getBoundingClientRect().bottom - el.clientTop - 138;
           const actor = el.querySelector('.game-avatar-articulated')!.getBoundingClientRect();
           const feet = actor.top + actor.height * (196 / 216);
           return Math.abs(feet - floor);
-        }, ground);
+        });
         expect(distance).toBeLessThan(12);
       }).toPass({ timeout: 1500 });
       const button = page.getByRole('button', { name: 'O · 사실', exact: true });
@@ -109,8 +102,9 @@ for (const density of [1, 2]) {
       expect(await page.evaluate(() => devicePixelRatio)).toBe(density);
       await expect(scene).toHaveCSS('image-rendering', 'pixelated');
       const rock = scene.locator('.game-answer-o .game-answer-landmark-art');
-      await expect(rock).toHaveCSS('width', '128px');
-      await expect(rock).toHaveCSS('height', '116px');
+      await expect(rock).toHaveCSS('width', '116px');
+      await expect(rock).toHaveCSS('height', '112px');
+      await expect(scene).toHaveCSS('background-size', '1080px 580px');
       const sourceSize = await scene.evaluate(async (element) => {
         const source = getComputedStyle(element).backgroundImage.match(/url\("([^"]+)"\)/)?.[1];
         const image = new Image();
@@ -118,7 +112,7 @@ for (const density of [1, 2]) {
         await image.decode();
         return [image.naturalWidth, image.naturalHeight];
       });
-      expect(sourceSize).toEqual([192, 128]);
+      expect(sourceSize).toEqual([1080, 580]);
 
       const output = evidenceOutput();
       if (output) await page.screenshot({ path: output.file(`forest-density-${density}.png`) });
@@ -158,9 +152,8 @@ test('resizing the answer scene keeps the ground aligned without observer warnin
     await expect
       .poll(() =>
         scene.evaluate((element) => {
-          const depth = Math.max(element.clientHeight, element.clientWidth / 1.5) * (1 - 94 / 128);
           const ground = parseFloat(getComputedStyle(element).getPropertyValue('--scene-ground'));
-          return Math.abs(ground - depth);
+          return Math.abs(ground - 138);
         }),
       )
       .toBeLessThan(1);
@@ -190,13 +183,13 @@ for (const width of [320, 390, 768, 1280]) {
         await scene.locator('.game-avatar-articulated[data-ready="true"]').waitFor();
         const marker = scene.locator(`.game-answer-${choice.toLowerCase()}`);
         const art = marker.locator('.game-answer-landmark-art');
-        await expect(art).toHaveAttribute(
-          'src',
-          region === 'forest' ? '/game/answers/forest-rock.svg' : `/game/answers/${region}.png`,
-        );
+        const file = { forest: 'forest-rock', village: 'village-sign', beach: 'beach-shell' }[
+          region
+        ];
+        await expect(art).toHaveAttribute('src', `/game/answers/${file}.svg`);
         await expect
           .poll(() => art.evaluate((el) => (el as HTMLImageElement).naturalWidth))
-          .toBeGreaterThan(0);
+          .toBe(116);
         await expect(async () => {
           const distance = await marker.evaluate((el) => {
             const scene = el.closest('section')!;
@@ -342,10 +335,12 @@ for (const width of [390, 1280]) {
     await expect(page.getByRole('button', { name: '얼굴 기본 모습' })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     expect(
-      await page.evaluate(() => document.fonts.check('16px NanumSquareRound', '한빛학교')),
-    ).toBe(true);
+      await page.evaluate(
+        async () => (await document.fonts.load('16px Galmuri11', '한빛학교')).length,
+      ),
+    ).toBe(1);
     expect(await page.locator('body').evaluate((el) => getComputedStyle(el).fontFamily)).toContain(
-      'NanumSquareRound',
+      'Galmuri11',
     );
     const output = evidenceOutput();
     if (output)
@@ -361,6 +356,14 @@ test('exploration is a map with no next-learning or round-card commands', async 
   await expect(page.getByRole('heading', { name: '다음 배움' })).toHaveCount(0);
   await expect(page.getByRole('list', { name: '회차별 학습' })).toHaveCount(0);
   await expect(page.locator('a[href^="#journey-day-"]')).toHaveCount(0);
+  const firstLocked = page.locator('[data-region-start="6"]');
+  const nextLocked = page.locator('[data-region-start="11"]');
+  await expect(firstLocked).toHaveAttribute('data-revealed', 'false');
+  await expect(firstLocked).toHaveCSS('--fade-bottom', '44px');
+  await expect(nextLocked).toHaveCSS('--fade-bottom', '0px');
+  expect(await firstLocked.evaluate((el) => getComputedStyle(el).maskImage)).toContain(
+    'linear-gradient',
+  );
   await page.getByRole('button', { name: '현재 위치로 돌아가기' }).click();
   expect(writes).toEqual([]);
   const output = evidenceOutput();

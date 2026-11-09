@@ -187,6 +187,21 @@ export function equipmentArt(itemId: string): EquipmentArt | null {
   return headHandDesign(slot, value);
 }
 
+// In the artwork's own grid: the top of each bag handle or the wrapped wand grip.
+const HAND_GRIPS = [
+  [15, 24],
+  [16, 25],
+  [16, 25],
+  [16, 26],
+  [16, 26],
+] as const;
+
+export function handEquipmentFit(value: number) {
+  const [gripX, gripY] = HAND_GRIPS[value - 1];
+  const scale = value <= 3 ? 0.82 : 0.9;
+  return { x: -gripX * scale, y: -gripY * scale, width: 32 * scale, height: 58 * scale };
+}
+
 export function equipmentSvg(art: EquipmentArt): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${art.width}" height="${art.height}" viewBox="0 0 ${art.width} ${art.height}" shape-rendering="${art.rendering ?? 'crispEdges'}">${art.markup}</svg>`;
 }

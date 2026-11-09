@@ -1,5 +1,6 @@
-import { equipmentArt, equipmentSvg, parseItemId } from './artwork';
+import { equipmentArt, equipmentSvg, handEquipmentFit, parseItemId } from './artwork';
 import type { EquipmentArt } from './artwork';
+import { ANATOMY } from './motion/anatomy';
 import { CHARACTER_IDS, SLOTS } from './types';
 import type { CharacterId, Equipment, Slot } from './types';
 
@@ -12,7 +13,6 @@ interface Anchor {
   pants: Box;
   feet: Point;
   head: Point;
-  grip: Point;
 }
 interface Bitmap {
   image: HTMLImageElement;
@@ -55,7 +55,6 @@ const ANCHORS: Anchor[] = [
     pants: [48, 134, 80, 146],
     feet: [45, 64],
     head: [65, 38],
-    grip: [47, 139],
   },
   {
     eyes: [
@@ -67,7 +66,6 @@ const ANCHORS: Anchor[] = [
     pants: [59, 134, 88, 146],
     feet: [53, 72],
     head: [69, 42],
-    grip: [54, 138],
   },
   {
     eyes: [
@@ -79,7 +77,6 @@ const ANCHORS: Anchor[] = [
     pants: [52, 133, 85, 145],
     feet: [48, 70],
     head: [65, 36],
-    grip: [51, 137],
   },
   {
     eyes: [
@@ -91,7 +88,6 @@ const ANCHORS: Anchor[] = [
     pants: [46, 133, 80, 146],
     feet: [42, 63],
     head: [62, 29],
-    grip: [45, 138],
   },
   {
     eyes: [
@@ -103,7 +99,6 @@ const ANCHORS: Anchor[] = [
     pants: [67, 145, 94, 151],
     feet: [61, 80],
     head: [81, 55],
-    grip: [63, 142],
   },
   {
     eyes: [
@@ -115,7 +110,6 @@ const ANCHORS: Anchor[] = [
     pants: [53, 145, 82, 152],
     feet: [52, 69],
     head: [70, 59],
-    grip: [54, 144],
   },
   {
     eyes: [
@@ -127,7 +121,6 @@ const ANCHORS: Anchor[] = [
     pants: [47, 136, 79, 147],
     feet: [43, 63],
     head: [63, 40],
-    grip: [48, 140],
   },
   {
     eyes: [
@@ -139,7 +132,6 @@ const ANCHORS: Anchor[] = [
     pants: [58, 137, 89, 146],
     feet: [55, 76],
     head: [70, 37],
-    grip: [55, 138],
   },
   {
     eyes: [
@@ -151,24 +143,11 @@ const ANCHORS: Anchor[] = [
     pants: [52, 137, 86, 146],
     feet: [48, 70],
     head: [70, 42],
-    grip: [49, 139],
   },
 ];
 
-const MOTION_GRIPS: Point[] = [
-  [47, 139],
-  [54, 138],
-  [51, 137],
-  [45, 138],
-  [63, 142],
-  [54, 144],
-  [48, 140],
-  [55, 138],
-  [49, 139],
-];
-export function avatarAnchor(characterId: CharacterId): Anchor & { grip: Point } {
-  const index = CHARACTER_IDS.indexOf(characterId);
-  return { ...ANCHORS[index], grip: MOTION_GRIPS[index] };
+export function avatarAnchor(characterId: CharacterId): Anchor {
+  return ANCHORS[CHARACTER_IDS.indexOf(characterId)];
 }
 
 /** Shared placement for the static renderer and the articulated head layer. */
@@ -185,9 +164,37 @@ export function avatarHatPlacement(characterId: CharacterId, value: number) {
     width: 112 * sx,
     height: 64 * sy,
     scalp: HAT_SCALP_BOUNDS[index],
-    scalpBottom: fit.seat - 5,
     crown,
   };
+}
+
+export function tuckHairUnderHat(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  fit: ReturnType<typeof avatarHatPlacement>,
+) {
+  if (fit.crown) return;
+  const mask = document.createElement('canvas');
+  mask.width = 128;
+  mask.height = Math.ceil(fit.y + fit.height);
+  const maskCtx = context(mask);
+  maskCtx.drawImage(
+    image,
+    Math.round(fit.x),
+    Math.round(fit.y),
+    Math.round(fit.width),
+    Math.round(fit.height),
+  );
+  const { data } = maskCtx.getImageData(0, 0, mask.width, mask.height);
+  const [left, right] = fit.scalp;
+  // Only tuck hair in columns covered by the hat. End the cut behind its top edge.
+  for (let x = left; x < right; x++) {
+    for (let y = 0; y < mask.height; y++) {
+      if (data[(y * mask.width + x) * 4 + 3] < 128) continue;
+      ctx.clearRect(x, 0, 1, y);
+      break;
+    }
+  }
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -303,11 +310,9 @@ export async function renderAvatar(
   ctx.clearRect(0, 0, 128, 176);
   ctx.drawImage(base, 0, 0, 128, 176);
   const a = ANCHORS[index];
-  if (gear.hat && gear.hat !== 5) {
-    const [left, right] = HAT_SCALP_BOUNDS[index],
-      edge = HAT_FITS[index].seat - 5;
-    ctx.clearRect(left, 0, right - left, edge);
-  }
+  const hatFit = gear.hat ? avatarHatPlacement(characterId, gear.hat) : undefined;
+  const hatLayer = gear.hat ? bitmap('hat', gear.hat) : undefined;
+  if (hatFit && hatLayer) tuckHairUnderHat(ctx, hatLayer.image, hatFit);
   const draw = (
     slot: Slot,
     value: number | undefined,
@@ -328,30 +333,25 @@ export async function renderAvatar(
   }
   if (gear.top) {
     const [x, y, r, b] = a.shirt;
-    draw('top', gear.top, x - 3, y - 2, r - x + 6, b - y + 3);
+    draw('top', gear.top, x - 3, y - 3, r - x + 6, b - y + 4);
   }
   if (gear.shoes) {
     const value = gear.shoes;
-    // Remove bare toes under the new soles, while preserving the ankles.
-    ctx.clearRect(a.feet[0] - 1, 161, a.feet[1] - a.feet[0] + 28, 11);
+    const [near, far] = a.feet;
+    const toeEdge = far + 27;
+    // The bare heel flares below the ankle. Preserve hair and skin above that flare.
+    ctx.clearRect(near - 1, 161, toeEdge - near + 1, 3);
+    ctx.clearRect(near - 3, 164, toeEdge - near + 3, 8);
     a.feet.forEach((x, j) => {
       const part = bitmap('shoes', value, j);
       if (part) draw('shoes', value, x, 170 - part.art.height, part.art.width, part.art.height, j);
     });
   }
   if (gear.hand) {
-    const scale = gear.hand <= 3 ? 0.82 : 0.9;
-    // The handle/shaft meets the closed palm, not the torso's bounding box.
-    const handleY = gear.hand <= 3 ? 27 : 36;
-    draw(
-      'hand',
-      gear.hand,
-      a.grip[0] - 16 * scale,
-      a.grip[1] - handleY * scale,
-      32 * scale,
-      58 * scale,
-    );
-    restoreGrip(ctx, base, a);
+    const palm = ANATOMY[characterId].palm;
+    const { x, y, width, height } = handEquipmentFit(gear.hand);
+    draw('hand', gear.hand, palm[0] + x, palm[1] + y, width, height);
+    restoreGrip(ctx, base, palm);
   }
   if (gear.face) {
     const layer = bitmap('face', gear.face),
@@ -372,9 +372,8 @@ export async function renderAvatar(
       ctx.restore();
     }
   }
-  if (gear.hat) {
-    const fit = avatarHatPlacement(characterId, gear.hat);
-    draw('hat', gear.hat, fit.x, fit.y, fit.width, fit.height);
+  if (hatFit) {
+    draw('hat', gear.hat, hatFit.x, hatFit.y, hatFit.width, hatFit.height);
   }
   if (!current()) return;
   const visible = context(canvas);
@@ -386,9 +385,13 @@ export async function renderAvatar(
   visible.drawImage(scratch, 0, 0);
 }
 
-function restoreGrip(ctx: CanvasRenderingContext2D, base: HTMLImageElement, a: Anchor): void {
-  const x = Math.max(0, a.grip[0] - 6),
-    y = a.grip[1] - 8,
+function restoreGrip(
+  ctx: CanvasRenderingContext2D,
+  base: HTMLImageElement,
+  palm: readonly [number, number],
+): void {
+  const x = Math.max(0, palm[0] - 6),
+    y = palm[1] - 8,
     w = 13,
     h = 14;
   const cached = equipmentGripCache.get(base);

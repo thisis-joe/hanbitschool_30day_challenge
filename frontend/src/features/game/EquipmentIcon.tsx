@@ -3,26 +3,24 @@ import type { Slot } from './types';
 import './game.css';
 
 const slotPaths: Record<Slot, string> = {
-  face: 'M2 8h7v7H2Zm13 0h7v7h-7ZM9 10h6M2 8 1 5m21 3 1-3',
-  hat: 'M5 16V8a7 7 0 0 1 14 0v8M2 16h20v4H2ZM5 12h14',
-  top: 'm8 3-6 4 3 6 3-2v10h8V11l3 2 3-6-6-4a4 4 0 0 1-8 0Z',
-  bottom: 'M5 3h14l2 18h-7l-2-11-2 11H3ZM5 7h14',
-  shoes: 'M3 6h7v6l10 3 1 5H3ZM3 16h17M10 12l-2 3',
-  hand: 'M4 9h16l1 12H3ZM8 9V6a4 4 0 0 1 8 0v3',
+  face: 'M1 5h5v1h4V5h5v6h-5V8H6v3H1Zm1 2v3h3V7Zm9 0v3h3V7Z',
+  hat: 'M5 2h6v1h1v6h3v4H1V9h3V3h1Zm1 2v3h4V4Zm0 4v1h4V8ZM3 11v1h10v-1Z',
+  top: 'M5 2h2v2h2V2h2v1h2v2h2v4h-2V8h-1v6H4V8H3v1H1V5h2V3h2Zm1 4v6h4V6H9v1H7V6Z',
+  bottom: 'M3 2h10v3h1v9H9v-4H7v4H2V5h1Zm2 2v1h6V4ZM4 7v5h1V9h2V7Zm5 0v2h2v3h1V7Z',
+  shoes: 'M2 3h6v5h3v1h2v1h1v1h1v3H2Zm2 2v6h9v-1h-3V9H6V5Zm0 7v1h9v-1Z',
+  hand: 'M6 2h4v1h1v3h3v7h-1v1H3v-1H2V6h3V3h1Zm1 2v2h2V4ZM4 8v4h8V8Z',
 };
 
 export function EquipmentCategoryIcon({ slot }: { slot: Slot }) {
   return (
     <svg
       className="game-equipment-category-icon"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinejoin="round"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      shapeRendering="crispEdges"
       aria-hidden="true"
     >
-      <path d={slotPaths[slot]} />
+      <path d={slotPaths[slot]} fillRule="evenodd" />
     </svg>
   );
 }

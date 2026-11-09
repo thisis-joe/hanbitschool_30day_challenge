@@ -34,7 +34,7 @@ export function PersonalQuestionsPage() {
       <h1 ref={heading} tabIndex={-1}>
         나의 문제
       </h1>
-      <p>다시 보고 싶은 문제와 별표한 문제를 관리해요.</p>
+      <p>다시 볼 문제를 골라 복습하거나 별표한 문제를 찾아보세요.</p>
       <nav className="learning-filters" aria-label="개인 문제 필터">
         {(Object.keys(filters) as PersonalQuestionFilter[]).map((key) => (
           <Link

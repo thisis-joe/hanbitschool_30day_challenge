@@ -128,7 +128,7 @@ function StatisticsWorkspace({
               ? `${classroom.data.gradeLabel} ${classroom.data.classNumber}반 학습 통계`
               : '학급 학습 통계'}
           </h1>
-          <p>학급 참여와 첫 답변을 확인하세요.</p>
+          <p>우리 반의 참여와 첫 답변을 살펴보세요.</p>
         </div>
         <span className="stats-readonly">교사용 조회</span>
       </header>
@@ -160,7 +160,7 @@ function StatisticsWorkspace({
               <dd>{summary.studentCount - summary.participatingCount}명</dd>
             </div>
             <div>
-              <dt>30회차 완료</dt>
+              <dt>30회 완료</dt>
               <dd>{summary.completeCount}명</dd>
             </div>
           </dl>

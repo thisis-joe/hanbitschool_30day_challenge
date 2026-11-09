@@ -11,7 +11,6 @@ import { useLearningActions } from './useLearningActions';
 import type { LearningMode } from './types';
 import { useGame, useJourney } from '../game/queries';
 import { GameAvatar } from '../game/GameAvatar';
-import { useSceneGround } from '../game/useSceneGround';
 import { RewardCard } from '../game/RewardCard';
 import { REGIONS } from '../game/journeyGeometry';
 
@@ -148,7 +147,6 @@ export function LearningDashboardPage() {
       : regionIndex !== null && regionIndex >= 2
         ? 'village'
         : 'forest';
-  const camp = useSceneGround<HTMLDivElement>(sceneRegion);
   return (
     <section className="learning-page game-journey-page game-home-page">
       <div className="game-home-intro">
@@ -158,7 +156,7 @@ export function LearningDashboardPage() {
         <h1 ref={heading} tabIndex={-1}>
           나의 학습
         </h1>
-        <p>하루 5문항, 숲에서 등대까지 이어지는 30회차 여행</p>
+        <p>하루에 다섯 문제씩 풀며 숲에서 등대까지 여행해요.</p>
       </div>
       <section className="learning-card game-camp" aria-label="오늘의 탐험">
         <div className="game-camp-copy">
@@ -174,12 +172,10 @@ export function LearningDashboardPage() {
               {!view.activeSession && view.nextAction in messages ? (
                 <p>{messages[view.nextAction as keyof typeof messages]}</p>
               ) : null}
-              {view.activeSession ? (
-                <p>진행 중인 학습을 마친 뒤 다른 회차를 시작할 수 있어요.</p>
-              ) : null}
+              {view.activeSession ? <p>풀던 문항부터 이어서 오늘의 학습을 마쳐요.</p> : null}
             </>
           ) : null}
-          <p>문장을 읽고 O · 사실, X · 해석을 골라 보세요.</p>
+          <p>문장을 읽고 사실(O)인지 해석(X)인지 고르세요.</p>
           {isChecking || actions.busy ? (
             <p role="status">최신 학습 상태를 확인하고 있어요</p>
           ) : null}
@@ -192,7 +188,7 @@ export function LearningDashboardPage() {
             </div>
           ) : null}
         </div>
-        <div ref={camp} className={`game-camp-scene game-scene-${sceneRegion}`}>
+        <div className={`game-camp-scene game-scene-${sceneRegion}`}>
           {appearance ? (
             <GameAvatar
               characterId={appearance.characterId}
@@ -255,7 +251,7 @@ export function LearningDashboardPage() {
           />
         ) : (
           <section className="game-reward-card">
-            <p>회차를 처음 통과하면 여행 선물을 받아요.</p>
+            <p>각 회차를 처음 통과할 때 여행 선물을 받아요.</p>
             <Link className="game-reward-fallback-link" to="/student/closet">
               옷장 둘러보기
             </Link>

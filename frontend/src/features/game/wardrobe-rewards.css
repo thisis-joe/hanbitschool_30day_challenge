@@ -8,8 +8,8 @@
   min-width: 0;
   padding: 28px;
   border: 4px solid var(--ink);
-  border-radius: 20px;
-  background: radial-gradient(ellipse at 15% 50%, #ffe29b 0%, transparent 50%), #fff6d6;
+  border-radius: var(--pixel-corner);
+  background: #fff6d6;
   box-shadow:
     0 6px 0 #a98b42,
     inset 0 0 0 3px #fffbee,
@@ -220,7 +220,7 @@
   scroll-margin-top: 12px;
   margin: 0;
   border: 4px solid var(--ink);
-  border-radius: 20px;
+  border-radius: var(--pixel-corner);
   overflow: hidden;
   background: #fff9e4;
   box-shadow: 0 6px 0 var(--shadow);
@@ -232,7 +232,7 @@
   justify-content: center;
   min-height: 390px;
   padding: 28px 20px 32px;
-  background: url('/game/scenes/room.webp') center / cover;
+  background: #dac7a0 url('/game/pixels/room.svg') center bottom / 760px 470px no-repeat;
   image-rendering: pixelated;
 }
 .game-wardrobe-room > .game-tag {
@@ -277,7 +277,7 @@
   min-height: 74px;
   background: #eceede;
   border: 3px solid var(--ink);
-  border-radius: 12px;
+  border-radius: var(--pixel-corner);
   font-size: 0.8rem;
 }
 .game-equipment-category-icon {
@@ -299,7 +299,7 @@
 }
 .game-closet-slot {
   border: 4px solid var(--ink);
-  border-radius: 20px;
+  border-radius: var(--pixel-corner);
   background: #e9ecd9;
   padding: 18px;
   box-shadow: 0 6px 0 var(--shadow);
@@ -339,7 +339,7 @@
   color: var(--ink);
   background: #fff9db;
   border: 3px solid var(--ink);
-  border-radius: 13px;
+  border-radius: var(--pixel-corner);
   overflow-wrap: anywhere;
 }
 .game-item-option strong {
@@ -393,7 +393,7 @@
   padding: 3px;
   background: #fffdf3;
   border: 2px solid #78806b;
-  border-radius: 6px;
+  border-radius: var(--pixel-corner);
   pointer-events: none;
 }
 .game-lock-badge svg {
@@ -455,7 +455,7 @@
   }
   .game-wardrobe-categories button {
     font-size: 0.75rem;
-    border-radius: 9px;
+    border-radius: var(--pixel-corner);
   }
   .game-closet-slot {
     padding: 14px;

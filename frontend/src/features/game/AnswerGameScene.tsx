@@ -9,6 +9,7 @@ import { useSceneGround } from './useSceneGround';
 import { PixelAnswerArt } from './PixelAnswerArt';
 
 const WALK_MS = MOTION_MS.walk;
+const landmarks = { forest: 'forest-rock', village: 'village-sign', beach: 'beach-shell' } as const;
 export function AnswerGameScene({
   appearance,
   journey,
@@ -62,8 +63,7 @@ export function AnswerGameScene({
           : 'idle';
   const position = journey?.journeyPosition ?? 0;
   const region = position < 50 ? 'forest' : position < 100 ? 'village' : 'beach';
-  const landmark = region === 'forest' ? 'forest-rock.svg' : `${region}.png`;
-  const scene = useSceneGround<HTMLElement>(region);
+  const scene = useSceneGround<HTMLElement>();
   const messages = {
     idle: appearance ? 'O와 X 중 어디로 갈까요?' : '여행 장면을 준비하고 있어요',
     walking: `${choice} 쪽으로 걸어가요`,
@@ -95,7 +95,7 @@ export function AnswerGameScene({
             <>
               <img
                 className="game-answer-landmark-art"
-                src={`/game/answers/${landmark}`}
+                src={`/game/answers/${landmarks[region]}.svg`}
                 alt=""
                 aria-hidden="true"
                 draggable={false}

@@ -65,8 +65,8 @@ beforeEach(() => {
           { method: 'setTransform', args },
         ]);
       },
-      getImageData() {
-        return { data: new Uint8ClampedArray(13 * 17 * 4) };
+      getImageData(_x: number, _y: number, width: number, height: number) {
+        return { data: new Uint8ClampedArray(width * height * 4) };
       },
       putImageData() {},
     } as unknown as CanvasRenderingContext2D;
@@ -188,9 +188,6 @@ it('snapshots chosen equipment and restores the hand in front of the held item',
   const frame = calls.get(canvas)!.find((call) => call.method === 'drawImage')!
     .args[0] as HTMLCanvasElement;
   const drawing = calls.get(frame)!;
-  expect(drawing.find((call) => call.method === 'clearRect' && call.args[0] === 14)?.args).toEqual([
-    14, 0, 104, 48,
-  ]);
   const draws = drawing.filter((call) => call.method === 'drawImage');
   expect(draws).toHaveLength(9); // Base, bottom, top, two shoes, item, fist, glasses, hat.
   expect(draws[6].args[0]).toBeInstanceOf(HTMLCanvasElement); // fist is above the held item

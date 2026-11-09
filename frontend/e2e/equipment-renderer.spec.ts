@@ -84,6 +84,75 @@ test('nine characters keep their fists in front of fitted bags and render every 
     if ([1, 2, 3, 7].includes(entry.outfit))
       expect(entry.heldPixels, JSON.stringify(entry)).toBeGreaterThan(35);
   }
+  const heels = await page.evaluate(() => {
+    // The original heel projects behind the fitted boot on these two sprites.
+    return [
+      [1, 51],
+      [7, 53],
+    ].map(([character, x]) => {
+      const alpha = (outfit: number) =>
+        document
+          .querySelector<HTMLCanvasElement>(
+            `canvas[data-character="${character}"][data-outfit="${outfit}"]`,
+          )!
+          .getContext('2d')!
+          .getImageData(x, 168, 1, 1).data[3];
+      return { original: alpha(0), equipped: alpha(2) };
+    });
+  });
+  for (const heel of heels) {
+    expect(heel.original).toBeGreaterThan(120);
+    expect(heel.equipped).toBe(0);
+  }
+  const shoulderSeams = await page.evaluate(() => {
+    // Visible undershirt pixels at the neck-side and outer shoulder of the original sprites.
+    const sites = [
+      [1, 61, 105],
+      [1, 75, 107],
+      [3, 75, 113],
+      [4, 70, 113],
+      [5, 59, 115],
+      [6, 76, 118],
+      [7, 83, 116],
+    ];
+    return sites.flatMap(([character, x, y]) => {
+      const pixel = (outfit: number) =>
+        document
+          .querySelector<HTMLCanvasElement>(
+            `canvas[data-character="${character}"][data-outfit="${outfit}"]`,
+          )!
+          .getContext('2d')!
+          .getImageData(x, y, 1, 1).data;
+      const original = pixel(0);
+      return [1, 2, 3, 4, 5].map((outfit) => {
+        const equipped = pixel(outfit);
+        return {
+          character,
+          x,
+          y,
+          outfit,
+          covered:
+            equipped[3] >= original[3] &&
+            equipped.slice(0, 3).some((v, i) => Math.abs(v - original[i]) > 8),
+        };
+      });
+    });
+  });
+  expect(shoulderSeams.filter((site) => !site.covered)).toEqual([]);
+  const hair = await page.evaluate(() => {
+    // Bora's green hat used to leave a flat ledge of hair above its right brim.
+    const pixel = (outfit: number, x: number, y: number) =>
+      Array.from(
+        document
+          .querySelector<HTMLCanvasElement>(`canvas[data-character="7"][data-outfit="${outfit}"]`)!
+          .getContext('2d')!
+          .getImageData(x, y, 1, 1).data,
+      );
+    return { above: pixel(2, 112, 50), below: pixel(2, 112, 73), originalBelow: pixel(0, 112, 73) };
+  });
+  expect(hair.above[3]).toBe(0);
+  expect(hair.originalBelow[3]).toBeGreaterThan(180);
+  expect(hair.below).toEqual(hair.originalBelow);
   expect(errors).toEqual([]);
   const output = evidenceOutput();
   if (output)

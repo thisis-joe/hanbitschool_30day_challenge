@@ -5,7 +5,6 @@ import type { EquipmentArt } from './artwork';
 const hat = (markup: string): EquipmentArt => ({
   width: 112,
   height: 64,
-  rendering: 'geometricPrecision',
   markup: `<g stroke="#584937" stroke-width="1.2" stroke-linejoin="round">${markup}</g>`,
 });
 
@@ -77,17 +76,16 @@ export const tailoredHats: EquipmentArt[] = [
 const bag = (markup: string): EquipmentArt => ({
   width: 32,
   height: 58,
-  rendering: 'geometricPrecision',
   markup: `<g stroke="#584937" stroke-width=".9" stroke-linejoin="round">${markup}</g>`,
 });
 export const tailoredBags = [
   bag(`
-    <path d="M12 33Q7 22 15 24Q23 22 20 33" fill="none" stroke="#90734e" stroke-width="2"/>
-    <path d="M12 33Q7 37 7 44Q6 51 15 52Q25 52 25 45Q25 37 19 33Z" fill="#c9a771"/>
-    <path d="M13 35Q9 40 10 46Q12 50 18 49Q23 48 21 42L18 35Z" fill="#e6ca95" stroke="none"/>
-    <path d="M11 34l9 1M18 35l2 7" fill="none" stroke="#86714b"/>
-    <path d="M21 40q8 0 3 7l-4-3Z" fill="#7d9567"/>
-    <path d="M12 39l-1 5m2 4h4" fill="none" stroke="#f4dfb4"/>
+    <path d="M12 23h8v1h2v2h1v8h-2v-7h-1v-2h-8v2h-1v7H9v-8h1v-2h2z" fill="#90734e" stroke="none"/>
+    <path d="M10 33h13v1h2v2h2v3h1v5h-1v2h-3v2H10v-1H7v-1H5v-2H4v-5h1v-3h2v-2h3z" fill="#c9a771"/>
+    <path d="M10 36h11v1h2v2h1v3h-2v2H11v-1H9v-4h1z" fill="#e6ca95" stroke="none"/>
+    <path d="M9 34h14v2h-3v2h-8v-1H9z" fill="#947149" stroke="none"/>
+    <path d="M19 39h4v1h-1v2h-2v1h-2v-3h1z" fill="#7d9567" stroke="none"/>
+    <path d="M11 39h2v1h-2zm0 2h1v2h-1zm4 4h5v1h-5z" fill="#f4dfb4" stroke="none"/>
   `),
   bag(`
     <path d="M11 33v-5q5-6 10 0v5" fill="none" stroke="#506b50" stroke-width="2"/>
@@ -119,7 +117,6 @@ const palettes = [
 const garment = (width: number, height: number, markup: string): EquipmentArt => ({
   width,
   height,
-  rendering: 'geometricPrecision',
   markup: `<g stroke="#584937" stroke-width=".9" stroke-linejoin="round">${markup}</g>`,
 });
 const tops = palettes.map(([cloth, light, shade], i) =>
@@ -127,22 +124,24 @@ const tops = palettes.map(([cloth, light, shade], i) =>
     44,
     44,
     `
-  <path d="M10 6L17 2Q18 9 25 13Q30 8 30 2L36 5L39 14L35 20L36 40Q23 44 8 40L10 20L6 14Z" fill="${shade}"/>
-  <path d="M11 7l5-3q1 8 9 12v24q-8 2-15-1l1-20-3-5Z" fill="${cloth}" stroke="none"/>
-  <path d="M32 4l3 2 2 8-4 6 1 20-7 1V15q5-4 5-11Z" fill="${cloth}" stroke="none"/>
-  <path d="M12 9l3-3q2 8 8 10v2q-7-3-9-7l-3 8" fill="${light}" stroke="none"/>
-  <path d="M26 15v25M11 37q11 3 23 0" fill="none" stroke="${shade}" stroke-width=".7"/>
+  <path d="M5 3L11 1H17Q20 5 25 6Q29 5 31 1H35L39 4L41 13Q41 17 39 21L38 23L39 40Q23 44 7 40L8 22Q5 18 4 14Z" fill="${shade}"/>
+  <path d="M7 4L16 2Q20 7 25 9V40Q17 42 9 39L10 21Q7 18 6 14Z" fill="${cloth}" stroke="none"/>
+  <path d="M32 2H35L38 5L40 13Q39 18 36 22L37 39L27 41V9Q31 7 32 2Z" fill="${cloth}" stroke="none"/>
+  <path d="M9 5L16 3Q19 7 24 9L23 11Q18 9 15 5L9 7Z" fill="${light}" stroke="none"/>
+  <path d="M26 9v31M11 37q11 3 23 0" fill="none" stroke="${shade}" stroke-width=".7"/>
   <path d="M11 23l10 1v9l-10-1Z M30 24l4-1v9l-4 1Z" fill="${shade}" stroke-width=".6"/>
   <path d="M12 24l8 1v3l-8-1Z M30 25l4-1v3l-4 1Z" fill="${light}" stroke="none"/>
   ${i === 2 ? `<path d="M11 19l12 1m-11 1 11 1m6-3 6-1m-5 18 5-1" stroke="${light}" stroke-width=".7"/>` : ''}
-  ${i === 3 ? `<path d="M14 4l7 10-6 4-5-9m19 6 4 3 3-10" fill="${light}" stroke-width=".6"/>` : ''}
+  ${i === 3 ? `<path d="M15 3l7 6-6 4-5-7m18 3 5 4 3-8" fill="${light}" stroke-width=".6"/>` : ''}
   ${i === 4 ? '<path d="M16 20l1 3 3 1-3 1-1 3-1-3-3-1 3-1Z" fill="#f5e7b6" stroke="none"/>' : ''}
   <path d="M24 20h1m-1 7h1m-1 8h1" stroke="#fff0b4" stroke-width="1.4"/>
   <path d="M12 34l7 1M33 8v5" stroke="${light}" stroke-width=".6"/>
 `,
   ),
 );
-const bottoms = palettes.map(([cloth, light, shade], i) =>
+const bottomPalettes = [...palettes];
+bottomPalettes[1] = ['#a48861', '#c9b08b', '#785d44'];
+const bottoms = bottomPalettes.map(([cloth, light, shade], i) =>
   garment(
     40,
     28,

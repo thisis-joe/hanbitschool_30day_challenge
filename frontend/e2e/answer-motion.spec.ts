@@ -26,7 +26,7 @@ test('all nine characters keep their limbs connected throughout walking, jumping
       sad: [180, 360],
     };
     for (const id of CHARACTER_IDS)
-      for (const set of [0, 1, 5]) {
+      for (const set of [0, 1, 2, 3, 4, 5]) {
         const equipment = Object.fromEntries(
           SLOTS.map((slot: string) => [slot, set ? `${slot}-${set}` : null]),
         );
@@ -130,6 +130,105 @@ test('resting anatomy preserves the original artwork for every character and out
     return failures;
   });
   expect(differences).toEqual([]);
+});
+
+test('each handheld bag hangs below the raised hand when the character cheers', async ({
+  page,
+}) => {
+  await page.goto('/e2e/fixtures/answer-motion.html');
+  await page.locator('html[data-ready="true"]').waitFor();
+  const bags = await page.evaluate(async () => {
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { buildAvatarRig, paintAvatarPose } = await import('/src/features/game/motion/rig.ts');
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { POSES } = await import('/src/features/game/motion/poses.ts');
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { emptyEquipment } = await import('/src/features/game/types.ts');
+    const canvas = document.createElement('canvas');
+    canvas.width = 176;
+    canvas.height = 216;
+    const ctx = canvas.getContext('2d')!;
+    const render = async (hand: string | null) => {
+      const rig = await buildAvatarRig(
+        'bora',
+        { ...emptyEquipment(), hand },
+        new AbortController().signal,
+      );
+      paintAvatarPose(canvas, rig, POSES.cheer);
+      return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    };
+    const bare = await render(null);
+    // Colors taken from each bag's body, excluding the handle and the character's own pixels.
+    const colors = [
+      [0xc9a771, 0xe6ca95],
+      [0x729271, 0x91ab80, 0xb1c39a, 0x809d73],
+      [0xa87652, 0xbb8b62, 0xd1a577],
+    ];
+    const results = [];
+    for (const [index, palette] of colors.entries()) {
+      const pixels = await render(`hand-${index + 1}`);
+      const bodyRows: number[] = [];
+      for (let i = 0; i < pixels.length; i += 4) {
+        const rgb = (pixels[i] << 16) | (pixels[i + 1] << 8) | pixels[i + 2];
+        const bareRgb = (bare[i] << 16) | (bare[i + 1] << 8) | bare[i + 2];
+        if (
+          palette.includes(rgb) &&
+          pixels[i + 3] === 255 &&
+          (rgb !== bareRgb || bare[i + 3] < 255)
+        )
+          bodyRows.push(Math.floor(i / 4 / canvas.width));
+      }
+      // The center of Bora's raised fist is at y=111 in the rendered cheer frame.
+      results.push({
+        item: index + 1,
+        bodyPixels: bodyRows.length,
+        lowestPaint: Math.max(...bodyRows),
+        aboveFist: bodyRows.filter((y) => y <= 111).length,
+      });
+    }
+    return results;
+  });
+  for (const bag of bags) {
+    expect(bag.bodyPixels, JSON.stringify(bag)).toBeGreaterThan(20);
+    expect(bag.lowestPaint, JSON.stringify(bag)).toBeGreaterThan(125);
+    expect(bag.aboveFist, JSON.stringify(bag)).toBe(0);
+  }
+});
+
+test('Bora’s raised arm leaves no skin-colored copy on her hair', async ({ page }) => {
+  await page.goto('/e2e/fixtures/answer-motion.html');
+  const observations = await page.evaluate(async () => {
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { buildAvatarRig, paintAvatarPose } = await import('/src/features/game/motion/rig.ts');
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { POSES } = await import('/src/features/game/motion/poses.ts');
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { emptyEquipment } = await import('/src/features/game/types.ts');
+    const rig = await buildAvatarRig(
+      'bora',
+      { ...emptyEquipment(), top: 'top-2' },
+      new AbortController().signal,
+    );
+    const canvas = document.createElement('canvas');
+    canvas.width = 176;
+    canvas.height = 216;
+    const ctx = canvas.getContext('2d')!;
+    const countSkin = () => {
+      // This strip is part of the original lowered arm and sits clear of the torso.
+      const pixels = ctx.getImageData(74, 163, 3, 8).data;
+      let count = 0;
+      for (let i = 0; i < pixels.length; i += 4)
+        if (pixels[i + 3] > 180 && pixels[i] > pixels[i + 1] * 1.05 && pixels[i + 1] > 95) count++;
+      return count;
+    };
+    paintAvatarPose(canvas, rig, POSES.idle);
+    const idleArm = countSkin();
+    paintAvatarPose(canvas, rig, POSES.cheer);
+    return { idleArm, ghostArm: countSkin(), nearbyHair: ctx.getImageData(70, 165, 1, 1).data[3] };
+  });
+  expect(observations.idleArm).toBeGreaterThan(10);
+  expect(observations.ghostArm).toBe(0);
+  expect(observations.nearbyHair).toBeGreaterThan(180);
 });
 
 test('arrives faster, completes the reaction, and respects reduced motion', async ({ page }) => {

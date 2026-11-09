@@ -1,5 +1,10 @@
-import { renderAvatar, avatarAnchor, avatarHatPlacement } from '../avatarRenderer';
-import { equipmentArt, equipmentSvg, parseItemId } from '../artwork';
+import {
+  renderAvatar,
+  avatarAnchor,
+  avatarHatPlacement,
+  tuckHairUnderHat,
+} from '../avatarRenderer';
+import { equipmentArt, equipmentSvg, handEquipmentFit, parseItemId } from '../artwork';
 import type { CharacterId, Equipment } from '../types';
 import type { AvatarPose } from './poses';
 import { ANATOMY, knee, rotated } from './anatomy';
@@ -117,6 +122,7 @@ export async function buildAvatarRig(
   const source = body.ctx.getImageData(0, 0, 128, 176),
     original = bare.ctx.getImageData(0, 0, 128, 176);
   const remaining = body.ctx.getImageData(0, 0, 128, 176);
+  const armPixels = new Uint8Array(128 * 176);
   const arm = (joints: Chain, bounds: Box, farSide = false): Limb => {
     const layer = surface(),
       pixels = layer.ctx.createImageData(128, 176);
@@ -134,6 +140,7 @@ export async function buildAvatarRig(
         if (y >= a.pants[1] && (farSide ? x < a.pants[2] : x > a.pants[0] + 5)) belongs = false;
         if (!belongs) continue;
         copyPixel(pixels, original, x, y);
+        armPixels[p / 4] = 1;
         // Keep any sleeve already painted above the original skin.
         if (
           source.data[p] === original.data[p] &&
@@ -187,8 +194,8 @@ export async function buildAvatarRig(
         copyPixel(headPixels, original, x, y);
         remaining.data[p + 3] = 0;
       }
-      // Braids, ponytail and long side hair remain behind the shoulders and legs.
-      else if (isBackHair(character, x, y) && original.data[p + 3]) {
+      // Long hair stays behind the limbs. Its bounds can overlap the original arm silhouette.
+      else if (isBackHair(character, x, y) && original.data[p + 3] && !armPixels[p / 4]) {
         copyPixel(hairPixels, original, x, y);
         remaining.data[p + 3] = 0;
       }
@@ -226,11 +233,8 @@ export async function buildAvatarRig(
       if (y >= a.pants[3] || x < a.shirt[0] - 3 || x > a.shirt[2] + 3)
         remaining.data[(y * 128 + x) * 4 + 3] = 0;
   body.ctx.putImageData(remaining, 0, 0);
-  if (hat) {
-    const fit = avatarHatPlacement(character, hat.value);
-    if (!fit.crown)
-      head.ctx.clearRect(fit.scalp[0], 0, fit.scalp[1] - fit.scalp[0], fit.scalpBottom);
-  }
+  const fittedHat = hat && { ...hat, fit: avatarHatPlacement(character, hat.value) };
+  if (fittedHat) tuckHairUnderHat(head.ctx, fittedHat.image, fittedHat.fit);
   const skinIndex = ((a.eyes[0][1] + 9) * 128 + a.eyes[0][0] + 2) * 4;
   const skin = `rgb(${original.data[skinIndex]},${original.data[skinIndex + 1]},${original.data[skinIndex + 2]})`;
   return {
@@ -252,7 +256,7 @@ export async function buildAvatarRig(
     headBottom,
     skin,
     face,
-    hat: hat && { ...hat, fit: avatarHatPlacement(character, hat.value) },
+    hat: fittedHat,
     held,
   };
 }
@@ -525,7 +529,9 @@ export function paintAvatarPose(canvas: HTMLCanvasElement, rig: AvatarRig, pose:
   ctx.save();
   rotate(ctx, rig.neck, pose.head);
   const hairLine = Math.min(...rig.anchor.eyes.map((p) => p[1])) - 14;
-  if (!pose.hair) ctx.drawImage(rig.heads[pose.expression], 0, 0);
+  // The covered roots follow the hat and head. Loose strands still swing in the hair layer.
+  if (!pose.hair || (rig.hat && !rig.hat.fit.crown))
+    ctx.drawImage(rig.heads[pose.expression], 0, 0);
   else
     mesh(ctx, rig.heads[pose.expression], [0, 0, 128, rig.headBottom], ([x, y]) => {
       const weight = Math.max(0, Math.min(1, (hairLine - y) / 28));
@@ -562,10 +568,11 @@ export function paintAvatarPose(canvas: HTMLCanvasElement, rig: AvatarRig, pose:
   if (rig.held) {
     ctx.save();
     ctx.translate(...near[2]);
-    ctx.rotate(((pose.nearArm + pose.nearElbow) * Math.PI) / 180);
-    const scale = rig.held.value <= 3 ? 0.82 : 0.9,
-      handleY = rig.held.value <= 3 ? 27 : 36;
-    ctx.drawImage(rig.held.image, -16 * scale, -handleY * scale, 32 * scale, 58 * scale);
+    // A bag pivots freely at its handle. A wand is braced by the fingers and turns with the wrist.
+    const angle = rig.held.value <= 3 ? -pose.bow : pose.nearArm + pose.nearElbow;
+    ctx.rotate((angle * Math.PI) / 180);
+    const { x, y, width, height } = handEquipmentFit(rig.held.value);
+    ctx.drawImage(rig.held.image, x, y, width, height);
     ctx.restore();
   }
   limb(ctx, rig.nearArm, near, rig.skin);

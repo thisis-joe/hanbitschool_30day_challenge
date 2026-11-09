@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="288" height="152" viewBox="0 0 288 152" shape-rendering="crispEdges">
+  <defs>
+    <g id="mist">
+      <path fill="#e2e5d1" d="M0 27h12v-6h14v-7h17v-6h18V4h27v4h17v6h18v6h14v7h18v8h-9v6h-20v3H19v-4H6v-5H0z"/>
+      <path fill="#f7f3dc" d="M13 26h15v-6h16v-7h19V9h26v4h17v6h18v7h14v6h-24v5H30v-4H13z"/>
+      <path fill="#fdf7e1" d="M36 23h17v-5h17v-4h18v4h14v5h19v3H36z"/>
+    </g>
+  </defs>
+  <use href="#mist" x="-31" y="7"/>
+  <use href="#mist" x="114" y="43"/>
+  <use href="#mist" x="46" y="104"/>
+  <use href="#mist" x="243" y="7"/>
+</svg>

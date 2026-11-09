@@ -105,8 +105,13 @@ function FeedbackTools({ questionId, result, accountId }: Props & { accountId: s
             disabled={!ready || busy}
             onClick={() => void write('STAR')}
           >
-            <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-              <path d="m20 3.5 5.1 10.4 11.5 1.7-8.3 8.1 2 11.5L20 29.8 9.7 35.2l2-11.5-8.3-8.1 11.5-1.7Z" />
+            <svg
+              viewBox="0 0 40 40"
+              shapeRendering="crispEdges"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M18 4h4v4h2v4h2v2h10v4h-4v2h-2v2h-2v6h2v6h-4v-2h-4v-2h-4v2h-4v2h-4v-6h2v-6h-2v-2H8v-2H4v-4h10v-2h2V8h2Z" />
             </svg>
           </button>
           <span

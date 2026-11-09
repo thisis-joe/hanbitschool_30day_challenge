@@ -52,6 +52,8 @@ it('colors the complete five-session terrain only from its first server-confirme
   const { update } = mount(view);
   expect(terrain(1)).toHaveAttribute('data-revealed', 'true');
   expect(terrain(6)).toHaveAttribute('data-revealed', 'false');
+  expect(terrain(6)).toHaveStyle({ '--fade-bottom': '44px' });
+  expect(terrain(11)).toHaveStyle({ '--fade-bottom': '0px' });
   expect(screen.getByLabelText('7회차 아직 열리지 않음')).toHaveClass('game-map-locked');
   update({
     ...view,
@@ -61,6 +63,7 @@ it('colors the complete five-session terrain only from its first server-confirme
   });
   expect(terrain(6)).toHaveAttribute('data-revealed', 'true');
   expect(terrain(11)).toHaveAttribute('data-revealed', 'false');
+  expect(terrain(11)).toHaveStyle({ '--fade-bottom': '44px' });
   expect(screen.getByLabelText('7회차 아직 열리지 않음')).toHaveClass('game-map-locked');
 });
 
@@ -68,15 +71,15 @@ it('colors the complete five-session terrain only from its first server-confirme
 it('places all six terrain slices on the uneven route boundaries and labels their ranges', () => {
   mount();
   const expected = [
-    [1, '77.6%', '22.4%', '1~5회차'],
-    [6, '54.1%', '23.5%', '6~10회차'],
-    [11, '35.4%', '18.7%', '11~15회차'],
-    [16, '20%', '15.4%', '16~20회차'],
-    [21, '10.46%', '9.54%', '21~25회차'],
-    [26, '0%', '10.46%', '26~30회차'],
+    [1, '77.6%', '0%', '1~5회차'],
+    [6, '54.1%', '22.4%', '6~10회차'],
+    [11, '35.4%', '45.9%', '11~15회차'],
+    [16, '20%', '64.6%', '16~20회차'],
+    [21, '10.46%', '80%', '21~25회차'],
+    [26, '0%', '89.54%', '26~30회차'],
   ] as const;
-  for (const [day, top, height, range] of expected) {
-    expect(terrain(day)).toHaveStyle({ '--region-top': top, '--region-height': height });
+  for (const [day, top, bottom, range] of expected) {
+    expect(terrain(day)).toHaveStyle({ '--region-top': top, '--region-bottom': bottom });
     expect(screen.getByText(range)).toBeVisible();
   }
 });

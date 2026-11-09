@@ -79,7 +79,7 @@ export function JourneyMap({
         aria-label="아래 숲에서 위 등대로 올라가는 탐험 지도"
       >
         <div className="game-map-world" ref={world}>
-          {MAP_REGIONS.map((region) => (
+          {MAP_REGIONS.map((region, index) => (
             <div
               key={region.firstDay}
               className={`game-map-terrain${revealing.includes(String(region.firstDay)) ? ' game-map-region-revealing' : ''}`}
@@ -89,23 +89,21 @@ export function JourneyMap({
               style={
                 {
                   '--region-top': `${region.top}%`,
-                  '--region-height': `${region.height}%`,
-                  '--region-bottom': `${100 - region.top - region.height}%`,
-                  '--region-accent': region.accent,
+                  '--region-bottom': `${Math.round((100 - region.top - region.height) * 100) / 100}%`,
+                  '--fade-top': revealed[MAP_REGIONS[index + 1]?.firstDay] ? '44px' : '0px',
+                  '--fade-bottom': revealed[MAP_REGIONS[index - 1]?.firstDay] ? '44px' : '0px',
                 } as CSSProperties
               }
             >
               <div className="game-map-art" />
-              <div className="game-map-clouds">
-                <i />
-                <i />
-              </div>
+              <div className="game-map-clouds" />
             </div>
           ))}
           <svg
             className="game-map-route"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
+            shapeRendering="crispEdges"
             aria-hidden="true"
           >
             <polyline points={MAP_TRAIL.map(([x, y]) => `${x},${y}`).join(' ')} />
@@ -161,7 +159,7 @@ export function JourneyMap({
           </div>
         </div>
       </div>
-      <p className="game-map-caption">지도를 위로 움직여 여행할 곳을 둘러보세요.</p>
+      <p className="game-map-caption">지도를 위로 스크롤해 다음 여행지를 살펴보세요.</p>
       {journey.journeyPosition === 150 && !journey.courseCompleted ? (
         <p>등대에 도착했어요. 아직 통과하지 못한 회차에 다시 도전해요.</p>
       ) : null}

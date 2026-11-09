@@ -14,7 +14,7 @@
   border: 0;
   overflow: hidden;
   color: #fff7d6;
-  background: radial-gradient(ellipse at 50% 44%, #203543e8, #070e1af5 73%);
+  background: #172633;
   isolation: isolate;
   animation: acquisition-scene var(--cinema-duration) linear both;
 }
@@ -32,9 +32,8 @@
 .acquisition-atmosphere {
   position: absolute;
   inset: -20%;
-  background:
-    radial-gradient(ellipse at 36% 40%, #60e8c41c, transparent 45%),
-    radial-gradient(ellipse at 65% 60%, #e9ad4929, transparent 45%);
+  background: url('/game/pixels/clouds.svg') left top / 288px 152px repeat;
+  opacity: 0.08;
   pointer-events: none;
 }
 .acquisition-stage {
@@ -52,30 +51,23 @@
 .acquisition-orbit,
 .acquisition-shockwave {
   position: absolute;
-  border-radius: 50%;
+  border-radius: 0;
 }
 .acquisition-aura {
   inset: -45%;
-  background: radial-gradient(circle, #ffffd6c9 0%, #ffe99d5c 16%, #ffc65329 32%, transparent 66%);
+  background: transparent;
   animation: acquisition-aura 2900ms var(--burst-at) ease-out both;
 }
 .acquisition-rays {
   inset: -65%;
-  background: repeating-conic-gradient(
-    from 5deg,
-    #fff4bc80 0deg 2deg,
-    #ffe07b28 5deg 9deg,
-    transparent 13deg 25deg
-  );
-  mask-image: radial-gradient(circle, transparent 6%, #000 16%, #0009 42%, transparent 69%);
+  background: repeating-linear-gradient(90deg, transparent 0 28px, #ffe07b28 28px 30px);
+  clip-path: polygon(8% 16%, 92% 16%, 92% 84%, 8% 84%);
   animation: acquisition-rays 3200ms var(--burst-at) cubic-bezier(0.12, 0.7, 0.25, 1) both;
 }
 .acquisition-orbit {
   inset: 17%;
   border: 1px solid #ffe7a884;
-  box-shadow:
-    0 0 24px #ffeeb526,
-    inset 0 0 24px #ffeeb526;
+  box-shadow: 0 0 0 2px #ffeeb526;
   animation: acquisition-orbit 3300ms var(--burst-at) ease-out both;
 }
 .acquisition-orbit::before,
@@ -101,15 +93,13 @@
 }
 .acquisition-flash {
   inset: 18%;
-  background: radial-gradient(circle, #fffef3, #fff4bca3 30%, transparent 70%);
+  background: #fff4bc35;
   animation: acquisition-flash 850ms var(--burst-at) ease-out both;
 }
 .acquisition-shockwave {
   inset: 33%;
   border: 4px solid #fff5c6;
-  box-shadow:
-    0 0 30px #ffc855,
-    inset 0 0 20px #ffe6a1;
+  box-shadow: 0 0 0 3px #ffc85538;
   animation: acquisition-shockwave 1600ms var(--burst-at) cubic-bezier(0.12, 0.6, 0.23, 1) both;
 }
 .acquisition-shockwave-late {
@@ -126,18 +116,16 @@
   width: var(--spark-size);
   height: var(--spark-size);
   background: #fff3aa;
-  box-shadow:
-    0 0 12px #ffcc65,
-    0 0 3px #fff;
+  box-shadow: 1px 2px 0 #b78544;
   animation: acquisition-flight 2700ms calc(var(--burst-at) + var(--flight-delay))
-    cubic-bezier(0.08, 0.68, 0.16, 1) both;
+    steps(24, end) both;
 }
 .acquisition-spark:nth-child(3n) {
   background: #a7ffde;
-  border-radius: 50%;
+  border-radius: 0;
 }
 .acquisition-spark:nth-child(4n) {
-  clip-path: polygon(50% 0, 62% 35%, 100% 50%, 62% 65%, 50% 100%, 38% 65%, 0 50%, 38% 35%);
+  clip-path: polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%);
   width: 24px;
   height: 24px;
 }
@@ -153,7 +141,7 @@
   left: 21%;
   bottom: 0;
   perspective: 650px;
-  filter: drop-shadow(0 10px 18px #060b1c80);
+  filter: drop-shadow(0 5px 0 #060b1c80);
   animation: acquisition-chest-charge 880ms ease-in-out both;
 }
 .acquisition-chest-base,
@@ -174,8 +162,8 @@
   height: 170%;
   bottom: 47%;
   left: -2.5%;
-  background: linear-gradient(to top, #fff5b6d9, #ffdd8a2e 65%, transparent);
-  clip-path: polygon(0 0, 100% 0, 76% 100%, 24% 100%);
+  background: linear-gradient(to top, #fff5b6a0 0 38%, #ffdd8a30 38% 66%, transparent 66%);
+  clip-path: polygon(0 0, 100% 0, 100% 40%, 88% 40%, 88% 72%, 76% 72%, 76% 100%, 24% 100%, 24% 72%, 12% 72%, 12% 40%, 0 40%);
   transform-origin: center bottom;
   animation: acquisition-column 2800ms 760ms ease-out both;
 }
@@ -196,8 +184,7 @@
 .acquisition-prize .game-equipment-icon {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 0 2px #fff8d3) drop-shadow(0 0 24px #fff2a5)
-    drop-shadow(0 16px 20px #030c24a8);
+  filter: drop-shadow(2px 4px 0 #030c247d);
 }
 .acquisition-prize-glint {
   position: absolute;
@@ -221,13 +208,12 @@
   display: grid;
   place-items: center;
   border: 5px solid #fff0b4;
-  border-radius: 28%;
-  background: linear-gradient(145deg, #fffbd0, #ffdf76 35%, #d38b30 85%);
+  border-radius: 0;
+  background: #dfae5c;
   box-shadow:
     inset 0 0 0 8px #c48632,
     inset 0 0 0 12px #ffe6a0,
-    0 12px 0 #8d552a,
-    0 0 70px #ffe48386;
+    0 12px 0 #8d552a;
   animation: acquisition-medal 1100ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .acquisition-xp-medal span {
@@ -327,7 +313,7 @@
   min-height: 44px;
   padding: 10px 16px;
   border: 1px solid #b8cec766;
-  border-radius: 999px;
+  border-radius: var(--pixel-corner);
   background: #0c1d29c9;
   color: #eff8ef;
   box-shadow: none;

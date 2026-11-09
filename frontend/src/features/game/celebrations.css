@@ -37,15 +37,15 @@
 .game-character-xp-aura {
   position: absolute;
   inset: 4% 0;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, #fff4a66b, #ffe8753d 35%, #81edd329 56%, transparent 72%);
+  border-radius: 0;
+  background: #fff4a62b;
   animation: character-xp-aura 2000ms ease-out both;
 }
 .game-character-xp-orbit {
   position: absolute;
   inset: 18% 2%;
   border: 2px solid #ffe9a3;
-  border-radius: 50%;
+  border-radius: 0;
   box-shadow:
     0 0 14px #ffe27a,
     inset 0 0 12px #fff6c180;
@@ -115,16 +115,15 @@
   height: 230px;
   left: -115px;
   top: -115px;
-  border-radius: 50%;
-  background: repeating-conic-gradient(from 12deg, #f2bd423d 0deg 12deg, transparent 12deg 30deg);
-  mask-image: radial-gradient(circle, transparent 8%, #000 22%, transparent 70%);
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 18px, #f2bd423d 18px 20px);
   animation: game-prize-rays 2200ms ease-out both;
 }
 .game-celebration-ring {
   position: absolute;
   inset: -36px;
   border: 2px solid #dfb247;
-  border-radius: 50%;
+  border-radius: 0;
   box-shadow:
     0 0 16px #f9d56c70,
     inset 0 0 10px #fff2aa80;
@@ -141,7 +140,7 @@
   left: -5px;
   top: -5px;
   background: #cf9a32;
-  clip-path: polygon(50% 0, 62% 35%, 100% 50%, 62% 65%, 50% 100%, 38% 65%, 0 50%, 38% 35%);
+  clip-path: polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%);
   animation: game-prize-particle 1800ms var(--spark-delay) both cubic-bezier(0.15, 0.7, 0.3, 1);
 }
 .game-celebration-particle:nth-child(3n) {
@@ -169,13 +168,13 @@
   animation-duration: 900ms;
   animation-delay: var(--spark-delay-xp);
 }
-.game-answer-scene.game-scene-forest .game-character-xp-aura,
-.game-answer-scene.game-scene-forest .game-character-xp-orbit,
-.game-answer-scene.game-scene-forest .game-character-xp .game-celebration-halo,
-.game-answer-scene.game-scene-forest .game-character-xp .game-celebration-ring {
+.game-answer-scene .game-character-xp-aura,
+.game-answer-scene .game-character-xp-orbit,
+.game-answer-scene .game-character-xp .game-celebration-halo,
+.game-answer-scene .game-character-xp .game-celebration-ring {
   display: none;
 }
-.game-answer-scene.game-scene-forest .game-character-xp .game-celebration-particle {
+.game-answer-scene .game-character-xp .game-celebration-particle {
   width: 9px;
   height: 9px;
   clip-path: polygon(33% 0, 67% 0, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0 67%, 0 33%, 33% 33%);
@@ -195,7 +194,7 @@
   display: inline-block;
   padding: 6px 12px;
   border: 1px solid #ad8732;
-  border-radius: 6px;
+  border-radius: var(--pixel-corner);
   color: #60471c;
   background: #ffed9f;
   font-weight: 900;

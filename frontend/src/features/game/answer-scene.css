@@ -1,32 +1,16 @@
 .game-learning-scene.game-answer-scene {
   --traveler-width: 154px;
-  --scene-ground: 26.5%;
-  --landmark-width: clamp(128px, 16vw, 176px);
+  --scene-ground: 138px;
+  --landmark-width: 116px;
   --answer-o-x: max(calc(var(--landmark-width) / 2 + 4px), 20%);
   height: 360px;
   margin-block: 18px 8px;
-  background-position: center bottom;
-}
-.game-learning-scene.game-answer-scene.game-scene-forest {
-  --landmark-width: 128px;
-  --scene-image-rendering: pixelated;
-  background-image: url('/game/scenes/forest-clearing.svg');
-}
-.game-scene-forest.game-answer-scene .game-answer-destination {
-  height: 116px;
-}
-.game-scene-forest.game-answer-scene .game-answer-destination b {
-  width: 48px;
-  height: 48px;
-}
-.game-scene-forest.game-answer-scene .game-answer-destination span {
-  font-size: 1rem;
 }
 .game-answer-destination {
   position: absolute;
   bottom: calc(var(--scene-ground) - 6px);
   width: var(--landmark-width);
-  height: calc(var(--landmark-width) * 0.92);
+  height: 112px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,8 +42,8 @@
 .game-answer-destination b {
   display: block;
   top: 25%;
-  width: clamp(48px, 4.4vw, 56px);
-  height: clamp(48px, 4.4vw, 56px);
+  width: 48px;
+  height: 48px;
   line-height: 1;
 }
 .game-answer-destination b svg {
@@ -70,7 +54,7 @@
 }
 .game-answer-destination span {
   top: 68%;
-  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-size: 1rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -144,7 +128,7 @@
   padding: 2px 6px;
   background: #fffdeff0;
   color: #263d35;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   z-index: 5;
 }
 .game-answer-traveler .game-avatar-motion-fallback {
