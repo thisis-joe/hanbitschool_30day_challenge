@@ -170,17 +170,24 @@ for (const viewport of [
     const icons = await tabs.evaluateAll((links) =>
       links.map((link) => {
         const icon = link.querySelector('svg')!;
+        const label = link.querySelector('span')!.getBoundingClientRect();
+        const bounds = link.getBoundingClientRect();
         return {
           colors: [
             ...new Set([...icon.querySelectorAll('path')].map((path) => path.getAttribute('fill'))),
           ],
           size: icon.getBoundingClientRect().width,
-          height: link.getBoundingClientRect().height,
+          height: bounds.height,
+          fontSize: parseFloat(getComputedStyle(link).fontSize),
+          labelFits: label.left >= bounds.left && label.right <= bounds.right,
         };
       }),
     );
     expect(
-      icons.every(({ colors, size, height }) => colors.length >= 3 && size === 16 && height >= 48),
+      icons.every(
+        ({ colors, size, height, fontSize, labelFits }) =>
+          colors.length >= 3 && size >= 24 && height >= 48 && fontSize >= 15 && labelFits,
+      ),
     ).toBe(true);
     expect(new Set(icons.map(({ colors }) => colors.join())).size).toBe(4);
     await sameRow(tabs.first(), tabs.last());
@@ -319,6 +326,13 @@ for (const width of [320, 390, 768, 1280]) {
       if (name === 'home' && width === 390)
         await expect(page.getByRole('link', { name: '이어풀기', exact: true })).toBeVisible();
       if (name === 'closet') {
+        if (width === 1280) {
+          const dressing = page
+            .getByRole('navigation', { name: '학생 여행 메뉴' })
+            .getByRole('link', { name: '꾸미기' });
+          await expect(dressing).toHaveCSS('font-size', '24px');
+          await expect(dressing.locator('svg')).toHaveCSS('width', '32px');
+        }
         const preview = page.getByRole('region', { name: '외형 미리보기' });
         await expect(preview.getByRole('link', { name: '캐릭터 선택' })).toHaveAttribute(
           'href',
