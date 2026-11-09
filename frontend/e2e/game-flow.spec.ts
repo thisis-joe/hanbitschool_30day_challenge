@@ -159,7 +159,7 @@ test('completionWaitsForRelatedStatusThenHomeReplayNeedsNoRetry', async ({ page 
     await page.unroute('**/api/student/learning/status');
   }
   await page.goto('/student/learning');
-  await page.getByText('지나온 배움 다시 풀기', { exact: true }).click();
+  await page.getByText('다시풀기', { exact: true }).click();
   await expect(
     page.getByRole('button', { name: '선택 회차 다시 풀기', exact: true }),
   ).toBeEnabled();

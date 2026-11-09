@@ -568,10 +568,11 @@
   padding-block: 10px;
 }
 .learning-replay-picker > div {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, max-content);
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  flex-wrap: wrap;
   padding-block: 12px;
 }
 .learning-replay-picker label {
@@ -579,6 +580,9 @@
 }
 .learning-replay-picker select {
   width: auto;
-  flex: 1;
-  max-width: 220px;
+  max-width: 100%;
+}
+.learning-replay-picker button {
+  grid-column: 1 / -1;
+  justify-self: center;
 }

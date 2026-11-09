@@ -308,7 +308,7 @@ export async function start(
   day: number | null,
 ) {
   if (new URL(page.url()).pathname === '/student/learning' && mode === 'REPLAY') {
-    const replaySummary = page.getByText('지나온 배움 다시 풀기', { exact: true });
+    const replaySummary = page.getByText('다시풀기', { exact: true });
     await expect(control.or(replaySummary).first()).toBeVisible();
     const picker = page.getByLabel('다시 풀 회차', { exact: true });
     if (await picker.locator(`option[value="${day}"]`).count()) {

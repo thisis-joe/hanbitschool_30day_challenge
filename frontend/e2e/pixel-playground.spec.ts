@@ -214,7 +214,7 @@ for (const density of [1, 2]) {
       await expect(scene.locator('canvas')).toHaveAttribute('width', '88');
       expect(
         await scene.evaluate((el) => getComputedStyle(el, '::after').backgroundImage),
-      ).toContain('/game/pixels/forest-dawn.svg');
+      ).toBe('none');
       expect(await page.evaluate(() => devicePixelRatio)).toBe(density);
       await expect(scene).toHaveCSS('image-rendering', 'pixelated');
       const rock = scene.locator('.game-answer-o .game-answer-landmark-art');

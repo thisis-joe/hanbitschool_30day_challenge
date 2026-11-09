@@ -229,7 +229,7 @@ export function LearningDashboardPage() {
           ) : null}
           {view && view.passedDayCount > 0 ? (
             <details className="learning-replay-picker">
-              <summary>지나온 배움 다시 풀기</summary>
+              <summary>다시풀기</summary>
               <div>
                 <label htmlFor="replay-day">다시 풀 회차</label>
                 <select
