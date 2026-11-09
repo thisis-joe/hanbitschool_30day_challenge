@@ -3,14 +3,14 @@
 @font-face {
   font-family: 'Galmuri11';
   src: url('/fonts/galmuri/Galmuri11.woff2') format('woff2');
-  font-weight: 400 500;
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Galmuri11';
   src: url('/fonts/galmuri/Galmuri11-Bold.woff2') format('woff2');
-  font-weight: 600 900;
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -25,25 +25,27 @@
   margin: 0 auto;
   padding: 8px 32px;
   gap: 8px;
-  background: #fffdf3f5;
+  background: var(--panel);
   border-bottom: 2px solid var(--line);
 }
 .game-student-nav a {
   justify-content: center;
   min-height: 48px;
-  border: 3px solid transparent;
+  border: 2px solid var(--line);
   border-radius: var(--pixel-corner);
   gap: 8px;
-  color: #263d35;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 2px 0 var(--edge);
+  font-weight: 700;
 }
 .game-student-nav a.active {
-  background: #f4d66e;
+  background: var(--rose);
   border-color: var(--ink);
-  box-shadow: 0 4px 0 var(--ink);
-  font-weight: 800;
+  box-shadow: 0 2px 0 var(--shadow);
 }
-.game-student-nav a:hover {
-  background: #f5edcc;
+.game-student-nav a:hover:not(.active) {
+  background: var(--rose-soft);
 }
 .game-student-nav svg {
   width: 24px;
@@ -84,19 +86,28 @@
   }
 }
 :root {
-  --cream: #fffdf3;
-  --paper: #fffef9;
-  --butter: #f4d66e;
-  --ink: #263d35;
-  --line: #435748;
-  --shadow: #263d35;
+  --cream: #efe2c6;
+  --paper: #fff8e9;
+  --panel: #f5e9cf;
+  --edge: #d7be94;
+  --butter: #f4d78c;
+  --rose: #f2b6c3;
+  --rose-soft: #fae1e6;
+  --action: #a5cf93;
+  --action-soft: #e4efd8;
+  --ink: #3d2725;
+  --line: #66493d;
+  --shadow: #5e4238;
+  --muted: #655145;
+  --focus: #365d4b;
   --pixel-corner: 0px;
-  --pixel-depth: 4px;
+  --pixel-depth: 3px;
   font-family: 'Galmuri11', sans-serif;
   color: var(--ink);
   background: var(--cream);
   font-synthesis: none;
   line-height: 1.6;
+  word-break: keep-all;
 }
 * {
   box-sizing: border-box;
@@ -140,12 +151,13 @@ textarea {
 button,
 .button {
   min-height: 48px;
-  background: var(--butter);
-  border: 3px solid var(--ink);
+  background: var(--action);
+  border: 2px solid var(--ink);
   border-radius: var(--pixel-corner);
   box-shadow:
     0 var(--pixel-depth) 0 var(--shadow),
-    inset 0 1px 0 #ffffff66;
+    inset 0 2px 0 #ffffff80,
+    inset 0 -2px 0 #3d272526;
   padding: 10px 18px;
   font-weight: 700;
   cursor: pointer;
@@ -169,7 +181,7 @@ button:active:not(:disabled),
   box-shadow: 0 1px 0 var(--shadow);
 }
 :focus-visible {
-  outline: 3px solid #486e5a;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 input,
@@ -178,9 +190,10 @@ select {
   width: 100%;
   min-width: 0;
   min-height: 48px;
-  border: 3px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: var(--pixel-corner);
-  background: white;
+  background: var(--paper);
+  box-shadow: inset 0 2px 0 var(--edge);
   padding: 10px 12px;
 }
 label {
@@ -192,13 +205,20 @@ label {
 small {
   display: block;
   margin-top: 5px;
-  color: #526257;
+  color: var(--muted);
   font-size: 0.8rem;
 }
 h1,
 h2,
 p {
   overflow-wrap: anywhere;
+}
+h1,
+h2,
+h3,
+strong,
+summary {
+  font-weight: 700;
 }
 h1 {
   font-size: clamp(1.6rem, 4vw, 2rem);
@@ -229,6 +249,8 @@ fieldset {
   gap: 20px;
   padding: 20px 32px;
   margin: auto;
+  border-bottom: 2px solid var(--line);
+  background: var(--paper);
 }
 .site-header nav a[aria-current='page'] {
   font-weight: 800;
@@ -240,15 +262,15 @@ fieldset {
   align-items: center;
   gap: 8px;
   text-decoration: none;
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-size: 1.5rem;
+  font-weight: 700;
   white-space: nowrap;
 }
 .brand-caption {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 400;
-  letter-spacing: 0.05em;
+  color: var(--muted);
 }
 .brand-mark,
 .auth-mark {
@@ -269,9 +291,9 @@ nav a {
   align-items: center;
 }
 .nav-button {
-  border: 3px solid var(--line);
+  border: 2px solid var(--line);
   padding: 0 8px;
-  background: transparent;
+  background: var(--panel);
   font-size: 0.87rem;
   min-height: 48px;
   box-shadow: none;
@@ -293,14 +315,15 @@ main {
 }
 .intro {
   padding: 66px 48px;
-  background: #f1ebcf;
+  background: var(--panel);
+  border-right: 2px solid var(--line);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
 }
 .intro p {
-  color: #526257;
+  color: var(--muted);
   line-height: 1.9;
 }
 .intro h2 {
@@ -309,8 +332,16 @@ main {
 .form-panel {
   padding: 40px 44px;
 }
+.form-panel h1,
+.workspace > h1,
+.account-panel > h1 {
+  padding: 8px 12px;
+  border: 2px solid var(--line);
+  background: var(--rose);
+  box-shadow: inset 0 2px 0 var(--rose-soft);
+}
 .description {
-  color: #526257;
+  color: var(--muted);
   font-size: 0.92rem;
   margin: 0 0 24px;
   word-break: keep-all;
@@ -339,7 +370,7 @@ main {
   min-height: 48px;
   margin-top: 28px;
   padding-block: 8px 4px;
-  border-top: 1px solid #a9b5a4;
+  border-top: 1px solid var(--edge);
   text-decoration-thickness: 1px;
   overflow-wrap: anywhere;
 }
@@ -354,7 +385,7 @@ main {
   padding: 12px 16px;
   border: 2px solid #53734d;
   border-radius: var(--pixel-corner);
-  background: #edf3e3;
+  background: var(--action-soft);
   font-size: 0.9rem;
 }
 .form-actions {
@@ -401,7 +432,7 @@ main {
 }
 .account-details dt {
   font-size: 0.85rem;
-  color: #526257;
+  color: var(--muted);
 }
 .account-details dd {
   font-weight: 700;
@@ -417,17 +448,19 @@ footer {
   padding: 20px 24px;
   text-align: center;
   font-size: 0.78rem;
-  color: #647264;
+  color: var(--muted);
 }
 @media (max-width: 700px) {
   .site-header {
-    padding: 16px 20px;
-    gap: 12px;
+    min-height: 0;
+    padding: 8px 16px;
+    gap: 6px 12px;
     align-items: flex-start;
     flex-wrap: wrap;
   }
   .brand {
-    font-size: 1.15rem;
+    font-size: 1.25rem;
+    line-height: 1.2;
   }
   nav {
     gap: 8px;
@@ -504,14 +537,14 @@ footer {
 .status-tag {
   font-size: 0.75rem;
   padding: 4px 8px;
-  background: #f1ebcf;
+  background: var(--panel);
   white-space: nowrap;
 }
 .issued-result {
   border: 3px solid var(--line);
   padding: 18px;
   margin-top: 24px;
-  background: #f1f5ec;
+  background: var(--action-soft);
   border-radius: var(--pixel-corner);
 }
 .issued-result h3 {
@@ -571,7 +604,7 @@ footer {
 .class-row-main p {
   font-size: 0.85rem;
   margin: 6px 0;
-  color: #526257;
+  color: var(--muted);
 }
 .join-code {
   max-width: 360px;
@@ -579,12 +612,12 @@ footer {
 .join-code input {
   font-weight: 700;
   letter-spacing: 0.15em;
-  background: #f8f5e7;
+  background: var(--panel);
 }
 .roster {
   margin-top: 24px;
   padding: 16px 20px;
-  background: #f7f6ef;
+  background: var(--panel);
   border-radius: var(--pixel-corner);
 }
 .roster h3 {
