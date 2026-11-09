@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { PixelIcon } from '../../app/PixelIcon';
 import { useCurrentAccount } from '../auth/queries';
@@ -27,6 +27,17 @@ interface Preview {
   itemId: string;
 }
 
+function watchViewport(onChange: () => void) {
+  window.addEventListener('resize', onChange);
+  return () => window.removeEventListener('resize', onChange);
+}
+
+function wardrobePageSize() {
+  const { innerWidth, innerHeight } = window;
+  if (innerWidth <= 375 || (innerWidth <= 720 && innerHeight <= 650)) return 1;
+  return innerWidth <= 1000 ? 2 : 3;
+}
+
 export function ClosetPage() {
   const game = useGame();
   const appearance = useAppearance();
@@ -35,10 +46,16 @@ export function ClosetPage() {
   const location = useLocation();
   const [preview, setPreview] = useState<Preview | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot>('face');
+  const [firstItem, setFirstItem] = useState(0);
+  const pageSize = useSyncExternalStore(watchViewport, wardrobePageSize);
   const previewPanel = useRef<HTMLElement>(null);
   const previewTrigger = useRef<HTMLButtonElement | null>(null);
   const restorePreviewFocus = useRef(false);
   const view = game.data;
+  const slotItems = view?.items.filter((entry) => entry.slot === selectedSlot) ?? [];
+  const pageCount = Math.ceil(slotItems.length / pageSize);
+  const page = Math.min(Math.floor(firstItem / pageSize), Math.max(0, pageCount - 1));
+  const pageStart = page * pageSize;
   const heading = useRouteHeadingFocus(owner, !!view);
   const currentPreview =
     preview &&
@@ -170,6 +187,7 @@ export function ClosetPage() {
                     disabled={appearance.busy}
                     onClick={() => {
                       setSelectedSlot(slot);
+                      setFirstItem(0);
                       setPreview(null);
                     }}
                   >
@@ -188,10 +206,40 @@ export function ClosetPage() {
                   <h2>{slotNames[selectedSlot]}</h2>
                   <p>잠긴 장비도 미리 입어 볼 수 있어요. 첫 통과로 얻은 뒤 착용할 수 있어요.</p>
                 </div>
-                <div className="game-wardrobe-grid">
-                  {view.items
-                    .filter((entry) => entry.slot === selectedSlot)
-                    .map((entry) => {
+                <div className="game-wardrobe-pages" data-paginated={pageCount > 1 || undefined}>
+                  {pageCount > 1
+                    ? ([-1, 1] as const).map((step) => {
+                        const forward = step === 1;
+                        const nextPage = page + step;
+                        const atEdge = nextPage < 0 || nextPage >= pageCount;
+                        return (
+                          <button
+                            key={step}
+                            type="button"
+                            className="secondary game-wardrobe-page-button"
+                            data-direction={forward ? 'next' : 'previous'}
+                            aria-label={forward ? '다음 장비 페이지' : '이전 장비 페이지'}
+                            aria-controls="wardrobe-items"
+                            aria-disabled={atEdge}
+                            disabled={appearance.busy}
+                            onClick={() => {
+                              if (atEdge) return;
+                              setFirstItem(nextPage * pageSize);
+                              setPreview(null);
+                            }}
+                          >
+                            <svg viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden="true">
+                              <path d="M2 7h3V5h3V3h3V1h3v14h-3v-2H8v-2H5V9H2z" />
+                            </svg>
+                          </button>
+                        );
+                      })
+                    : null}
+                  <div id="wardrobe-items" className="game-wardrobe-grid" data-columns={pageSize}>
+                    {pageCount === 0 ? (
+                      <p className="game-wardrobe-empty">이 종류에는 장비가 없어요.</p>
+                    ) : null}
+                    {slotItems.slice(pageStart, pageStart + pageSize).map((entry, index) => {
                       const hasItem = view.inventory.some(
                         (inventory) => inventory.itemId === entry.itemId && inventory.owned,
                       );
@@ -207,6 +255,7 @@ export function ClosetPage() {
                           disabled={appearance.busy}
                           onClick={(event) => {
                             previewTrigger.current = event.currentTarget;
+                            setFirstItem(pageStart + index);
                             if (owner)
                               setPreview({
                                 owner,
@@ -243,6 +292,12 @@ export function ClosetPage() {
                         </button>
                       );
                     })}
+                  </div>
+                  {pageCount > 1 ? (
+                    <p className="game-wardrobe-page-count" role="status" aria-label="장비 페이지">
+                      {page + 1} / {pageCount}
+                    </p>
+                  ) : null}
                 </div>
               </section>
             </div>
