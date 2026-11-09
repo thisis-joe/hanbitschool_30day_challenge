@@ -322,7 +322,7 @@ test('characterWardrobePersistsAcrossRelogin', async ({ page }) => {
   const saved = page.waitForResponse(
     (r) => r.request().method() === 'PUT' && r.url().endsWith('/game/appearance'),
   );
-  await page.getByRole('button', { name: '착용하기', exact: true }).click();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   expect((await saved).status()).toBe(200);
   const before = await game(page);
   expect(before.characterId).toBe('bora');
@@ -375,8 +375,8 @@ test('firstPassGiftSavesWithoutFinishAndReplayPaysOnlyRepeatXp', async ({ page }
   await layoutAndTargets(page);
 });
 
-// Catches preview writes or server ownership bypass through a forged appearance request.
-test('lockedPreviewCannotBecomeSavedGear', async ({ page }) => {
+// Checks the locked card and server ownership guard for a forged appearance request.
+test('lockedGearCannotBePreviewedOrSaved', async ({ page }) => {
   await provisionLearner(page);
   const before = await game(page);
   await page.goto('/student/closet');
@@ -385,10 +385,10 @@ test('lockedPreviewCannotBecomeSavedGear', async ({ page }) => {
     if (r.method() === 'PUT' && r.url().endsWith('/game/appearance')) writes++;
   });
   await page.getByRole('button', { name: '모자 장비 보기', exact: true }).click();
-  await page.getByRole('button', { name: '새벽왕관 미리보기', exact: true }).click();
-  await expect(page.getByRole('region', { name: '외형 미리보기' })).toContainText('미보유');
-  await expect(page.getByRole('button', { name: '착용하기', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: '미리보기 취소' }).click();
+  await page.getByRole('button', { name: '다음 장비 페이지' }).click();
+  await expect(page.getByRole('button', { name: /새벽왕관.*26회차 통과 시 획득/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '저장', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '되돌리기', exact: true })).toBeDisabled();
   expect(writes).toBe(0);
   const csrf = await (await page.request.get('/api/auth/csrf')).json();
   const forged = await page.request.put('/api/student/game/appearance', {

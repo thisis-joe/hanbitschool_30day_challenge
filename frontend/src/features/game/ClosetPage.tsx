@@ -64,14 +64,15 @@ export function ClosetPage() {
     preview.route === location.key
       ? preview
       : null;
-  const item = currentPreview
-    ? view?.items.find(
-        (option) => option.itemId === currentPreview.itemId && SLOTS.includes(option.slot),
-      )
-    : undefined;
-  const owned = item
-    ? view?.inventory.some((entry) => entry.itemId === item.itemId && entry.owned)
-    : false;
+  const item =
+    view && currentPreview
+      ? view.items.find(
+          (option) =>
+            option.itemId === currentPreview.itemId &&
+            SLOTS.includes(option.slot) &&
+            view.inventory.some((entry) => entry.itemId === option.itemId && entry.owned),
+        )
+      : undefined;
   const equipment =
     view && item ? { ...view.equippedBySlot, [item.slot]: item.itemId } : view?.equippedBySlot;
   const gearNames = equipment
@@ -133,78 +134,66 @@ export function ClosetPage() {
                   preview={!!item}
                 />
                 <div className="game-preview-controls">
-                  {item ? (
-                    <>
-                      <p>
-                        {item.name} ·{' '}
-                        {owned ? '보유' : `미보유 · ${item.rewardDay}회차 첫 통과로 획득`}
-                      </p>
-                      {owned ? (
-                        <button
-                          disabled={appearance.busy}
-                          onClick={() => {
-                            const intent = currentPreview;
-                            void appearance
-                              .save(view.characterId, {
-                                ...view.equippedBySlot,
-                                [item.slot]: item.itemId,
-                              })
-                              .then((saved) => {
-                                if (saved) {
-                                  restorePreviewFocus.current = true;
-                                  setPreview((current) => (current === intent ? null : current));
-                                }
-                              });
-                          }}
-                        >
-                          {appearance.busy ? '저장 중…' : '착용하기'}
-                        </button>
-                      ) : null}
-                      <button
-                        className="secondary"
-                        disabled={appearance.busy}
-                        onClick={closePreview}
-                      >
-                        미리보기 취소
-                      </button>
-                    </>
-                  ) : (
-                    <p>지금 저장된 옷차림이에요.</p>
-                  )}
+                  <button
+                    type="button"
+                    disabled={!item || appearance.busy}
+                    onClick={() => {
+                      if (!item || !equipment) return;
+                      const intent = currentPreview;
+                      void appearance.save(view.characterId, equipment).then((saved) => {
+                        if (saved) {
+                          restorePreviewFocus.current = true;
+                          setPreview((current) => (current === intent ? null : current));
+                        }
+                      });
+                    }}
+                  >
+                    {appearance.busy ? '저장 중…' : '저장'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={!item || appearance.busy}
+                    onClick={closePreview}
+                  >
+                    되돌리기
+                  </button>
                   {appearance.error ? <p role="alert">{appearance.error}</p> : null}
                 </div>
               </section>
-              <p className="game-wardrobe-note">캐릭터를 바꿔도 모은 장비는 그대로예요.</p>
             </div>
             <div className="game-wardrobe-inventory">
-              <div className="game-wardrobe-categories" role="group" aria-label="장비 종류">
-                {SLOTS.map((slot) => (
-                  <button
-                    key={slot}
-                    aria-label={`${slotNames[slot]} 장비 보기`}
-                    aria-pressed={selectedSlot === slot}
-                    aria-controls="wardrobe-inventory"
-                    disabled={appearance.busy}
-                    onClick={() => {
-                      setSelectedSlot(slot);
-                      setFirstItem(0);
-                      setPreview(null);
-                    }}
-                  >
-                    <EquipmentCategoryIcon slot={slot} />
-                    <span>{slotNames[slot]}</span>
-                  </button>
-                ))}
-              </div>
               <section
                 id="wardrobe-inventory"
                 className="game-closet-slot"
                 aria-label={slotNames[selectedSlot]}
               >
                 <div className="game-inventory-heading">
-                  <p className="learning-eyebrow">나의 장비 상자</p>
-                  <h2>{slotNames[selectedSlot]}</h2>
-                  <p>잠긴 장비도 미리 입어 볼 수 있어요. 첫 통과로 얻은 뒤 착용할 수 있어요.</p>
+                  <div className="game-inventory-title">
+                    <p className="learning-eyebrow">나의 장비 상자</p>
+                    <h2>{slotNames[selectedSlot]}</h2>
+                  </div>
+                  <div className="game-wardrobe-categories" role="group" aria-label="장비 종류">
+                    {SLOTS.map((slot) => (
+                      <button
+                        key={slot}
+                        type="button"
+                        aria-label={`${slotNames[slot]} 장비 보기`}
+                        aria-pressed={selectedSlot === slot}
+                        aria-controls="wardrobe-inventory"
+                        disabled={appearance.busy}
+                        onClick={() => {
+                          setSelectedSlot(slot);
+                          setFirstItem(0);
+                          setPreview(null);
+                        }}
+                      >
+                        <EquipmentCategoryIcon slot={slot} />
+                        <span>{slotNames[slot]}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p>회차를 통과하면 새 장비를 얻을 수 있어요.</p>
                 </div>
                 <div className="game-wardrobe-pages" data-paginated={pageCount > 1 || undefined}>
                   {pageCount > 1
@@ -250,9 +239,9 @@ export function ClosetPage() {
                           data-equipped={
                             view.equippedBySlot[selectedSlot] === entry.itemId || undefined
                           }
-                          aria-label={`${entry.name} 미리보기`}
-                          aria-pressed={item?.itemId === entry.itemId}
-                          disabled={appearance.busy}
+                          aria-label={hasItem ? `${entry.name} 미리보기` : undefined}
+                          aria-pressed={hasItem ? item?.itemId === entry.itemId : undefined}
+                          disabled={!hasItem || appearance.busy}
                           onClick={(event) => {
                             previewTrigger.current = event.currentTarget;
                             setFirstItem(pageStart + index);
@@ -287,7 +276,7 @@ export function ClosetPage() {
                               ? view.equippedBySlot[selectedSlot] === entry.itemId
                                 ? '착용 중'
                                 : '보유'
-                              : `미보유 · ${entry.rewardDay}회차 첫 통과`}
+                              : `${entry.rewardDay}회차 통과 시 획득`}
                           </span>
                         </button>
                       );

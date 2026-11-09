@@ -31,12 +31,6 @@
   flex: none;
   pointer-events: none;
 }
-@media (max-width: 720px) {
-  .game-student-nav {
-    padding-inline: 8px;
-    gap: 4px;
-  }
-}
 :root {
   --site-width: 1120px;
   --cream: #efe2c6;
@@ -130,6 +124,37 @@ button,
   padding: 6px 10px;
   gap: 6px;
   line-height: 1.25;
+}
+.game-student-nav > a {
+  font-size: clamp(1.125rem, 2.5vw, 1.5rem);
+  white-space: nowrap;
+}
+.game-student-nav .pixel-icon {
+  width: 32px;
+  height: 32px;
+}
+@media (max-width: 720px) {
+  .game-student-nav {
+    padding-inline: 8px;
+    gap: 4px;
+  }
+  .game-student-nav > a {
+    gap: 4px;
+    padding: 4px 1px;
+    font-size: clamp(1rem, 3vw, 1.125rem);
+  }
+  .game-student-nav .pixel-icon {
+    width: 24px;
+    height: 24px;
+  }
+}
+@media (max-width: 440px) {
+  .game-student-nav > a {
+    flex-direction: column;
+    gap: 2px;
+    padding-block: 3px;
+    font-size: clamp(0.75rem, 4.7vw, 0.9375rem);
+  }
 }
 :is(.site-menu, .game-student-nav) > a[aria-current='page'] {
   background-color: var(--accent);
@@ -444,14 +469,10 @@ main:has(> .auth-frame) {
     justify-content: center;
     gap: 6px;
   }
-  .site-menu > :is(a, button),
-  .game-student-nav > a {
+  .site-menu > :is(a, button) {
     gap: 4px;
     padding: 4px 5px;
     font-size: 0.75rem;
-  }
-  .game-student-nav > a {
-    padding-inline: 1px;
   }
   main {
     padding: 12px 16px 36px;

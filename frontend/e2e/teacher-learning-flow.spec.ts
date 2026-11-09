@@ -790,7 +790,7 @@ test('combinedGameHistoryAndTeacherStatsSurviveBackendRestart', async ({ page, b
   await captureSanitizedResultProof(page);
   await page.goto('/student/closet');
   await page.getByRole('button', { name: '책벌레안경 미리보기', exact: true }).click();
-  await page.getByRole('button', { name: '착용하기', exact: true }).click();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   await protectedText(page.getByRole('button', { name: '책벌레안경 미리보기' }), '착용 중', {
     contains: true,
   });

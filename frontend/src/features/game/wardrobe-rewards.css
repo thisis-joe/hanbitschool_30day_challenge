@@ -251,22 +251,23 @@
   line-height: 1.6;
 }
 .game-preview-controls button {
-  flex: 1 1 auto;
+  flex: 1;
 }
 .game-wardrobe-categories {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  flex: 1 0 min(100%, 280px);
   gap: 7px;
-  margin-bottom: 20px;
 }
 .game-wardrobe-categories button {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6px 2px;
+  gap: 2px;
+  padding: 5px 1px;
   min-width: 0;
-  min-height: 74px;
+  min-height: 60px;
   background: var(--paper);
   border: 2px solid var(--ink);
   border-radius: var(--pixel-corner);
@@ -276,18 +277,12 @@
   width: 24px;
   height: 24px;
   flex: none;
-  margin: 4px;
 }
 .game-wardrobe-categories [aria-pressed='true'] {
   background: var(--accent);
   box-shadow:
     0 3px 0 var(--shadow),
     inset 0 2px 0 var(--accent-soft);
-}
-.game-wardrobe-note {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin: 20px 0 0;
 }
 .game-closet-slot {
   border: 4px solid var(--ink);
@@ -298,20 +293,25 @@
   overflow: clip;
 }
 .game-inventory-heading {
-  padding: 0 2px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
   margin-bottom: 16px;
-  border-bottom: 2px solid var(--edge);
 }
-.game-inventory-heading .learning-eyebrow {
+.game-inventory-title .learning-eyebrow {
   color: var(--muted);
   margin: 0;
   font-size: 0.75rem;
 }
-.game-inventory-heading h2 {
+.game-inventory-title h2 {
   font-size: 1.65rem;
 }
-.game-inventory-heading > p:last-child {
+.game-inventory-heading > p {
+  flex-basis: 100%;
   margin: 0;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--edge);
   font-size: 0.8rem;
   line-height: 1.6;
 }
@@ -413,6 +413,9 @@
 .game-item-locked {
   background: #f2f1e7;
 }
+.game-item-locked:disabled {
+  opacity: 1;
+}
 .game-item-art {
   position: relative;
   display: block;
@@ -451,17 +454,6 @@
   fill: none;
   stroke: #596448;
   stroke-width: 2;
-}
-@media (max-width: 1000px) {
-  .game-wardrobe-categories {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-  .game-wardrobe-categories button {
-    flex-direction: row;
-    gap: 8px;
-    min-height: 52px;
-  }
 }
 @media (max-width: 720px) {
   .game-wardrobe-studio {
@@ -503,8 +495,8 @@
     gap: 4px;
   }
   .game-wardrobe-categories button {
+    min-height: 48px;
     font-size: 0.75rem;
-    border-radius: var(--pixel-corner);
   }
   .game-closet-slot {
     padding: 14px;
@@ -633,6 +625,10 @@
 }
 @container wardrobe (max-height: 265px) {
   .game-inventory-heading {
+    margin-bottom: 8px;
+  }
+  .game-inventory-title,
+  .game-inventory-heading > p {
     display: none;
   }
   .game-item-option {
@@ -653,8 +649,11 @@
   .game-wardrobe-walker {
     width: min(116px, 64cqh);
   }
-  .game-wardrobe-note,
   .game-inventory-heading {
+    margin-bottom: 8px;
+  }
+  .game-inventory-title,
+  .game-inventory-heading > p {
     display: none;
   }
   .game-preview-controls,
@@ -664,20 +663,9 @@
   .game-walk-hint {
     font-size: 0.72rem;
   }
-  .game-wardrobe-categories {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    margin-bottom: 8px;
-  }
-  .game-wardrobe-categories button {
-    flex-direction: column;
-    gap: 2px;
-    min-height: 48px;
-    padding: 3px 1px;
-  }
   .game-equipment-category-icon {
     width: 16px;
     height: 16px;
-    margin: 0;
   }
   .game-closet-slot {
     padding: 8px;
@@ -709,9 +697,6 @@
     padding: 0;
     overflow: hidden;
     clip-path: inset(50%);
-  }
-  .game-preview-controls:not(:has(button, [role='alert'])) {
-    display: none;
   }
   .button.game-wardrobe-choice {
     gap: 4px;

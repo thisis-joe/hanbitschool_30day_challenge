@@ -350,16 +350,6 @@
   }
 }
 
-@media (max-width: 319px) {
-  .game-student-nav a {
-    flex-direction: column;
-    gap: 2px;
-    white-space: nowrap;
-    font-size: 0.72rem;
-    line-height: 1.2;
-  }
-}
-
 .game-answer-content .learning-feedback-tools > [role='alert'] {
   padding: 8px 12px;
   border-radius: var(--pixel-corner);
