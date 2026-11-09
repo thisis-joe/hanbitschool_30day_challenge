@@ -50,11 +50,6 @@ export function AuthFrame({
           <br />
           한빛학교
         </h2>
-        <p>
-          학생은 하루에 다섯 문제를 풀고,
-          <br />
-          선생님은 우리 반의 학습을 살펴봐요.
-        </p>
       </aside>
       <section className="form-panel">
         <h1 ref={heading} tabIndex={-1}>

@@ -119,6 +119,7 @@ button,
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
 }
 /* Navigation reads as a row of game controls while the text stays visible. */
 :is(.site-menu, .game-student-nav, .game-page-nav) > a,
@@ -127,7 +128,6 @@ button,
   background-color: var(--paper);
   padding: 6px 10px;
   gap: 6px;
-  text-align: center;
   line-height: 1.25;
 }
 :is(.site-menu, .game-student-nav) > a[aria-current='page'] {
@@ -296,10 +296,6 @@ main {
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-}
-.intro p {
-  color: var(--muted);
-  line-height: 1.9;
 }
 .intro h2 {
   margin: 24px 0 0;
