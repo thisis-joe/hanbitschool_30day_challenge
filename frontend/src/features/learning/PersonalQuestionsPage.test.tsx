@@ -10,7 +10,6 @@ import {
   deferred,
   learningStatus,
   personalQuestion,
-  sessionId,
 } from '../../test/learningFixtures';
 import { PersonalQuestionsPage } from './PersonalQuestionsPage';
 
@@ -166,13 +165,10 @@ it('activeSessionBlocksPrivateReviewStart', async () => {
   );
   renderQuestions();
   await userEvent.click(await screen.findByRole('checkbox'));
-  expect(await screen.findByRole('link', { name: '진행 중인 학습 이어풀기' })).toHaveAttribute(
-    'href',
-    `/student/learning/sessions/${sessionId}`,
-  );
   await waitFor(() =>
     expect(screen.getByRole('button', { name: '선택한 문제 복습하기' })).toBeDisabled(),
   );
+  expect(screen.queryByRole('link', { name: '진행 중인 학습 이어풀기' })).toBeNull();
 });
 
 // Deriving recent outcome from mastery/queue/star would mislabel the mastered WRONG or null rows.

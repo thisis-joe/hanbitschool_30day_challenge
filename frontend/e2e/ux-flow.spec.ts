@@ -299,7 +299,7 @@ test('teacher returns to the selected student and list settings', async ({ page 
 for (const width of [320, 390, 768, 1280]) {
   test(`student surfaces at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
-    await scenario(page);
+    await scenario(page, 'student', false, width === 390);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     for (const [name, path] of Object.entries({
@@ -316,6 +316,8 @@ for (const width of [320, 390, 768, 1280]) {
       if (['map', 'closet', 'questions'].includes(name))
         await expect(heading).toHaveCSS('clip-path', 'inset(50%)');
       else await expect(heading).toBeVisible();
+      if (name === 'home' && width === 390)
+        await expect(page.getByRole('link', { name: '이어풀기', exact: true })).toBeVisible();
       if (name === 'closet') {
         const preview = page.getByRole('region', { name: '외형 미리보기' });
         await expect(preview.getByRole('link', { name: '캐릭터 선택' })).toHaveAttribute(
@@ -326,6 +328,9 @@ for (const width of [320, 390, 768, 1280]) {
       }
       if (name === 'questions') {
         await expect(page.getByRole('link', { name: '학습 홈으로', exact: true })).toHaveCount(0);
+        await expect(
+          page.getByRole('link', { name: '진행 중인 학습 이어풀기', exact: true }),
+        ).toHaveCount(0);
         const card = page
           .getByRole('list', { name: '개인 문제 목록' })
           .getByRole('listitem')
