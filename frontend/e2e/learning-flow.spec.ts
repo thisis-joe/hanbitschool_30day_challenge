@@ -293,7 +293,7 @@ test('privateQueueBookmarkAndConsentRemainIndependent', async ({ page }) => {
     'aria-pressed',
     'true',
   );
-  await page.getByRole('link', { name: '학습 홈으로', exact: true }).click();
+  await page.getByRole('link', { name: '오늘', exact: true }).click();
   let replay = await start(
     page,
     page.getByRole('button', { name: '선택 회차 다시 풀기', exact: true }),

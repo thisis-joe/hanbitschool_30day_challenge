@@ -177,18 +177,9 @@
   }
 }
 
-.game-closet-card > h1 {
-  font-size: clamp(2rem, 5vw, 2.65rem);
-}
 .game-closet-card > p {
   max-width: 650px;
   color: #53634f;
-}
-.game-closet-card .game-page-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 20px 0 28px;
 }
 .game-wardrobe-studio {
   display: grid;
@@ -206,6 +197,7 @@
   top: 88px;
 }
 .game-appearance-preview {
+  position: relative;
   scroll-margin-top: 12px;
   margin: 0;
   border: 4px solid var(--ink);
@@ -224,10 +216,20 @@
   background: #dac7a0 url('/game/pixels/original-room.png') center bottom / cover no-repeat;
   image-rendering: pixelated;
 }
-.game-wardrobe-room > .game-tag {
+.game-wardrobe-room > .game-tag,
+.button.game-wardrobe-choice {
   position: absolute;
   top: 14px;
+}
+.game-wardrobe-room > .game-tag {
+  right: 14px;
+}
+.button.game-wardrobe-choice {
   left: 14px;
+  z-index: 3;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
 }
 .game-wardrobe-room .game-avatar {
   width: 184px;
@@ -428,9 +430,13 @@
   }
   .game-wardrobe-room > .game-tag {
     top: 8px;
-    left: 8px;
+    right: 8px;
     font-size: 0.7rem;
     padding: 3px 6px;
+  }
+  .button.game-wardrobe-choice {
+    top: 8px;
+    left: 8px;
   }
   .game-preview-controls {
     padding: 10px;

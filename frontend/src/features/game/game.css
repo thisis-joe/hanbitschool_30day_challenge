@@ -24,10 +24,12 @@
   box-shadow: 0 5px 0 var(--shadow);
   overflow: hidden;
 }
-.game-learning-scene,
-.game-camp-scene {
-  /* All outdoor art is 768 pixels wide. Anchor its painted walking surface to the scene floor. */
+.game-learning-scene {
   --art-width: 1080px;
+}
+.game-learning-scene,
+.game-camp-scene::before {
+  /* All outdoor art is 768 pixels wide. Anchor its painted walking surface to the scene floor. */
   --art-ground: calc(var(--art-width) * var(--art-ground-rows) / 768);
   background: var(--region-sky) var(--region-art) center
     calc(100% + var(--art-ground) - var(--scene-ground)) / var(--art-width) auto no-repeat;
@@ -127,22 +129,14 @@
   font-size: 1.35rem;
   margin: 8px 0;
 }
-.game-home-intro {
-  margin: 10px 0 28px;
-}
-.game-home-intro p {
-  color: var(--muted);
-}
-.game-home-intro h1 {
-  font-size: clamp(1.75rem, 5vw, 2.25rem);
-}
-.game-home-intro .learning-eyebrow {
-  margin-bottom: 8px;
-  color: var(--ink);
-  width: fit-content;
-  padding: 2px 8px;
-  border: 1px solid var(--line);
-  background: var(--accent);
+.game-route-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .game-next-gift {
   --paper: #fff6d6;
@@ -197,6 +191,10 @@
   align-items: center;
   text-align: center;
 }
+.game-camp-copy:has(.learning-replay-picker) {
+  padding-block-end: 12px;
+  justify-content: space-between;
+}
 .game-camp-copy h1 {
   font-size: clamp(1.75rem, 3vw, 2.25rem);
   line-height: 1.25;
@@ -221,16 +219,32 @@
   font-weight: 800;
 }
 .game-camp-scene {
-  --art-width: 800px;
+  --camp-art-width: 800px;
   --scene-ground: 116px;
   position: relative;
+  container-type: size;
+  isolation: isolate;
   min-height: 440px;
   border-left: 3px solid var(--ink);
+}
+.game-camp-scene::before {
+  /* Cover the top edge even when the copy column makes the scene taller. */
+  --art-width: max(
+    var(--camp-art-width),
+    100cqw,
+    calc((100cqh - var(--scene-ground) + 1px) * 768 / var(--art-sky-rows))
+  );
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
 }
 .game-scene-forest {
   --region-sky: #2b4b40;
   --region-art: url('/game/pixels/original-forest.png');
   --art-ground-rows: 140;
+  --art-sky-rows: 376;
 }
 :is(.game-learning-traveler, .game-learning-location, .game-scene-fallback, .game-camp-scene > .game-avatar) {
   z-index: 1;
@@ -239,11 +253,13 @@
   --region-sky: #414b3d;
   --region-art: url('/game/pixels/original-village.png');
   --art-ground-rows: 144;
+  --art-sky-rows: 384;
 }
 .game-scene-beach {
   --region-sky: #315257;
   --region-art: url('/game/pixels/original-beach.png');
   --art-ground-rows: 143;
+  --art-sky-rows: 433;
 }
 .game-camp-scene > .game-avatar {
   position: absolute;
@@ -387,7 +403,7 @@
     min-height: 52px;
   }
   .game-camp-scene {
-    --art-width: max(540px, calc(100vw - 32px));
+    --camp-art-width: 540px;
     --scene-ground: 66px;
     grid-row: 2;
     min-height: 210px;

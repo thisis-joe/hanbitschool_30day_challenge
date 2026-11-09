@@ -84,16 +84,9 @@ export function ClosetPage() {
   return (
     <section className="learning-page game-closet-page">
       <div className="learning-card game-closet-card">
-        <h1 ref={heading} tabIndex={-1}>
+        <h1 className="game-route-title" ref={heading} tabIndex={-1}>
           나의 옷장
         </h1>
-        <p>장비를 골라 입어 보고, 마음에 들면 착용해 보세요.</p>
-        <nav className="game-page-nav" aria-label="꾸미기 메뉴">
-          <Link to="/student/character">
-            <PixelIcon name="people" />
-            캐릭터 선택
-          </Link>
-        </nav>
         {game.isPending ? <p role="status">옷장을 불러오고 있어요.</p> : null}
         {game.error ? (
           <>
@@ -111,6 +104,10 @@ export function ClosetPage() {
                 className="game-appearance-preview"
                 aria-label="외형 미리보기"
               >
+                <Link className="button secondary game-wardrobe-choice" to="/student/character">
+                  <PixelIcon name="people" />
+                  캐릭터 선택
+                </Link>
                 <WardrobePlayground
                   key={`${owner}:${location.key}`}
                   characterId={view.characterId}

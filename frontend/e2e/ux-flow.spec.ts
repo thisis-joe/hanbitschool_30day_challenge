@@ -190,7 +190,7 @@ for (const viewport of [
     await map.click();
     await expect(map).toHaveAttribute('aria-current', 'page');
     await expect(map).toHaveCSS('background-color', 'rgb(194, 217, 231)');
-    await expect(page.getByRole('heading', { name: '탐험 지도' })).toBeVisible();
+    await expect(page.getByRole('region', { name: '탐험 경로', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(viewport.width);
   });
   for (const continuing of [false, true]) {
@@ -312,7 +312,31 @@ for (const width of [320, 390, 768, 1280]) {
       password: '/account/password',
     })) {
       await page.goto(path);
-      await expect(page.locator('main h1')).toBeVisible();
+      const heading = page.locator('main h1');
+      if (['map', 'closet', 'questions'].includes(name))
+        await expect(heading).toHaveCSS('clip-path', 'inset(50%)');
+      else await expect(heading).toBeVisible();
+      if (name === 'closet') {
+        const preview = page.getByRole('region', { name: '외형 미리보기' });
+        await expect(preview.getByRole('link', { name: '캐릭터 선택' })).toHaveAttribute(
+          'href',
+          '/student/character',
+        );
+        await expect(preview.getByText('나의 여행 친구', { exact: true })).toHaveCount(0);
+      }
+      if (name === 'questions') {
+        await expect(page.getByRole('link', { name: '학습 홈으로', exact: true })).toHaveCount(0);
+        const card = page
+          .getByRole('list', { name: '개인 문제 목록' })
+          .getByRole('listitem')
+          .first();
+        const text = (await card.locator('.learning-personal-heading').boundingBox())!;
+        for (const action of ['별표', '다시 볼 목록에서 제거']) {
+          const button = (await card.getByRole('button', { name: action }).boundingBox())!;
+          expect(button.x).toBeGreaterThanOrEqual(text.x + text.width);
+          expect(button.height).toBeGreaterThanOrEqual(48);
+        }
+      }
       await expect(page.locator('[role="status"]')).not.toContainText(['불러오고 있어요']);
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
@@ -443,6 +467,13 @@ test('home keeps learning focused without round cards', async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     const closedScene = await sceneGeometry();
     await expect(replayButton).toBeHidden();
+    const closedGap = await replay.evaluate((el) => {
+      const copy = el.closest('.game-camp-copy')!.getBoundingClientRect();
+      return copy.bottom - el.getBoundingClientRect().bottom;
+    });
+    expect(closedGap).toBeLessThanOrEqual(width <= 720 ? 24 : 40);
+    if (output && [390, 1280].includes(width))
+      await page.screenshot({ path: output.file(`home-closed-${width}.png`), fullPage: true });
     await replay.press('Enter');
     await expect(replayButton).toBeEnabled();
     expect(await sceneGeometry()).toEqual(closedScene);
@@ -482,11 +513,12 @@ test('home keeps learning focused without round cards', async ({ page }) => {
         return [nav.left - header.left, nav.right - header.right];
       });
     expect(edgeOffsets).toEqual([0, 0]);
-    expect(
-      await campScene.evaluate(
-        (el) => parseFloat(getComputedStyle(el).backgroundSize) - el.clientWidth,
-      ),
-    ).toBeGreaterThanOrEqual(0);
+    const paintCoverage = await campScene.evaluate((el) => {
+      const imageWidth = parseFloat(getComputedStyle(el, '::before').backgroundSize);
+      const floor = parseFloat(getComputedStyle(el).getPropertyValue('--scene-ground'));
+      return [imageWidth - el.clientWidth, (imageWidth * 376) / 768 - (el.clientHeight - floor)];
+    });
+    for (const coverage of paintCoverage) expect(coverage).toBeGreaterThanOrEqual(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
   await expect(page.getByRole('heading', { name: '오늘의 탐험', level: 1 })).toBeVisible();
