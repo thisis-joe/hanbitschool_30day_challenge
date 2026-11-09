@@ -20,7 +20,7 @@
   z-index: 20;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  max-width: 1060px;
+  max-width: var(--site-width);
   margin: 0 auto;
   padding: 6px 16px 8px;
   gap: 6px;
@@ -38,6 +38,7 @@
   }
 }
 :root {
+  --site-width: 1120px;
   --cream: #efe2c6;
   --paper: #fff8e9;
   --panel: #f5e9cf;
@@ -230,7 +231,7 @@ fieldset {
   margin-top: 24px;
 }
 .site-header {
-  max-width: 1120px;
+  max-width: var(--site-width);
   min-height: 92px;
   display: flex;
   align-items: center;

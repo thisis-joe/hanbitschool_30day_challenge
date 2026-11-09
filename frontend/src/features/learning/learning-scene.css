@@ -5,7 +5,6 @@
 .game-learning-session .game-learning-scene.game-answer-immersive {
   --traveler-width: 192px;
   --reading-height: max(20rem, clamp(320px, 46svh, 408px));
-  --forest-light-top: calc(var(--reading-height) - 22px);
   /* Leave room above the sprite for its jump, including the tallest hat. */
   --playfield-height: calc(var(--scene-ground) + var(--traveler-width) * 1.16 + 16px);
   height: calc(var(--reading-height) + var(--playfield-height) + 4px);

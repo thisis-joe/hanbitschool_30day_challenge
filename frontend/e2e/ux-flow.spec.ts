@@ -204,6 +204,13 @@ for (const viewport of [
         ? page.getByRole('link', { name: '이어풀기', exact: true })
         : page.getByRole('button', { name: '오늘 학습 시작', exact: true });
       await expect(action).toBeInViewport({ ratio: 1, timeout: 2000 });
+      expect(
+        await action.evaluate((el) => {
+          const column = el.closest('.game-camp-copy')!.getBoundingClientRect();
+          const button = el.getBoundingClientRect();
+          return Math.abs(button.left + button.width / 2 - (column.left + column.width / 2));
+        }),
+      ).toBeLessThan(1);
       const output = evidenceOutput();
       if (output) {
         const state = continuing ? 'resume' : 'start';
@@ -401,12 +408,24 @@ test('empty lists explain the next step without a dead review action', async ({ 
 
 test('home keeps learning focused without round cards', async ({ page }) => {
   await scenario(page);
+  await page.route('**/api/student/learning/status', (route) =>
+    route.fulfill({
+      json: {
+        ...learningStatus,
+        calendarCap: 2,
+        earliestUnpassedDay: 2,
+        passedDayCount: 1,
+        nextAction: 'START_FIRST',
+        activeSession: null,
+      },
+    }),
+  );
   await page.goto('/student/learning');
   await expect(page.getByRole('button', { name: '오늘 학습 시작', exact: true })).toBeVisible();
   await expect(page.getByRole('list', { name: '회차별 학습' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '회차별 학습 보기' })).toHaveCount(0);
   const gift = page.getByRole('complementary', { name: '다음 여행 선물' });
-  await expect(gift).toContainText('동그란 안경');
+  await expect(gift).toContainText('작은 모자');
   await expect(gift.locator('svg')).toHaveAttribute('shape-rendering', 'crispEdges');
   await expect(page.locator('.game-home-page > :last-child')).toHaveClass(/game-home-stats/);
   await expect(page.getByText('나의 여행 친구', { exact: true })).toHaveCount(0);
@@ -414,12 +433,22 @@ test('home keeps learning focused without round cards', async ({ page }) => {
   for (const width of [320, 390, 720, 1280]) {
     await page.setViewportSize({ width, height: 844 });
     await expect(gift).toBeVisible();
-    expect(
-      await gift.evaluate((el) => {
-        const row = el.parentElement!.getBoundingClientRect();
-        return Math.abs(row.right - el.getBoundingClientRect().right);
-      }),
-    ).toBeLessThan(1);
+    const insets = await gift.evaluate((el) => {
+      const row = el.parentElement!.getBoundingClientRect();
+      const gift = el.getBoundingClientRect();
+      return { right: row.right - gift.right, top: gift.top - row.top };
+    });
+    expect(insets.right).toBeGreaterThanOrEqual(8);
+    expect(insets.right).toBeLessThanOrEqual(16);
+    expect(insets.top).toBeGreaterThanOrEqual(8);
+    const edgeOffsets = await page
+      .getByRole('navigation', { name: '학생 여행 메뉴' })
+      .evaluate((el) => {
+        const header = document.querySelector('header')!.getBoundingClientRect();
+        const nav = el.getBoundingClientRect();
+        return [nav.left - header.left, nav.right - header.right];
+      });
+    expect(edgeOffsets).toEqual([0, 0]);
     expect(
       await campScene.evaluate(
         (el) => parseFloat(getComputedStyle(el).backgroundSize) - el.clientWidth,
@@ -427,6 +456,23 @@ test('home keeps learning focused without round cards', async ({ page }) => {
     ).toBeGreaterThanOrEqual(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
+  const replay = page.getByText('다시풀기', { exact: true });
+  await replay.focus();
+  await replay.press('Enter');
+  const replayButton = page.getByRole('button', { name: '선택 회차 다시 풀기' });
+  await expect(replayButton).toBeEnabled();
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    const camp = page.locator('.game-camp-copy');
+    const center = (await camp.boundingBox())!;
+    for (const locator of [camp.getByText('숲 입구 · 2회차'), replayButton]) {
+      const item = (await locator.boundingBox())!;
+      expect(Math.abs(item.x + item.width / 2 - (center.x + center.width / 2))).toBeLessThan(1);
+    }
+  }
+  const output = evidenceOutput();
+  if (output)
+    await page.screenshot({ path: output.file('home-centered-replay.png'), fullPage: true });
 });
 
 test('mobile wardrobe brings the preview into reach and returns to the chosen item', async ({

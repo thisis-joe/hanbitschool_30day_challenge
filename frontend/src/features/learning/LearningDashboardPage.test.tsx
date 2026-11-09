@@ -257,7 +257,7 @@ it('passed rounds remain replayable from a compact selector without cards', asyn
     ),
   );
   renderHome();
-  await userEvent.click(await screen.findByText('지나온 배움 다시 풀기'));
+  await userEvent.click(await screen.findByText('다시풀기'));
   await userEvent.selectOptions(screen.getByRole('combobox', { name: '다시 풀 회차' }), '2');
   await userEvent.click(screen.getByRole('button', { name: '선택 회차 다시 풀기' }));
   expect(await screen.findByText('실제 세션 화면')).toBeVisible();
