@@ -147,6 +147,12 @@
     padding-block-end: 12px;
   }
 }
+@media (max-width: 720px) and (min-height: 500px) {
+  #root:has(> main > .game-closet-page) {
+    height: auto;
+    min-height: 100dvh;
+  }
+}
 .game-journey-page h2,
 .game-character-page h2,
 .game-closet-page h2 {

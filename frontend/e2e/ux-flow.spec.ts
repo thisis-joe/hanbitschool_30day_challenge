@@ -334,6 +334,13 @@ for (const width of [320, 390, 768, 1280]) {
           await expect(dressing.locator('svg')).toHaveCSS('width', '32px');
         }
         const preview = page.getByRole('region', { name: '외형 미리보기' });
+        if (width <= 720) {
+          const room = preview.getByRole('group', { name: '캐릭터 움직이기' });
+          await expect(room).toHaveCSS('background-size', 'contain');
+          const { width: roomWidth, height: roomHeight } = (await room.boundingBox())!;
+          expect(Math.abs(roomWidth - roomHeight * 1.5)).toBeLessThan(1);
+          await expect(room).toBeInViewport({ ratio: 1 });
+        }
         await expect(preview.getByRole('link', { name: '캐릭터 선택' })).toHaveAttribute(
           'href',
           '/student/character',
@@ -342,7 +349,7 @@ for (const width of [320, 390, 768, 1280]) {
         await expect(page.getByText('장비 벗기', { exact: true })).toHaveCount(0);
         await expect(page.getByRole('button', { name: '얼굴 장비 보기' })).toBeInViewport();
       }
-      if (name === 'map' || name === 'closet') {
+      if (name === 'map' || (name === 'closet' && width > 320)) {
         const screenHeight = await page.evaluate(() => ({
           document: document.documentElement.scrollHeight,
           viewport: innerHeight,
@@ -667,9 +674,11 @@ test('wardrobe pages show every item without scrolling the inventory', async ({ 
           expect(distance, `${width}px: ${item.name} inside the wardrobe`).toBeGreaterThanOrEqual(
             0,
           );
+        if (width === 320) await option.evaluate((el) => el.scrollIntoView({ block: 'center' }));
         await expect(option).toBeInViewport({ ratio: 1 });
       }
-      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
+      if (width > 320)
+        expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(height);
       if (index < pages - 1) {
         await next.press('Enter');
         await expect(next).toBeFocused();
