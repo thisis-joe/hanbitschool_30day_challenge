@@ -15,12 +15,6 @@
     inset 0 0 0 3px #fffbee,
     inset 0 0 0 5px #c8a65b;
 }
-.game-home-under > .game-reward-card {
-  grid-column: 1 / -1;
-}
-.game-home-under > .game-regions {
-  grid-column: 1 / -1;
-}
 .game-reward-card:has(.game-reward-character) {
   grid-template-columns: minmax(140px, 210px) minmax(0, 1fr) 160px;
 }
