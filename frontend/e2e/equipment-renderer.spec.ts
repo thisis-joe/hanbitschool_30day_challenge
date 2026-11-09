@@ -84,6 +84,26 @@ test('nine characters keep their fists in front of fitted bags and render every 
     if ([1, 2, 3, 7].includes(entry.outfit))
       expect(entry.heldPixels, JSON.stringify(entry)).toBeGreaterThan(35);
   }
+  const heels = await page.evaluate(() => {
+    // The original heel projects behind the fitted boot on these two sprites.
+    return [
+      [1, 51],
+      [7, 53],
+    ].map(([character, x]) => {
+      const alpha = (outfit: number) =>
+        document
+          .querySelector<HTMLCanvasElement>(
+            `canvas[data-character="${character}"][data-outfit="${outfit}"]`,
+          )!
+          .getContext('2d')!
+          .getImageData(x, 168, 1, 1).data[3];
+      return { original: alpha(0), equipped: alpha(2) };
+    });
+  });
+  for (const heel of heels) {
+    expect(heel.original).toBeGreaterThan(120);
+    expect(heel.equipped).toBe(0);
+  }
   expect(errors).toEqual([]);
   const output = evidenceOutput();
   if (output)

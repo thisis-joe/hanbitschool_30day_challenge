@@ -132,6 +132,69 @@ test('resting anatomy preserves the original artwork for every character and out
   expect(differences).toEqual([]);
 });
 
+test('each handheld bag hangs below the raised hand when the character cheers', async ({
+  page,
+}) => {
+  await page.goto('/e2e/fixtures/answer-motion.html');
+  await page.locator('html[data-ready="true"]').waitFor();
+  const bags = await page.evaluate(async () => {
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { buildAvatarRig, paintAvatarPose } = await import('/src/features/game/motion/rig.ts');
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { POSES } = await import('/src/features/game/motion/poses.ts');
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { emptyEquipment } = await import('/src/features/game/types.ts');
+    const canvas = document.createElement('canvas');
+    canvas.width = 176;
+    canvas.height = 216;
+    const ctx = canvas.getContext('2d')!;
+    const render = async (hand: string | null) => {
+      const rig = await buildAvatarRig(
+        'bora',
+        { ...emptyEquipment(), hand },
+        new AbortController().signal,
+      );
+      paintAvatarPose(canvas, rig, POSES.cheer);
+      return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    };
+    const bare = await render(null);
+    // Colors taken from each bag's body, excluding the handle and the character's own pixels.
+    const colors = [
+      [0xc9a771, 0xe6ca95],
+      [0x729271, 0x91ab80, 0xb1c39a, 0x809d73],
+      [0xa87652, 0xbb8b62, 0xd1a577],
+    ];
+    const results = [];
+    for (const [index, palette] of colors.entries()) {
+      const pixels = await render(`hand-${index + 1}`);
+      const bodyRows: number[] = [];
+      for (let i = 0; i < pixels.length; i += 4) {
+        const rgb = (pixels[i] << 16) | (pixels[i + 1] << 8) | pixels[i + 2];
+        const bareRgb = (bare[i] << 16) | (bare[i + 1] << 8) | bare[i + 2];
+        if (
+          palette.includes(rgb) &&
+          pixels[i + 3] === 255 &&
+          (rgb !== bareRgb || bare[i + 3] < 255)
+        )
+          bodyRows.push(Math.floor(i / 4 / canvas.width));
+      }
+      // The center of Bora's raised fist is at y=111 in the rendered cheer frame.
+      results.push({
+        item: index + 1,
+        bodyPixels: bodyRows.length,
+        lowestPaint: Math.max(...bodyRows),
+        aboveFist: bodyRows.filter((y) => y <= 111).length,
+      });
+    }
+    return results;
+  });
+  for (const bag of bags) {
+    expect(bag.bodyPixels, JSON.stringify(bag)).toBeGreaterThan(20);
+    expect(bag.lowestPaint, JSON.stringify(bag)).toBeGreaterThan(125);
+    expect(bag.aboveFist, JSON.stringify(bag)).toBe(0);
+  }
+});
+
 test('arrives faster, completes the reaction, and respects reduced motion', async ({ page }) => {
   await page.goto('/e2e/fixtures/answer-motion.html');
   const scene = page.getByRole('region', { name: '학습 여행 장면' });

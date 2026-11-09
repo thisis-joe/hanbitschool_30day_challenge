@@ -1,5 +1,5 @@
 import { renderAvatar, avatarAnchor, avatarHatPlacement } from '../avatarRenderer';
-import { equipmentArt, equipmentSvg, parseItemId } from '../artwork';
+import { equipmentArt, equipmentSvg, handEquipmentFit, parseItemId } from '../artwork';
 import type { CharacterId, Equipment } from '../types';
 import type { AvatarPose } from './poses';
 import { ANATOMY, knee, rotated } from './anatomy';
@@ -562,10 +562,11 @@ export function paintAvatarPose(canvas: HTMLCanvasElement, rig: AvatarRig, pose:
   if (rig.held) {
     ctx.save();
     ctx.translate(...near[2]);
-    ctx.rotate(((pose.nearArm + pose.nearElbow) * Math.PI) / 180);
-    const scale = rig.held.value <= 3 ? 0.82 : 0.9,
-      handleY = rig.held.value <= 3 ? 27 : 36;
-    ctx.drawImage(rig.held.image, -16 * scale, -handleY * scale, 32 * scale, 58 * scale);
+    // A bag pivots freely at its handle. A wand is braced by the fingers and turns with the wrist.
+    const angle = rig.held.value <= 3 ? -pose.bow : pose.nearArm + pose.nearElbow;
+    ctx.rotate((angle * Math.PI) / 180);
+    const { x, y, width, height } = handEquipmentFit(rig.held.value);
+    ctx.drawImage(rig.held.image, x, y, width, height);
     ctx.restore();
   }
   limb(ctx, rig.nearArm, near, rig.skin);
