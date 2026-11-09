@@ -122,7 +122,8 @@ html {
   transform: none;
 }
 main:focus,
-h1[tabindex='-1']:focus {
+.form-panel h1:focus,
+.teacher-stats h1:focus {
   outline: none;
 }
 a {

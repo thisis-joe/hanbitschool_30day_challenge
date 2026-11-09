@@ -220,8 +220,8 @@ export function LearningSessionPage() {
                 </div>
                 <div className="learning-reading-panel">
                   <p className="learning-source">{question.text}</p>
+                  <p className="learning-description">문장을 읽고 사실인지 해석인지 골라 주세요.</p>
                 </div>
-                <p className="learning-description">문장을 읽고 사실인지 해석인지 골라 주세요.</p>
                 {waitingForServer || (actions.busy && pendingChoice) ? (
                   <p className="learning-answer-status" role="status">
                     {waitingForServer

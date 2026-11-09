@@ -22,8 +22,8 @@ function OpeningChest() {
   return (
     <div className="acquisition-chest" aria-hidden="true">
       <div className="acquisition-chest-light" />
-      <svg className="acquisition-chest-base" viewBox="0 0 240 160">
-        <ellipse cx="120" cy="146" rx="105" ry="10" fill="#030e22" opacity=".7" />
+      <svg className="acquisition-chest-base" viewBox="0 0 240 160" shapeRendering="crispEdges">
+        <path d="M22 140h196v3h8v7h-8v4H22v-4h-8v-7h8z" fill="#030e22" opacity=".7" />
         <path
           d="m22 78 21-15h154l21 15-10 65H32Z"
           fill="#683a29"
@@ -50,14 +50,14 @@ function OpeningChest() {
         <path d="M52 98h5v5h-5Zm125 0h5v5h-5ZM52 125h5v5h-5Zm125 0h5v5h-5Z" fill="#fff4ba" />
       </svg>
       <div className="acquisition-chest-lid">
-        <svg viewBox="0 0 240 160">
+        <svg viewBox="0 0 240 160" shapeRendering="crispEdges">
           <path
-            d="M23 83V58q0-35 34-35h126q34 0 34 35v25Z"
+            d="M23 83V52h4V41h7v-8h10v-6h13v-4h126v4h13v6h10v8h7v11h4v31Z"
             fill="#b5793c"
             stroke="#36282a"
             strokeWidth="5"
           />
-          <path d="M29 72V58q0-29 29-29h124q29 0 29 29v14Z" fill="#d59a49" />
+          <path d="M29 72V54h5V43h8v-7h11v-6h134v6h11v7h8v11h5v18Z" fill="#d59a49" />
           <path
             d="M49 26h18v54H49Zm124 0h18v54h-18Z"
             fill="#ffe393"

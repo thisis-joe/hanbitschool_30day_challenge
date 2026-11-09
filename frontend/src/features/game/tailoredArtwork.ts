@@ -5,7 +5,6 @@ import type { EquipmentArt } from './artwork';
 const hat = (markup: string): EquipmentArt => ({
   width: 112,
   height: 64,
-  rendering: 'geometricPrecision',
   markup: `<g stroke="#584937" stroke-width="1.2" stroke-linejoin="round">${markup}</g>`,
 });
 
@@ -77,17 +76,16 @@ export const tailoredHats: EquipmentArt[] = [
 const bag = (markup: string): EquipmentArt => ({
   width: 32,
   height: 58,
-  rendering: 'geometricPrecision',
   markup: `<g stroke="#584937" stroke-width=".9" stroke-linejoin="round">${markup}</g>`,
 });
 export const tailoredBags = [
   bag(`
-    <path d="M12 33Q7 22 15 24Q23 22 20 33" fill="none" stroke="#90734e" stroke-width="2"/>
-    <path d="M12 33Q7 37 7 44Q6 51 15 52Q25 52 25 45Q25 37 19 33Z" fill="#c9a771"/>
-    <path d="M13 35Q9 40 10 46Q12 50 18 49Q23 48 21 42L18 35Z" fill="#e6ca95" stroke="none"/>
-    <path d="M11 34l9 1M18 35l2 7" fill="none" stroke="#86714b"/>
-    <path d="M21 40q8 0 3 7l-4-3Z" fill="#7d9567"/>
-    <path d="M12 39l-1 5m2 4h4" fill="none" stroke="#f4dfb4"/>
+    <path d="M12 23h8v1h2v2h1v8h-2v-7h-1v-2h-8v2h-1v7H9v-8h1v-2h2z" fill="#90734e" stroke="none"/>
+    <path d="M10 33h13v1h2v2h2v3h1v5h-1v2h-3v2H10v-1H7v-1H5v-2H4v-5h1v-3h2v-2h3z" fill="#c9a771"/>
+    <path d="M10 36h11v1h2v2h1v3h-2v2H11v-1H9v-4h1z" fill="#e6ca95" stroke="none"/>
+    <path d="M9 34h14v2h-3v2h-8v-1H9z" fill="#947149" stroke="none"/>
+    <path d="M19 39h4v1h-1v2h-2v1h-2v-3h1z" fill="#7d9567" stroke="none"/>
+    <path d="M11 39h2v1h-2zm0 2h1v2h-1zm4 4h5v1h-5z" fill="#f4dfb4" stroke="none"/>
   `),
   bag(`
     <path d="M11 33v-5q5-6 10 0v5" fill="none" stroke="#506b50" stroke-width="2"/>
@@ -119,7 +117,6 @@ const palettes = [
 const garment = (width: number, height: number, markup: string): EquipmentArt => ({
   width,
   height,
-  rendering: 'geometricPrecision',
   markup: `<g stroke="#584937" stroke-width=".9" stroke-linejoin="round">${markup}</g>`,
 });
 const tops = palettes.map(([cloth, light, shade], i) =>
@@ -142,7 +139,9 @@ const tops = palettes.map(([cloth, light, shade], i) =>
 `,
   ),
 );
-const bottoms = palettes.map(([cloth, light, shade], i) =>
+const bottomPalettes = [...palettes];
+bottomPalettes[1] = ['#a48861', '#c9b08b', '#785d44'];
+const bottoms = bottomPalettes.map(([cloth, light, shade], i) =>
   garment(
     40,
     28,

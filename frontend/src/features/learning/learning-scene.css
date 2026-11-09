@@ -9,8 +9,6 @@
   margin: 0;
   border-width: 2px;
   border-radius: var(--pixel-corner);
-  background-position: center bottom;
-  image-rendering: var(--scene-image-rendering, auto);
   box-shadow: 0 3px 0 var(--ink);
 }
 .game-answer-immersive .game-answer-content {
@@ -148,13 +146,9 @@
 }
 .game-answer-content .learning-description {
   margin: 8px 0 0;
-  text-align: center;
-  color: #263d35;
+  text-align: left;
+  color: #435748;
   font-size: 0.8rem;
-  font-weight: 700;
-  text-shadow:
-    0 1px 2px #fffef1,
-    0 0 8px #fffef1;
 }
 .game-answer-content .learning-bookmark {
   top: -6px;
@@ -285,7 +279,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: 210px;
-  background: linear-gradient(#102d25eb, #102d25bf 55%, transparent);
+  background: linear-gradient(#102d25e6 0 70px, #102d25b3 70px 142px, #102d2570 142px 198px, transparent 198px);
   pointer-events: none;
 }
 .game-answer-content h1:focus {

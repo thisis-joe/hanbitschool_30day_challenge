@@ -11,7 +11,6 @@ import { useLearningActions } from './useLearningActions';
 import type { LearningMode } from './types';
 import { useGame, useJourney } from '../game/queries';
 import { GameAvatar } from '../game/GameAvatar';
-import { useSceneGround } from '../game/useSceneGround';
 import { RewardCard } from '../game/RewardCard';
 import { REGIONS } from '../game/journeyGeometry';
 
@@ -148,7 +147,6 @@ export function LearningDashboardPage() {
       : regionIndex !== null && regionIndex >= 2
         ? 'village'
         : 'forest';
-  const camp = useSceneGround<HTMLDivElement>(sceneRegion);
   return (
     <section className="learning-page game-journey-page game-home-page">
       <div className="game-home-intro">
@@ -190,7 +188,7 @@ export function LearningDashboardPage() {
             </div>
           ) : null}
         </div>
-        <div ref={camp} className={`game-camp-scene game-scene-${sceneRegion}`}>
+        <div className={`game-camp-scene game-scene-${sceneRegion}`}>
           {appearance ? (
             <GameAvatar
               characterId={appearance.characterId}

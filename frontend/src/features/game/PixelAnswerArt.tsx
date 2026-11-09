@@ -1,13 +1,19 @@
+const cross = Array.from({ length: 36 }, (_, row) => {
+  const x = 6 + Math.round((29 * row) / 35);
+  const y = row + 6;
+  return `M${x} ${y}h7v1h-7zM${41 - x} ${y}h7v1h-7z`;
+}).join('');
+
 export function PixelAnswerArt({ choice }: { choice: 'O' | 'X' }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" shapeRendering="crispEdges">
+    <svg viewBox="0 0 48 48" aria-hidden="true" shapeRendering="crispEdges">
       {choice === 'O' ? (
         <path
           fillRule="evenodd"
-          d="M6 2h12v2h4v4h2v8h-2v4h-4v2H6v-2H2v-4H0V8h2V4h4zm2 5v2H5v6h3v2h8v-2h3V9h-3V7z"
+          d="M14 4h20v1h4v2h3v3h2v4h1v20h-1v4h-2v3h-3v2h-4v1H14v-1h-4v-2H7v-3H5v-4H4V14h1v-4h2V7h3V5h4zm1 8v2h-2v2h-1v16h1v2h2v2h18v-2h2v-2h1V16h-1v-2h-2v-2z"
         />
       ) : (
-        <path d="M1 2h6v3h3v3h4V5h3V2h6v6h-3v3h-3v2h3v3h3v6h-6v-3h-3v-3h-4v3H7v3H1v-6h3v-3h3v-2H4V8H1z" />
+        <path d={cross} />
       )}
     </svg>
   );

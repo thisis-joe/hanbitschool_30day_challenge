@@ -79,7 +79,7 @@ export function JourneyMap({
         aria-label="아래 숲에서 위 등대로 올라가는 탐험 지도"
       >
         <div className="game-map-world" ref={world}>
-          {MAP_REGIONS.map((region) => (
+          {MAP_REGIONS.map((region, index) => (
             <div
               key={region.firstDay}
               className={`game-map-terrain${revealing.includes(String(region.firstDay)) ? ' game-map-region-revealing' : ''}`}
@@ -89,23 +89,21 @@ export function JourneyMap({
               style={
                 {
                   '--region-top': `${region.top}%`,
-                  '--region-height': `${region.height}%`,
-                  '--region-bottom': `${100 - region.top - region.height}%`,
-                  '--region-accent': region.accent,
+                  '--region-bottom': `${Math.round((100 - region.top - region.height) * 100) / 100}%`,
+                  '--fade-top': revealed[MAP_REGIONS[index + 1]?.firstDay] ? '44px' : '0px',
+                  '--fade-bottom': revealed[MAP_REGIONS[index - 1]?.firstDay] ? '44px' : '0px',
                 } as CSSProperties
               }
             >
               <div className="game-map-art" />
-              <div className="game-map-clouds">
-                <i />
-                <i />
-              </div>
+              <div className="game-map-clouds" />
             </div>
           ))}
           <svg
             className="game-map-route"
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
+            shapeRendering="crispEdges"
             aria-hidden="true"
           >
             <polyline points={MAP_TRAIL.map(([x, y]) => `${x},${y}`).join(' ')} />
