@@ -10,7 +10,7 @@ export function StaffLoginPage() {
   const submit = useSubmission();
   const [success, setSuccess] = useState(false);
   return (
-    <AuthFrame title="교직원 로그인" description="발급받은 아이디와 비밀번호를 입력하세요.">
+    <AuthFrame title="교직원 로그인">
       <form
         onSubmit={(e) => {
           e.preventDefault();
