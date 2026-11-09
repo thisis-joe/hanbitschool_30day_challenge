@@ -26,7 +26,7 @@ test('all nine characters keep their limbs connected throughout walking, jumping
       sad: [180, 360],
     };
     for (const id of CHARACTER_IDS)
-      for (const set of [0, 1, 5]) {
+      for (const set of [0, 1, 2, 3, 4, 5]) {
         const equipment = Object.fromEntries(
           SLOTS.map((slot: string) => [slot, set ? `${slot}-${set}` : null]),
         );
@@ -193,6 +193,42 @@ test('each handheld bag hangs below the raised hand when the character cheers', 
     expect(bag.lowestPaint, JSON.stringify(bag)).toBeGreaterThan(125);
     expect(bag.aboveFist, JSON.stringify(bag)).toBe(0);
   }
+});
+
+test('Bora’s raised arm leaves no skin-colored copy on her hair', async ({ page }) => {
+  await page.goto('/e2e/fixtures/answer-motion.html');
+  const observations = await page.evaluate(async () => {
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { buildAvatarRig, paintAvatarPose } = await import('/src/features/game/motion/rig.ts');
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { POSES } = await import('/src/features/game/motion/poses.ts');
+    // @ts-expect-error The Vite fixture serves source modules directly.
+    const { emptyEquipment } = await import('/src/features/game/types.ts');
+    const rig = await buildAvatarRig(
+      'bora',
+      { ...emptyEquipment(), top: 'top-2' },
+      new AbortController().signal,
+    );
+    const canvas = document.createElement('canvas');
+    canvas.width = 176;
+    canvas.height = 216;
+    const ctx = canvas.getContext('2d')!;
+    const countSkin = () => {
+      // This strip is part of the original lowered arm and sits clear of the torso.
+      const pixels = ctx.getImageData(74, 163, 3, 8).data;
+      let count = 0;
+      for (let i = 0; i < pixels.length; i += 4)
+        if (pixels[i + 3] > 180 && pixels[i] > pixels[i + 1] * 1.05 && pixels[i + 1] > 95) count++;
+      return count;
+    };
+    paintAvatarPose(canvas, rig, POSES.idle);
+    const idleArm = countSkin();
+    paintAvatarPose(canvas, rig, POSES.cheer);
+    return { idleArm, ghostArm: countSkin(), nearbyHair: ctx.getImageData(70, 165, 1, 1).data[3] };
+  });
+  expect(observations.idleArm).toBeGreaterThan(10);
+  expect(observations.ghostArm).toBe(0);
+  expect(observations.nearbyHair).toBeGreaterThan(180);
 });
 
 test('arrives faster, completes the reaction, and respects reduced motion', async ({ page }) => {

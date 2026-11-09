@@ -117,6 +117,7 @@ export async function buildAvatarRig(
   const source = body.ctx.getImageData(0, 0, 128, 176),
     original = bare.ctx.getImageData(0, 0, 128, 176);
   const remaining = body.ctx.getImageData(0, 0, 128, 176);
+  const armPixels = new Uint8Array(128 * 176);
   const arm = (joints: Chain, bounds: Box, farSide = false): Limb => {
     const layer = surface(),
       pixels = layer.ctx.createImageData(128, 176);
@@ -134,6 +135,7 @@ export async function buildAvatarRig(
         if (y >= a.pants[1] && (farSide ? x < a.pants[2] : x > a.pants[0] + 5)) belongs = false;
         if (!belongs) continue;
         copyPixel(pixels, original, x, y);
+        armPixels[p / 4] = 1;
         // Keep any sleeve already painted above the original skin.
         if (
           source.data[p] === original.data[p] &&
@@ -187,8 +189,8 @@ export async function buildAvatarRig(
         copyPixel(headPixels, original, x, y);
         remaining.data[p + 3] = 0;
       }
-      // Braids, ponytail and long side hair remain behind the shoulders and legs.
-      else if (isBackHair(character, x, y) && original.data[p + 3]) {
+      // Long hair stays behind the limbs. Its bounds can overlap the original arm silhouette.
+      else if (isBackHair(character, x, y) && original.data[p + 3] && !armPixels[p / 4]) {
         copyPixel(hairPixels, original, x, y);
         remaining.data[p + 3] = 0;
       }
