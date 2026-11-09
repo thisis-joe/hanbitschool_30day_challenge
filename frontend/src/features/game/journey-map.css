@@ -13,12 +13,13 @@
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 2px solid var(--ink);
-  background: var(--paper);
+  background: var(--panel);
   font-size: 0.8rem;
   font-weight: 700;
 }
 .game-map-toolbar button {
   flex-shrink: 0;
+  background: var(--paper);
 }
 .game-map-viewport {
   height: clamp(440px, 70dvh, 760px);

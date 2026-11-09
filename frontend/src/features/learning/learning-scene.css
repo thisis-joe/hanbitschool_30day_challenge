@@ -72,11 +72,12 @@
 .game-answer-content .learning-feedback-header h1,
 .game-learning-session .game-answer-content .learning-question-header h1 {
   margin: 0;
-  font-size: clamp(1.15rem, 2.8vw, 1.5rem);
-  color: #fffdf3;
-  text-shadow:
-    0 2px 3px #153725,
-    0 0 8px #153725;
+  padding: 2px 8px;
+  border: 2px solid var(--ink);
+  background: var(--rose);
+  box-shadow: inset 0 2px 0 var(--rose-soft);
+  font-size: clamp(1.125rem, 2.8vw, 1.5rem);
+  color: var(--ink);
 }
 .game-answer-content .learning-question-header {
   margin-bottom: 12px;
@@ -109,20 +110,21 @@
 }
 .game-answer-content .learning-reading-panel {
   padding: clamp(14px, 2.2vw, 20px);
-  border: 1px solid #43574866;
+  border: 2px solid var(--line);
   border-radius: var(--pixel-corner);
   background: var(--paper);
-  box-shadow: 0 2px 0 #263d3540;
-  color: #263d35;
+  box-shadow: 0 3px 0 var(--shadow);
+  color: var(--ink);
 }
 .game-answer-content .learning-reading-panel .learning-source {
   margin: 0;
-  font-size: clamp(1.05rem, 2.6vw, 1.35rem);
+  font-size: clamp(1.0625rem, 2.6vw, 1.25rem);
+  font-weight: 400;
   line-height: 1.65;
 }
 .game-answer-content .learning-reading-panel .learning-explanation {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.7;
 }
 .game-answer-content .learning-answer-key {
@@ -132,7 +134,7 @@
 .game-answer-content .learning-source + .learning-answer-key {
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid #43574830;
+  border-top: 1px solid var(--edge);
 }
 .game-answer-content .learning-answer-status {
   width: fit-content;
@@ -140,15 +142,15 @@
   margin: 6px auto 0;
   padding: 4px 10px;
   border-radius: var(--pixel-corner);
-  background: #fffef4;
-  color: #263d35;
+  background: var(--paper);
+  color: var(--ink);
   font-size: 0.8rem;
 }
 .game-answer-content .learning-description {
   margin: 8px 0 0;
   text-align: left;
-  color: #435748;
-  font-size: 0.8rem;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 .game-answer-content .learning-bookmark {
   top: -6px;
