@@ -287,8 +287,8 @@
   content: '';
   position: absolute;
   inset: 0 0 auto;
-  height: 210px;
-  background: linear-gradient(#102d25e6 0 70px, #102d25b3 70px 142px, #102d2570 142px 198px, transparent 198px);
+  height: calc(var(--reading-height) + 50px);
+  background: linear-gradient(#102d25 48%, #102d2590 76%, transparent);
   pointer-events: none;
 }
 .game-answer-content h1:focus {

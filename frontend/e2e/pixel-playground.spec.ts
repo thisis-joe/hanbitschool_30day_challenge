@@ -179,7 +179,7 @@ for (const width of [320, 390, 768, 1280]) {
       const scene = page.getByRole('region', { name: '학습 여행 장면' });
       await expect(async () => {
         const distance = await scene.evaluate((el) => {
-          // The authored image puts the ground at row 442 of 580, even after cropping.
+          // The painted walking surface is anchored to the fixed scene floor.
           const floor = el.getBoundingClientRect().bottom - el.clientTop - 138;
           const actor = el.querySelector('.game-avatar-articulated')!.getBoundingClientRect();
           const feet = actor.top + actor.height * (196 / 216);
@@ -220,7 +220,8 @@ for (const density of [1, 2]) {
       const rock = scene.locator('.game-answer-o .game-answer-landmark-art');
       await expect(rock).toHaveCSS('width', '116px');
       await expect(rock).toHaveCSS('height', '112px');
-      await expect(scene).toHaveCSS('background-size', '1080px 580px');
+      await expect(scene).toHaveCSS('background-size', '768px auto');
+      await expect(scene).toHaveCSS('background-image', /\/game\/pixels\/original-forest\.png/);
       const sourceSize = await scene.evaluate(async (element) => {
         const source = getComputedStyle(element).backgroundImage.match(/url\("([^"]+)"\)/)?.[1];
         const image = new Image();
@@ -228,7 +229,7 @@ for (const density of [1, 2]) {
         await image.decode();
         return [image.naturalWidth, image.naturalHeight];
       });
-      expect(sourceSize).toEqual([1080, 580]);
+      expect(sourceSize).toEqual([768, 516]);
 
       const output = evidenceOutput();
       if (output) await page.screenshot({ path: output.file(`forest-density-${density}.png`) });
@@ -299,13 +300,10 @@ for (const width of [320, 390, 768, 1280]) {
         await scene.locator('.game-avatar-articulated[data-ready="true"]').waitFor();
         const marker = scene.locator(`.game-answer-${choice.toLowerCase()}`);
         const art = marker.locator('.game-answer-landmark-art');
-        const file = { forest: 'forest-pixel-rock', village: 'village-sign', beach: 'beach-shell' }[
-          region
-        ];
-        await expect(art).toHaveAttribute('src', `/game/answers/${file}.svg`);
+        await expect(art).toHaveAttribute('src', `/game/answers/original-${region}.png`);
         await expect
           .poll(() => art.evaluate((el) => (el as HTMLImageElement).naturalWidth))
-          .toBe(116);
+          .toBe(88);
         await expect(async () => {
           const distance = await marker.evaluate((el) => {
             const scene = el.closest('section')!;

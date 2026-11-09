@@ -26,10 +26,11 @@
 }
 .game-learning-scene,
 .game-camp-scene {
-  /* The native 1080 × 580 scene has its floor on row 442. Crop at 1×. */
-  --art-ground: 138px;
+  /* All outdoor art is 768 pixels wide. Anchor its painted walking surface to the scene floor. */
+  --art-width: 1080px;
+  --art-ground: calc(var(--art-width) * var(--art-ground-rows) / 768);
   background: var(--region-sky) var(--region-art) center
-    calc(100% + var(--art-ground) - var(--scene-ground)) / 1080px 580px no-repeat;
+    calc(100% + var(--art-ground) - var(--scene-ground)) / var(--art-width) auto no-repeat;
   image-rendering: pixelated;
 }
 .game-learning-road {
@@ -228,6 +229,7 @@
   font-weight: 800;
 }
 .game-camp-scene {
+  --art-width: 720px;
   --scene-ground: 116px;
   position: relative;
   min-height: 440px;
@@ -235,7 +237,8 @@
 }
 .game-scene-forest {
   --region-sky: #2b4b40;
-  --region-art: url('/game/pixels/forest-clearing.svg');
+  --region-art: url('/game/pixels/original-forest.png');
+  --art-ground-rows: 140;
 }
 .game-scene-forest::after {
   content: '';
@@ -253,11 +256,13 @@
 }
 .game-scene-village {
   --region-sky: #414b3d;
-  --region-art: url('/game/pixels/village.svg');
+  --region-art: url('/game/pixels/original-village.png');
+  --art-ground-rows: 144;
 }
 .game-scene-beach {
   --region-sky: #315257;
-  --region-art: url('/game/pixels/beach.svg');
+  --region-art: url('/game/pixels/original-beach.png');
+  --art-ground-rows: 143;
 }
 .game-camp-scene > .game-avatar {
   position: absolute;
@@ -313,7 +318,7 @@
   gap: 12px;
   border: 4px solid var(--ink);
   border-radius: var(--pixel-corner);
-  background: #dac7a0 url('/game/pixels/room.svg') center bottom / 760px 470px no-repeat;
+  background: #dac7a0 url('/game/pixels/original-room.png') center bottom / cover no-repeat;
   image-rendering: pixelated;
   box-shadow: 0 6px 0 var(--shadow);
 }
@@ -408,11 +413,15 @@
     min-height: 52px;
   }
   .game-camp-scene {
+    --art-width: 540px;
     --scene-ground: 66px;
     grid-row: 2;
     min-height: 210px;
     border-left: 0;
     border-top: 3px solid var(--ink);
+  }
+  .game-learning-scene {
+    --art-width: 768px;
   }
   .game-camp-scene > .game-avatar {
     left: 21%;
