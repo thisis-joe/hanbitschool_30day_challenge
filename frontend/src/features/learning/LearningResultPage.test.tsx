@@ -254,7 +254,7 @@ it('fifthFeedbackLeavesWithoutFinishAndRestoresGift', async () => {
     }),
   );
   const first = setup(`/student/learning/sessions/${sessionId}`);
-  await userEvent.click(await screen.findByRole('link', { name: '한빛학교 배움터' }));
+  await userEvent.click(await screen.findByRole('link', { name: '사실일까? 해석일까?' }));
   first.unmount();
   setup();
   expect(await screen.findByText('새 선물')).toBeVisible();
@@ -366,7 +366,7 @@ function setup(
     ...render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[path]}>
-          <Link to="/student/learning">한빛학교 배움터</Link>
+          <Link to="/student/learning">사실일까? 해석일까?</Link>
           {controls}
           <Routes>
             <Route path="/student/learning/sessions/:sessionId" element={<LearningSessionPage />} />

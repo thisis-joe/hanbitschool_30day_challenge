@@ -271,5 +271,7 @@ test('long text stays readable above the character on a small phone', async ({ p
   await expect(source).toContainText('서로 다르게');
   await expect(page.locator('.learning-explanation')).toContainText('어떤 근거');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const output = evidenceOutput();
+  if (output) await page.screenshot({ path: output.file('long-feedback-320.png') });
   await expect(page.getByRole('link', { name: '완료하기', exact: true })).toBeInViewport();
 });
