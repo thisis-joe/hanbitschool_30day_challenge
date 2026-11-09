@@ -77,7 +77,7 @@ export function RewardCard({
         {revealing ? <CelebrationBurst key={acquisitionId ?? item.itemId} /> : null}
         <div className="game-reward-art" aria-hidden="true">
           <EquipmentIcon itemId={item.itemId} slot={item.slot} />
-          <img className="game-treasure-chest" src="/game/reward-chest.svg" alt="" />
+          <img className="game-treasure-chest" src="/game/pixels/reward-chest.svg" alt="" />
         </div>
         <span className="game-mystery-cloud game-cloud-left" aria-hidden="true" />
         <span className="game-mystery-cloud game-cloud-right" aria-hidden="true" />
