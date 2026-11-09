@@ -187,24 +187,6 @@ export function ClosetPage() {
                   <p className="learning-eyebrow">나의 장비 상자</p>
                   <h2>{slotNames[selectedSlot]}</h2>
                   <p>잠긴 장비도 미리 입어 볼 수 있어요. 첫 통과로 얻은 뒤 착용할 수 있어요.</p>
-                  <button
-                    className="game-base-reset"
-                    aria-label={`${slotNames[selectedSlot]} 기본 모습`}
-                    data-equipped={!view.equippedBySlot[selectedSlot] || undefined}
-                    disabled={appearance.busy || !view.equippedBySlot[selectedSlot]}
-                    onClick={() => {
-                      setPreview(null);
-                      void appearance.save(view.characterId, {
-                        ...view.equippedBySlot,
-                        [selectedSlot]: null,
-                      });
-                    }}
-                  >
-                    <svg viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden="true">
-                      <path d="M6 2v2H4v2H2m0 0v2h2v2h2M2 6h10v1h1v1h1v4h-1v1h-1v1H8" />
-                    </svg>
-                    <span>{view.equippedBySlot[selectedSlot] ? '장비 벗기' : '기본 모습'}</span>
-                  </button>
                 </div>
                 <div className="game-wardrobe-grid">
                   {view.items

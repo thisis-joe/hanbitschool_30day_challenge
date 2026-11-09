@@ -236,6 +236,19 @@
     border-radius: var(--pixel-corner);
   }
 }
+@media (min-height: 500px) {
+  .game-exploration-page .game-map-stage {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .game-exploration-page .game-map-viewport {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .game-map-region-revealing,
   .game-map-region-revealing .game-map-clouds {

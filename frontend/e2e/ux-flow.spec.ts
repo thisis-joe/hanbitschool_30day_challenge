@@ -298,7 +298,7 @@ test('teacher returns to the selected student and list settings', async ({ page 
 
 for (const width of [320, 390, 768, 1280]) {
   test(`student surfaces at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 844 });
+    await page.setViewportSize({ width, height: width === 320 ? 568 : 844 });
     await scenario(page, 'student', false, width === 390);
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
@@ -325,6 +325,15 @@ for (const width of [320, 390, 768, 1280]) {
           '/student/character',
         );
         await expect(preview.getByText('나의 여행 친구', { exact: true })).toHaveCount(0);
+        await expect(page.getByText('장비 벗기', { exact: true })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: '얼굴 장비 보기' })).toBeInViewport();
+      }
+      if (name === 'map' || name === 'closet') {
+        const screenHeight = await page.evaluate(() => ({
+          document: document.documentElement.scrollHeight,
+          viewport: innerHeight,
+        }));
+        expect(screenHeight.document).toBeLessThanOrEqual(screenHeight.viewport);
       }
       if (name === 'questions') {
         await expect(page.getByRole('link', { name: '학습 홈으로', exact: true })).toHaveCount(0);
@@ -455,6 +464,8 @@ test('home keeps learning focused without round cards', async ({ page }) => {
   await expect(page.getByRole('button', { name: '회차별 학습 보기' })).toHaveCount(0);
   const gift = page.getByRole('complementary', { name: '다음 여행 선물' });
   await expect(gift).toContainText('작은 모자');
+  await expect(gift).not.toContainText('첫 통과');
+  await expect(gift).toHaveCSS('text-align', 'center');
   await expect(gift.locator('svg')).toHaveAttribute('shape-rendering', 'crispEdges');
   await expect(page.locator('.game-home-page > :last-child')).toHaveClass(/game-home-stats/);
   await expect(page.getByText('나의 여행 친구', { exact: true })).toHaveCount(0);

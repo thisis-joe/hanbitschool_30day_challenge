@@ -19,7 +19,7 @@ it('filters inventory by category and keeps all six slots reachable without savi
     await user.click(category);
     expect(category).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('region', { name })).toBeVisible();
-    expect(screen.getByRole('button', { name: `${name} 기본 모습` })).toBeVisible();
+    expect(screen.queryByRole('button', { name: `${name} 기본 모습` })).toBeNull();
     expect(category).toHaveFocus();
   }
   expect(screen.getByRole('button', { name: '빛나는 지팡이 미리보기' })).toBeVisible();
@@ -60,16 +60,12 @@ it('unownedPreviewNeverPutsAndCancelRestoresSavedGear', async () => {
 });
 
 // Saving a partial slot map or inventing haru would erase another slot/character choice.
-it('ownedEquipAndBaseRestoreSendSixSlotsAndRevision', async () => {
+it('ownedEquipSendsSixSlotsAndRevision', async () => {
   const { user, commands } = setup();
   await user.click(await screen.findByRole('button', { name: '모자 장비 보기' }));
   await user.click(await screen.findByRole('button', { name: '작은 모자 미리보기' }));
   await user.click(screen.getByRole('button', { name: '착용하기' }));
   await waitFor(() => expect(commands).toHaveLength(1));
-  await user.click(screen.getByRole('button', { name: '얼굴 장비 보기' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: '얼굴 기본 모습' })).toBeEnabled());
-  await user.click(screen.getByRole('button', { name: '얼굴 기본 모습' }));
-  await waitFor(() => expect(commands).toHaveLength(2));
   expect(commands[0]).toEqual({
     characterId: null,
     expectedRevision: 7,
@@ -81,11 +77,6 @@ it('ownedEquipAndBaseRestoreSendSixSlotsAndRevision', async () => {
       shoes: null,
       hand: null,
     },
-  });
-  expect(commands[1]).toEqual({
-    characterId: null,
-    expectedRevision: 8,
-    equippedBySlot: { face: null, hat: 'hat-1', top: null, bottom: null, shoes: null, hand: null },
   });
 });
 
