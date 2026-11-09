@@ -22,7 +22,7 @@ it('filters inventory by category and keeps all six slots reachable without savi
     expect(screen.queryByRole('button', { name: `${name} 기본 모습` })).toBeNull();
     expect(category).toHaveFocus();
   }
-  expect(screen.getByRole('button', { name: '빛나는 지팡이 미리보기' })).toBeVisible();
+  expect(screen.getByRole('button', { name: /빛나는 지팡이.*30회차 통과 시 획득/ })).toBeDisabled();
   expect(screen.queryByRole('button', { name: '동그란 안경 미리보기' })).toBeNull();
   expect(commands).toHaveLength(0);
 });
@@ -43,19 +43,31 @@ function setup(view = gameView) {
   return { commands, user: userEvent.setup(), ...renderPage(<App />, '/student/closet') };
 }
 
-// Sending preview to the server or mutating canonical gear breaks cancellation and ownership.
-it('unownedPreviewNeverPutsAndCancelRestoresSavedGear', async () => {
+it('keeps locked equipment hidden and restores saved gear when undoing an owned preview', async () => {
   const { user, commands } = setup();
   await user.click(await screen.findByRole('button', { name: '손 장비 보기' }));
-  await user.click(await screen.findByRole('button', { name: '빛나는 지팡이 미리보기' }));
+  const locked = screen.getByRole('button', { name: /빛나는 지팡이.*30회차 통과 시 획득/ });
+  expect(locked).toBeDisabled();
+  await user.click(locked);
+
   const preview = screen.getByRole('region', { name: '외형 미리보기' });
-  expect(within(preview).getByText(/미보유/)).toBeVisible();
-  expect(within(preview).getByRole('img')).toHaveAccessibleName(/빛나는 지팡이/);
-  expect(screen.queryByRole('button', { name: '착용하기' })).toBeNull();
-  expect(commands).toHaveLength(0);
-  await user.click(screen.getByRole('button', { name: '미리보기 취소' }));
-  expect(within(preview).getByRole('img')).toHaveAccessibleName(/동그란 안경/);
-  expect(within(preview).queryByText(/미보유/)).toBeNull();
+  const avatar = within(preview).getByRole('img');
+  const save = within(preview).getByRole('button', { name: '저장' });
+  const undo = within(preview).getByRole('button', { name: '되돌리기' });
+  expect(avatar).toHaveAccessibleName(/동그란 안경/);
+  expect(avatar).not.toHaveAccessibleName(/빛나는 지팡이/);
+  expect(save).toBeDisabled();
+  expect(undo).toBeDisabled();
+
+  await user.click(screen.getByRole('button', { name: '모자 장비 보기' }));
+  await user.click(screen.getByRole('button', { name: '작은 모자 미리보기' }));
+  expect(avatar).toHaveAccessibleName(/작은 모자/);
+  expect(within(preview).queryByText(/작은 모자/)).toBeNull();
+  expect(save).toBeEnabled();
+  await user.click(undo);
+  expect(avatar).not.toHaveAccessibleName(/작은 모자/);
+  expect(save).toBeDisabled();
+  expect(undo).toBeDisabled();
   expect(commands).toHaveLength(0);
 });
 
@@ -64,7 +76,7 @@ it('ownedEquipSendsSixSlotsAndRevision', async () => {
   const { user, commands } = setup();
   await user.click(await screen.findByRole('button', { name: '모자 장비 보기' }));
   await user.click(await screen.findByRole('button', { name: '작은 모자 미리보기' }));
-  await user.click(screen.getByRole('button', { name: '착용하기' }));
+  await user.click(screen.getByRole('button', { name: '저장' }));
   await waitFor(() => expect(commands).toHaveLength(1));
   expect(commands[0]).toEqual({
     characterId: null,
@@ -85,7 +97,7 @@ it('unknownCatalogArtDoesNotExecuteMarkup', async () => {
   const { user, container } = setup({
     ...gameView,
     items: [{ itemId: bad, assetKey: bad, name: bad, slot: 'hand', value: 6, rewardDay: 30 }],
-    inventory: [{ itemId: bad, owned: false, acquiredAt: null }],
+    inventory: [{ itemId: bad, owned: true, acquiredAt: null }],
   });
   await user.click(await screen.findByRole('button', { name: '손 장비 보기' }));
   await user.click(await screen.findByRole('button', { name: `${bad} 미리보기` }));
@@ -96,8 +108,8 @@ it('unknownCatalogArtDoesNotExecuteMarkup', async () => {
 
 it('previewClearsImmediatelyWhenOwnerChanges', async () => {
   const { user, client } = setup();
-  await user.click(await screen.findByRole('button', { name: '손 장비 보기' }));
-  await user.click(await screen.findByRole('button', { name: '빛나는 지팡이 미리보기' }));
+  await user.click(await screen.findByRole('button', { name: '모자 장비 보기' }));
+  await user.click(await screen.findByRole('button', { name: '작은 모자 미리보기' }));
   const next = {
     ...gameView,
     characterId: 'bora' as const,
@@ -113,5 +125,5 @@ it('previewClearsImmediatelyWhenOwnerChanges', async () => {
       within(screen.getByRole('region', { name: '외형 미리보기' })).getByRole('img'),
     ).toHaveAccessibleName(/보라/),
   );
-  expect(screen.queryByRole('button', { name: '미리보기 취소' })).toBeNull();
+  expect(screen.getByRole('button', { name: '되돌리기' })).toBeDisabled();
 });
