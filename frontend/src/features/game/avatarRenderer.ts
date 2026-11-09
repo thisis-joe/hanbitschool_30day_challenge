@@ -307,7 +307,7 @@ export async function renderAvatar(
   }
   if (gear.top) {
     const [x, y, r, b] = a.shirt;
-    draw('top', gear.top, x - 3, y - 2, r - x + 6, b - y + 3);
+    draw('top', gear.top, x - 3, y - 3, r - x + 6, b - y + 4);
   }
   if (gear.shoes) {
     const value = gear.shoes;

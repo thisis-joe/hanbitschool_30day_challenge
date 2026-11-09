@@ -127,15 +127,15 @@ const tops = palettes.map(([cloth, light, shade], i) =>
     44,
     44,
     `
-  <path d="M10 6L17 2Q18 9 25 13Q30 8 30 2L36 5L39 14L35 20L36 40Q23 44 8 40L10 20L6 14Z" fill="${shade}"/>
-  <path d="M11 7l5-3q1 8 9 12v24q-8 2-15-1l1-20-3-5Z" fill="${cloth}" stroke="none"/>
-  <path d="M32 4l3 2 2 8-4 6 1 20-7 1V15q5-4 5-11Z" fill="${cloth}" stroke="none"/>
-  <path d="M12 9l3-3q2 8 8 10v2q-7-3-9-7l-3 8" fill="${light}" stroke="none"/>
-  <path d="M26 15v25M11 37q11 3 23 0" fill="none" stroke="${shade}" stroke-width=".7"/>
+  <path d="M5 3L11 1H17Q20 5 25 6Q29 5 31 1H35L39 4L41 13Q41 17 39 21L38 23L39 40Q23 44 7 40L8 22Q5 18 4 14Z" fill="${shade}"/>
+  <path d="M7 4L16 2Q20 7 25 9V40Q17 42 9 39L10 21Q7 18 6 14Z" fill="${cloth}" stroke="none"/>
+  <path d="M32 2H35L38 5L40 13Q39 18 36 22L37 39L27 41V9Q31 7 32 2Z" fill="${cloth}" stroke="none"/>
+  <path d="M9 5L16 3Q19 7 24 9L23 11Q18 9 15 5L9 7Z" fill="${light}" stroke="none"/>
+  <path d="M26 9v31M11 37q11 3 23 0" fill="none" stroke="${shade}" stroke-width=".7"/>
   <path d="M11 23l10 1v9l-10-1Z M30 24l4-1v9l-4 1Z" fill="${shade}" stroke-width=".6"/>
   <path d="M12 24l8 1v3l-8-1Z M30 25l4-1v3l-4 1Z" fill="${light}" stroke="none"/>
   ${i === 2 ? `<path d="M11 19l12 1m-11 1 11 1m6-3 6-1m-5 18 5-1" stroke="${light}" stroke-width=".7"/>` : ''}
-  ${i === 3 ? `<path d="M14 4l7 10-6 4-5-9m19 6 4 3 3-10" fill="${light}" stroke-width=".6"/>` : ''}
+  ${i === 3 ? `<path d="M15 3l7 6-6 4-5-7m18 3 5 4 3-8" fill="${light}" stroke-width=".6"/>` : ''}
   ${i === 4 ? '<path d="M16 20l1 3 3 1-3 1-1 3-1-3-3-1 3-1Z" fill="#f5e7b6" stroke="none"/>' : ''}
   <path d="M24 20h1m-1 7h1m-1 8h1" stroke="#fff0b4" stroke-width="1.4"/>
   <path d="M12 34l7 1M33 8v5" stroke="${light}" stroke-width=".6"/>
