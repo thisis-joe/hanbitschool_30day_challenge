@@ -410,7 +410,8 @@ test('home keeps learning focused without round cards', async ({ page }) => {
   await expect(gift.locator('svg')).toHaveAttribute('shape-rendering', 'crispEdges');
   await expect(page.locator('.game-home-page > :last-child')).toHaveClass(/game-home-stats/);
   await expect(page.getByText('나의 여행 친구', { exact: true })).toHaveCount(0);
-  for (const width of [320, 390, 1280]) {
+  const campScene = page.locator('.game-camp-scene');
+  for (const width of [320, 390, 720, 1280]) {
     await page.setViewportSize({ width, height: 844 });
     await expect(gift).toBeVisible();
     expect(
@@ -419,6 +420,11 @@ test('home keeps learning focused without round cards', async ({ page }) => {
         return Math.abs(row.right - el.getBoundingClientRect().right);
       }),
     ).toBeLessThan(1);
+    expect(
+      await campScene.evaluate(
+        (el) => parseFloat(getComputedStyle(el).backgroundSize) - el.clientWidth,
+      ),
+    ).toBeGreaterThanOrEqual(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
 });

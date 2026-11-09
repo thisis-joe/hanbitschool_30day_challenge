@@ -229,7 +229,7 @@
   font-weight: 800;
 }
 .game-camp-scene {
-  --art-width: 720px;
+  --art-width: 800px;
   --scene-ground: 116px;
   position: relative;
   min-height: 440px;
@@ -413,7 +413,7 @@
     min-height: 52px;
   }
   .game-camp-scene {
-    --art-width: 540px;
+    --art-width: max(540px, calc(100vw - 32px));
     --scene-ground: 66px;
     grid-row: 2;
     min-height: 210px;
