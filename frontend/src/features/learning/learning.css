@@ -562,27 +562,43 @@
   border-top: 1px solid var(--line);
   font-size: 0.9rem;
 }
-.learning-replay-picker summary {
-  cursor: pointer;
+.learning-replay-toggle {
+  width: 100%;
   min-height: 44px;
-  padding-block: 10px;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
-.learning-replay-picker > div {
-  display: grid;
-  grid-template-columns: auto minmax(0, max-content);
+.learning-replay-toggle::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.learning-replay-toggle[aria-expanded='true']::before {
+  transform: rotate(90deg);
+}
+.learning-replay-controls {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding-block: 12px;
+  gap: 8px;
+  padding-block: 8px 12px;
 }
-.learning-replay-picker label {
-  margin: 0;
+/* The closed controls keep their space so the neighboring scene stays fixed. */
+.learning-replay-controls[inert] {
+  visibility: hidden;
 }
-.learning-replay-picker select {
+.learning-replay-controls select {
   width: auto;
   max-width: 100%;
+  padding-inline: 8px;
 }
-.learning-replay-picker button {
-  grid-column: 1 / -1;
-  justify-self: center;
+.learning-replay-controls button {
+  max-width: 100%;
+  padding-inline: 8px;
 }

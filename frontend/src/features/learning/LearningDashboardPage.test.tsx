@@ -32,7 +32,7 @@ function renderHome() {
   );
 }
 
-it('homeShowsTheCanonicalNextActionAndGiftInTheHeading', async () => {
+it('homeShowsTheCanonicalNextActionAndGiftInTheScene', async () => {
   server.use(
     http.get('*/api/student/learning/status', () => HttpResponse.json(ready)),
     http.get('*/api/student/game', () => HttpResponse.json(gameView)),
@@ -47,7 +47,8 @@ it('homeShowsTheCanonicalNextActionAndGiftInTheHeading', async () => {
   const gift = await screen.findByRole('complementary', { name: '다음 여행 선물' });
   expect(gift).toHaveTextContent('동그란 안경');
   expect(gift).toHaveTextContent('1회차 첫 통과');
-  expect(gift.parentElement).toContainElement(screen.getByRole('heading', { name: '나의 학습' }));
+  expect(gift.parentElement).toHaveClass('game-camp-scene');
+  expect(camp).toContainElement(screen.getByRole('heading', { name: '오늘의 탐험', level: 1 }));
   expect(screen.queryByRole('region', { name: '여행 선물' })).toBeNull();
   expect(screen.queryByRole('navigation', { name: '여행 지역' })).toBeNull();
 });
@@ -362,6 +363,14 @@ it.each(['start', 'retry'] as const)(
     server.use(
       http.get('*/api/auth/me', () => HttpResponse.json(current)),
       http.get('*/api/student/learning/status', async () => {
+        if (current.accountId === studentB.accountId)
+          return HttpResponse.json({
+            ...ready,
+            calendarCap: 4,
+            earliestUnpassedDay: 4,
+            passedDayCount: 3,
+            firstAnswerCount: 15,
+          });
         if (current.accountId === 'student-a' && ++aReads === 2 && !switched) {
           entered.resolve();
           await release.promise;
@@ -419,9 +428,9 @@ it.each(['start', 'retry'] as const)(
     expect(screen.getByRole('button', { name: '오늘 학습 시작' })).toBeDisabled();
     try {
       await userEvent.click(screen.getByRole('button', { name: '학생 B로 전환' }));
-      expect(await screen.findByText('새친구의 배움')).toBeVisible();
+      expect(await screen.findByText(/ · 4회차$/)).toBeVisible();
       await userEvent.click(screen.getByRole('button', { name: '학생 A로 복귀' }));
-      expect(await screen.findByText('숲친구의 배움')).toBeVisible();
+      expect(await screen.findByText(/ · 2회차$/)).toBeVisible();
       const control = await screen.findByRole('button', {
         name: action === 'retry' ? '같은 요청 다시 확인' : '오늘 학습 시작',
       });

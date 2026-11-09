@@ -37,12 +37,14 @@ export function LearningDashboardPage() {
   const activeCheck = useRef<HomeCheck | null>(null);
   const [checking, setChecking] = useState<HomeCheck | null>(null);
   const [replayDay, setReplayDay] = useState(1);
+  const [replayOpen, setReplayOpen] = useState(false);
   useEffect(() => {
     mounted.current = true;
     const reset = () => {
       activeCheck.current = null;
       setChecking(null);
       setReplayDay(1);
+      setReplayOpen(false);
     };
     reset();
     const unsubscribe = subscribePendingCommandCleanup(reset);
@@ -149,34 +151,15 @@ export function LearningDashboardPage() {
         : 'forest';
   return (
     <section className="learning-page game-journey-page game-home-page">
-      <div className="game-home-intro game-home-heading">
-        <div className="game-home-title">
-          <p className="learning-eyebrow">
-            {account?.role === 'STUDENT' ? `${account.nickname}의 배움` : '30회차 배움'}
-          </p>
-          <h1 ref={heading} tabIndex={-1}>
-            나의 학습
-          </h1>
-        </div>
-        {reward ? (
-          <aside className="game-next-gift pixel-window" aria-label="다음 여행 선물">
-            <PixelIcon name="chest" />
-            <div>
-              <span>다음 여행 선물</span>
-              <strong>{reward.name}</strong>
-              <small>{reward.rewardDay}회차 첫 통과</small>
-            </div>
-          </aside>
-        ) : null}
-        <p className="game-home-description">하루에 다섯 문제씩 풀며 숲에서 등대까지 여행해요.</p>
-      </div>
       <section className="learning-card game-camp" aria-label="오늘의 탐험">
         <div className="game-camp-copy">
           <p className="game-tag">
             {regionIndex === null ? '여행 준비' : REGIONS[regionIndex]}
             {day ? ` · ${day}회차` : ''}
           </p>
-          <h2>오늘의 탐험</h2>
+          <h1 ref={heading} tabIndex={-1}>
+            오늘의 탐험
+          </h1>
           {status.isPending ? <p role="status">학습을 불러오고 있어요</p> : null}
           {view ? (
             <>
@@ -228,12 +211,23 @@ export function LearningDashboardPage() {
             </div>
           ) : null}
           {view && view.passedDayCount > 0 ? (
-            <details className="learning-replay-picker">
-              <summary>다시풀기</summary>
-              <div>
-                <label htmlFor="replay-day">다시 풀 회차</label>
+            <div className="learning-replay-picker">
+              <button
+                type="button"
+                className="learning-replay-toggle"
+                aria-expanded={replayOpen}
+                aria-controls="learning-replay-controls"
+                onClick={() => setReplayOpen((open) => !open)}
+              >
+                다시풀기
+              </button>
+              <div
+                id="learning-replay-controls"
+                className="learning-replay-controls"
+                inert={!replayOpen}
+              >
                 <select
-                  id="replay-day"
+                  aria-label="다시 풀 회차"
                   value={replayDay}
                   disabled={blocked || !!view.activeSession}
                   onChange={(event) => setReplayDay(Number(event.target.value))}
@@ -252,10 +246,20 @@ export function LearningDashboardPage() {
                   선택 회차 다시 풀기
                 </button>
               </div>
-            </details>
+            </div>
           ) : null}
         </div>
         <div className={`game-camp-scene game-scene-${sceneRegion}`}>
+          {reward ? (
+            <aside className="game-next-gift pixel-window" aria-label="다음 여행 선물">
+              <PixelIcon name="chest" />
+              <div>
+                <span>다음 여행 선물</span>
+                <strong>{reward.name}</strong>
+                <small>{reward.rewardDay}회차 첫 통과</small>
+              </div>
+            </aside>
+          ) : null}
           {appearance ? (
             <GameAvatar
               characterId={appearance.characterId}

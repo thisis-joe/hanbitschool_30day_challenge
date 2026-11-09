@@ -210,7 +210,7 @@ it('studentPasswordChangeLandsOnLearningHome', async () => {
   await u.type(screen.getByLabelText('새 비밀번호'), 'NextPass!2026');
   await u.type(screen.getByLabelText('새 비밀번호 확인'), 'NextPass!2026');
   await u.click(screen.getByRole('button', { name: '비밀번호 변경' }));
-  expect(await screen.findByRole('heading', { name: '나의 학습' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: '오늘의 탐험' })).toBeVisible();
 });
 
 // Removing student key/reset/cancellation would render A's delayed list or pending retry for B.

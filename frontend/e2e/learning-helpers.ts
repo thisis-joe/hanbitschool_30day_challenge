@@ -296,7 +296,7 @@ export async function provisionLearner(page: Page) {
   await signOut(page);
   await signup(page, classroom);
   await studentLogin(page, '한빛학교', classroom.gradeLabel, 1, 1, 'Student!2026');
-  await expect(page.getByRole('heading', { name: '나의 학습', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '오늘의 탐험', exact: true })).toBeVisible();
   expect((await status(page)).calendarCap).toBe(2);
   return classroom;
 }

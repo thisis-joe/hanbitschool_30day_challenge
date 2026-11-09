@@ -430,17 +430,50 @@ test('home keeps learning focused without round cards', async ({ page }) => {
   await expect(page.locator('.game-home-page > :last-child')).toHaveClass(/game-home-stats/);
   await expect(page.getByText('나의 여행 친구', { exact: true })).toHaveCount(0);
   const campScene = page.locator('.game-camp-scene');
-  for (const width of [320, 390, 720, 1280]) {
-    await page.setViewportSize({ width, height: 844 });
-    await expect(gift).toBeVisible();
-    const insets = await gift.evaluate((el) => {
-      const row = el.parentElement!.getBoundingClientRect();
-      const gift = el.getBoundingClientRect();
-      return { right: row.right - gift.right, top: gift.top - row.top };
+  const replay = page.getByText('다시풀기', { exact: true });
+  const replayButton = page.getByRole('button', { name: '선택 회차 다시 풀기' });
+  const replayDay = page.getByRole('combobox', { name: '다시 풀 회차' });
+  const sceneGeometry = () =>
+    campScene.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      return [box.width, box.height, box.top + scrollY];
     });
-    expect(insets.right).toBeGreaterThanOrEqual(8);
-    expect(insets.right).toBeLessThanOrEqual(16);
-    expect(insets.top).toBeGreaterThanOrEqual(8);
+  const output = evidenceOutput();
+  for (const width of [1280, 320, 390, 720, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    const closedScene = await sceneGeometry();
+    await expect(replayButton).toBeHidden();
+    await replay.press('Enter');
+    await expect(replayButton).toBeEnabled();
+    expect(await sceneGeometry()).toEqual(closedScene);
+
+    const select = (await replayDay.boundingBox())!;
+    const button = (await replayButton.boundingBox())!;
+    const camp = (await page.locator('.game-camp-copy').boundingBox())!;
+    const left = Math.min(select.x, button.x);
+    const right = Math.max(select.x + select.width, button.x + button.width);
+    expect(Math.abs((left + right) / 2 - (camp.x + camp.width / 2))).toBeLessThan(1);
+    if (width !== 768)
+      expect(Math.abs(select.y + select.height / 2 - (button.y + button.height / 2))).toBeLessThan(
+        1,
+      );
+    if (output && [390, 1280].includes(width))
+      await page.screenshot({ path: output.file(`home-replay-${width}.png`), fullPage: true });
+
+    await replay.press('Enter');
+    await expect(replayButton).toBeHidden();
+    expect(await sceneGeometry()).toEqual(closedScene);
+    await expect(gift).toBeVisible();
+    const giftLayout = await gift.evaluate((el) => {
+      const scene = el.closest('.game-camp-scene')!.getBoundingClientRect();
+      const gift = el.getBoundingClientRect();
+      return { right: scene.right - gift.right, top: gift.top - scene.top, width: gift.width };
+    });
+    expect(giftLayout.right).toBeGreaterThanOrEqual(8);
+    expect(giftLayout.right).toBeLessThanOrEqual(16);
+    expect(giftLayout.top).toBeGreaterThanOrEqual(8);
+    expect(giftLayout.top).toBeLessThanOrEqual(16);
+    expect(giftLayout.width).toBeGreaterThanOrEqual(width === 320 ? 130 : width < 721 ? 165 : 240);
     const edgeOffsets = await page
       .getByRole('navigation', { name: '학생 여행 메뉴' })
       .evaluate((el) => {
@@ -456,23 +489,8 @@ test('home keeps learning focused without round cards', async ({ page }) => {
     ).toBeGreaterThanOrEqual(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   }
-  const replay = page.getByText('다시풀기', { exact: true });
-  await replay.focus();
-  await replay.press('Enter');
-  const replayButton = page.getByRole('button', { name: '선택 회차 다시 풀기' });
-  await expect(replayButton).toBeEnabled();
-  for (const width of [320, 390, 1280]) {
-    await page.setViewportSize({ width, height: 844 });
-    const camp = page.locator('.game-camp-copy');
-    const center = (await camp.boundingBox())!;
-    for (const locator of [camp.getByText('숲 입구 · 2회차'), replayButton]) {
-      const item = (await locator.boundingBox())!;
-      expect(Math.abs(item.x + item.width / 2 - (center.x + center.width / 2))).toBeLessThan(1);
-    }
-  }
-  const output = evidenceOutput();
-  if (output)
-    await page.screenshot({ path: output.file('home-centered-replay.png'), fullPage: true });
+  await expect(page.getByRole('heading', { name: '오늘의 탐험', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '나의 학습', exact: true })).toHaveCount(0);
 });
 
 test('mobile wardrobe brings the preview into reach and returns to the chosen item', async ({

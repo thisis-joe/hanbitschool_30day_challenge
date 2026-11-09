@@ -144,30 +144,18 @@
   border: 1px solid var(--line);
   background: var(--accent);
 }
-.game-home-heading {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 45%);
-  align-items: center;
-  column-gap: 12px;
-}
-.game-home-title {
-  min-width: 0;
-}
-.game-home-description {
-  grid-column: 1 / -1;
-}
 .game-next-gift {
   --paper: #fff6d6;
-  --gift-inset: 12px;
+  position: absolute;
+  z-index: 2;
+  inset-block-start: 12px;
+  inset-inline-end: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  justify-self: end;
-  max-width: min(calc(100% - var(--gift-inset)), 13rem);
-  margin-block-start: 8px;
-  margin-inline-end: var(--gift-inset);
-  padding: 8px 10px;
-  font-size: 0.875rem;
+  gap: 12px;
+  width: min(16rem, calc(100% - 24px));
+  padding: 12px 14px;
+  font-size: 1.125rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
@@ -184,7 +172,7 @@
 .game-next-gift span,
 .game-next-gift small {
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 .game-next-gift small {
   margin: 2px 0 0;
@@ -209,7 +197,7 @@
   align-items: center;
   text-align: center;
 }
-.game-camp-copy h2 {
+.game-camp-copy h1 {
   font-size: clamp(1.75rem, 3vw, 2.25rem);
   line-height: 1.25;
   margin: 18px 0 10px;
@@ -367,24 +355,16 @@
   gap: 10px;
 }
 @media (max-width: 720px) {
-  .game-home-page .game-home-intro {
-    margin-block: 0 16px;
-  }
-  .game-home-page .game-home-intro h1 {
-    margin-block: 4px 8px;
-  }
-  .game-home-page .game-home-intro p {
-    margin-block: 0;
-  }
   .game-next-gift {
-    --gift-inset: 8px;
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
     gap: 5px;
-    padding: 6px;
-    font-size: 0.8125rem;
+    width: min(11rem, 49%);
+    padding: 8px 7px;
+    font-size: 0.9375rem;
   }
-  .game-next-gift .pixel-icon {
-    width: 16px;
-    height: 16px;
+  .game-next-gift :is(span, small) {
+    font-size: 0.75rem;
   }
   .learning-card.game-camp {
     grid-template-columns: minmax(0, 1fr);
@@ -398,7 +378,7 @@
     padding: 20px;
   }
   .game-camp .game-camp-copy > p,
-  .game-camp .game-camp-copy > h2 {
+  .game-camp .game-camp-copy > h1 {
     margin: 0;
   }
   .game-camp .game-camp-copy > button,
@@ -421,6 +401,12 @@
     left: 21%;
     width: 124px;
     bottom: calc(var(--scene-ground, 26.5%) - 8px);
+  }
+  .game-camp-scene:has(.game-next-gift) {
+    min-height: 244px;
+  }
+  .game-camp-scene:has(.game-next-gift) > .game-avatar {
+    left: clamp(8px, calc(50% - 132px), 21%);
   }
   .game-character-studio {
     grid-template-columns: minmax(0, 1fr);

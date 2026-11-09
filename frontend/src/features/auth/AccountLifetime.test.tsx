@@ -133,7 +133,7 @@ it.each(['initial', 'alreadyAnonymous'])(
       expect(sessionStorage.getItem('unrelated')).toBe('keep');
       const epochAfterAnonymous = getPendingCommandEpoch();
       await act(async () => releaseLogin.resolve());
-      expect(await screen.findByRole('heading', { name: '나의 학습' })).toBeVisible();
+      expect(await screen.findByRole('heading', { name: '오늘의 탐험' })).toBeVisible();
       expect(client.getQueryData(meKey)).toMatchObject({ accountId: 'student-a' });
       expect(screen.queryByRole('alert')).toBeNull();
       expect(loginPosts).toBe(1);
@@ -226,7 +226,7 @@ it('abortedPreviousOwners401BodyCannotClearTheNewAccountOrPendingCommand', async
     });
     expect(client.getQueryData(meKey)).toMatchObject({ accountId: 'student-b' });
     expect(readPendingCommand(studentB.accountId)).toEqual(pending);
-    expect(screen.getByRole('heading', { name: '나의 학습' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: '오늘의 탐험' })).toBeVisible();
     await expect(oldRead).rejects.toMatchObject({ name: 'AbortError' });
   } finally {
     releaseBody.resolve();

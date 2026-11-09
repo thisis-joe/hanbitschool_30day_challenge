@@ -312,7 +312,7 @@ test('characterWardrobePersistsAcrossRelogin', async ({ page }) => {
       page.off('response', observe);
     }
   })();
-  await expect(page.getByRole('heading', { name: '나의 학습', exact: true })).toBeFocused();
+  await expect(page.getByRole('heading', { name: '오늘의 탐험', exact: true })).toBeFocused();
   await selectCharacter(page);
   await layoutAndTargets(page);
   await firstPass(page);
